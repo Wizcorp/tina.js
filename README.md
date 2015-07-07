@@ -29,7 +29,7 @@ To create a tween and start it (it will be automaticall updated):
 	var myTween = new TINA.Tween(myObject, ['x']).to(duration, { x: 1 }).start();
 ```
 
-Possibility to create several transitions:
+To create several transitions:
 ```
 	var myObject = { x: 0 };
 	var duration1 = 2;
@@ -40,6 +40,23 @@ Possibility to create several transitions:
 To start a tween after a given delay:
 ```
 	var myTween = new TINA.Tween(myObject, ['x']).to(duration, { x: 1 }).delay(1);
+```
+
+To add callbacks on specific events:
+```
+	var myTween = new TINA.Tween(myObject, ['x']).to(duration, { x: 1 }).delay(1);
+
+	myTween.onStart(function () {
+		console.log('Tweening will now start');
+	});
+
+	myTween.onUpdate(function (time, dt) {
+		console.log('My object at time', time, 'is', myObject);
+	});
+
+	myTween.onComplete(function () {
+		console.log('Tweening is complete');
+	});
 ```
 
 To create a tweener:
@@ -55,6 +72,7 @@ To create the tweener that updates automatically:
 To manually update TINA
 ```
 	var myTweener = new TINA.Timer();
+	var myTween = new TINA.Tween(myObject, ['x']).to(duration, { x: 1 }).start();
 	onRequestAnimationFrame() {
 		TINA.update();
 	}
