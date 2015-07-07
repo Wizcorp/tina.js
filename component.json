@@ -1,0 +1,33 @@
+{
+	"name": "TINA",
+	"repo": "Wizcorp/TINA",
+	"version": "0.1.0",
+	"description": "Tweening and INterpolations for Animation",
+	"main": "index.js",
+	"scripts": [
+		"Delay.js",
+		"DoublyList.js",
+		"easing.js",
+		"index.js",
+		"interpolation.js",
+		"Playable.js",
+		"Player.js",
+		"Recorder.js",
+		"Sequence.js",
+		"Ticker.js",
+		"Timeline.js",
+		"Timer.js",
+		"Tween.js",
+		"Tweener.js",
+		"updateMethods.js"
+	],
+	"repository": {
+		"type": "git",
+		"url": "git://github.com/Wizcorp/TINA.git"
+	},
+	"bugs": {
+		"url": "https://github.com/Wizcorp/TINA/issues"
+	},
+	"author": "bchevalier",
+	"license": "MIT"
+}
