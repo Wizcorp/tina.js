@@ -62,6 +62,10 @@ ObjectRecorder.prototype.play = function (time, smooth) {
  */
 
 function Recorder() {
+	if ((this instanceof Recorder) === false) {
+		return new Recorder();
+	}
+
 	Playable.call(this);
 
 	// Never ends

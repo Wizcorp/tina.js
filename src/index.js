@@ -67,7 +67,7 @@ var TINA = {
 	interpolation: require('./interpolation'),
 
 	_tweeners: [],
-	_tweeners: [],
+	_defaultTweener: null,
 	_running: false,
 
 	_startTime: 0,
@@ -223,6 +223,18 @@ var TINA = {
 		return this;
 	},
 
+	add: function (tweener) {
+		this._tweeners.push(tweener);
+	},
+
+	setDefaultTweener: function (tweener) {
+		this._defaultTweener = tweener;
+	},
+
+	getDefaultTweener: function () {
+		return this._defaultTweener;
+	},
+
 	_add: function (tweener) {
 		// A tweener is starting
 		if (this._running === false) {
@@ -240,26 +252,20 @@ var TINA = {
 		}
 	},
 
-	getTweener: function () {
-		if (this._tweeners.length > 0) {
-			return this._tweeners[0];
+	_getDefaultTweener: function () {
+		if (this._defaultTweener === null) {
+			var DefaultTweener = this.Timer;
+			this._defaultTweener = new DefaultTweener().start();
+		} else {
+			// Is the default tweener running?
+			var idx = this._tweeners.indexOf(this._defaultTweener);
+			if (idx !== -1) {
+				// Not running, starting it
+				this._defaultTweener.start();
+			}
 		}
 
-		var DefaultTweener = this.Timer;
-		return new DefaultTweener();
-	},
-
-	getRunningTweeners: function () {
-		return this._tweeners.slice(0);
-	},
-
-	getRunningTweener: function () {
-		if (this._tweeners.length > 0) {
-			return this._tweeners[0];
-		}
-
-		var DefaultTweener = this.Timer;
-		return new DefaultTweener().start();
+		return this._defaultTweener;
 	}
 };
 
@@ -307,15 +313,8 @@ if (typeof document[hidden] === 'undefined') {
 }
 
 (function (root) {
-	if (typeof define === 'function' && define.amd) {
-		// AMD
-		define([], function () {
-			return TINA;
-		});
-	} else {
-		// Global variable
-		root.TINA = TINA;
-	}
+	// Global variable
+	root.TINA = TINA;
 })(this);
 
 module.exports = TINA;

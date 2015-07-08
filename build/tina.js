@@ -144,6 +144,10 @@ var Playable = require('tina/src/Playable.js');
  */
 
 function Delay(duration) {
+	if ((this instanceof Delay) === false) {
+		return new Delay(duration);
+	}
+
 	Playable.call(this);
 	this._duration = duration;
 }
@@ -532,6 +536,7 @@ var TINA = {
 	Timer:         require('tina/src/Timer.js'),
 	Ticker:        require('tina/src/Ticker.js'),
 	Playable:      require('tina/src/Playable.js'),
+	Player:        require('tina/src/Player.js'),
 	// Controller:    require('./Controller'), // TODO
 	Tween:         require('tina/src/Tween.js'),
 	// TweenRelative: require('./TweenRelative'), // TODO
@@ -543,7 +548,7 @@ var TINA = {
 	interpolation: require('tina/src/interpolation.js'),
 
 	_tweeners: [],
-	_tweeners: [],
+	_defaultTweener: null,
 	_running: false,
 
 	_startTime: 0,
@@ -699,6 +704,18 @@ var TINA = {
 		return this;
 	},
 
+	add: function (tweener) {
+		this._tweeners.push(tweener);
+	},
+
+	setDefaultTweener: function (tweener) {
+		this._defaultTweener = tweener;
+	},
+
+	getDefaultTweener: function () {
+		return this._defaultTweener;
+	},
+
 	_add: function (tweener) {
 		// A tweener is starting
 		if (this._running === false) {
@@ -716,26 +733,20 @@ var TINA = {
 		}
 	},
 
-	getTweener: function () {
-		if (this._tweeners.length > 0) {
-			return this._tweeners[0];
+	_getDefaultTweener: function () {
+		if (this._defaultTweener === null) {
+			var DefaultTweener = this.Timer;
+			this._defaultTweener = new DefaultTweener().start();
+		} else {
+			// Is the default tweener running?
+			var idx = this._tweeners.indexOf(this._defaultTweener);
+			if (idx !== -1) {
+				// Not running, starting it
+				this._defaultTweener.start();
+			}
 		}
 
-		var DefaultTweener = this.Timer;
-		return new DefaultTweener();
-	},
-
-	getRunningTweeners: function () {
-		return this._tweeners.slice(0);
-	},
-
-	getRunningTweener: function () {
-		if (this._tweeners.length > 0) {
-			return this._tweeners[0];
-		}
-
-		var DefaultTweener = this.Timer;
-		return new DefaultTweener().start();
+		return this._defaultTweener;
 	}
 };
 
@@ -783,15 +794,8 @@ if (typeof document[hidden] === 'undefined') {
 }
 
 (function (root) {
-	if (typeof define === 'function' && define.amd) {
-		// AMD
-		define([], function () {
-			return TINA;
-		});
-	} else {
-		// Global variable
-		root.TINA = TINA;
-	}
+	// Global variable
+	root.TINA = TINA;
 })(this);
 
 module.exports = TINA;
@@ -1321,20 +1325,18 @@ Playable.prototype._pause    = function () { if (this._onPause    !== null) { th
 Playable.prototype._resume   = function () { if (this._onResume   !== null) { this._onResume();   } };
 
 Playable.prototype.delay = function (delay) {
-	var player = this._player;
-	if (player === null) {
-		player = TINA.getRunningTweener();
+	if (this._player === null) {
+		this._player = TINA._getDefaultTweener();
 	}
-	this._player = player;
 
-	player._delay(this, delay);
+	this._player._delay(this, delay);
 	return this;
 };
 
 Playable.prototype.start = function (timeOffset) {
 	var player = this._player;
 	if (player === null) {
-		player = TINA.getRunningTweener();
+		player = TINA._getDefaultTweener();
 	}
 
 	if (player._add(this) === false) {
@@ -1741,6 +1743,10 @@ ObjectRecorder.prototype.play = function (time, smooth) {
  */
 
 function Recorder() {
+	if ((this instanceof Recorder) === false) {
+		return new Recorder();
+	}
+
 	Playable.call(this);
 
 	// Never ends
@@ -1838,6 +1844,10 @@ var Timeline = require('tina/src/Timeline.js');
  */
 
 function Sequence() {
+	if ((this instanceof Sequence) === false) {
+		return new Sequence();
+	}
+
 	Timeline.call(this);
 }
 Sequence.prototype = Object.create(Timeline.prototype);
@@ -1851,7 +1861,7 @@ Sequence.prototype.add = function (playable) {
 	return this;
 };
 
-Sequence.prototype.wait = function (duration) {
+Sequence.prototype.addDelay = function (duration) {
 	this._duration += duration;
 	return this;
 };
@@ -1868,6 +1878,10 @@ var Tweener = require('tina/src/Tweener.js');
  *
  */
 function Ticker(tupt) {
+	if ((this instanceof Ticker) === false) {
+		return new Ticker(tupt);
+	}
+
 	Tweener.call(this);
 
 	// Time units per tick (tupt)
@@ -1941,6 +1955,10 @@ var Player = require('tina/src/Player.js');
  */
 
 function Timeline() {
+	if ((this instanceof Timeline) === false) {
+		return new Timeline();
+	}
+
 	Player.call(this);
 }
 Timeline.prototype = Object.create(Player.prototype);
@@ -2026,6 +2044,10 @@ var clock = window.performance || Date;
  *
  */
 function Timer(tups) {
+	if ((this instanceof Timer) === false) {
+		return new Timer(tups);
+	}
+
 	Tweener.call(this);
 
 	// Time units per second (tups)
@@ -2156,10 +2178,23 @@ function Temporisation(start, duration, toObject) {
  */
 
 function Tween(object, properties) {
+	if ((this instanceof Tween) === false) {
+		return new Tween(object, properties);
+	}
+
 	Playable.call(this);
 
 	// Tweened object
 	this._object = object;
+
+	if ((properties === null || properties === undefined) && (object instanceof Array)) {
+		// Given object is an array
+		// Its properties to tween are the indices of the array
+		properties = [];
+		for (var p = 0; p < object.length; p += 1) {
+			properties[p] = p;
+		}
+	}
 
 	// Properties to tween
 	this._properties = properties;
@@ -2399,6 +2434,10 @@ Tweener.prototype._delay = function (playable, delay) {
 	delayPlayable.tweener(this).onComplete(function (timeOverflow) {
 		playable.start(timeOverflow);
 	}).start();
+};
+
+Tweener.prototype.useAsDefault = function () {
+	TINA.setDefaultTweener(this);
 };
 });
 

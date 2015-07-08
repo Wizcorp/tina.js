@@ -92,3 +92,7 @@ Tweener.prototype._delay = function (playable, delay) {
 		playable.start(timeOverflow);
 	}).start();
 };
+
+Tweener.prototype.useAsDefault = function () {
+	TINA.setDefaultTweener(this);
+};

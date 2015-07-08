@@ -73,10 +73,23 @@ function Temporisation(start, duration, toObject) {
  */
 
 function Tween(object, properties) {
+	if ((this instanceof Tween) === false) {
+		return new Tween(object, properties);
+	}
+
 	Playable.call(this);
 
 	// Tweened object
 	this._object = object;
+
+	if ((properties === null || properties === undefined) && (object instanceof Array)) {
+		// Given object is an array
+		// Its properties to tween are the indices of the array
+		properties = [];
+		for (var p = 0; p < object.length; p += 1) {
+			properties[p] = p;
+		}
+	}
 
 	// Properties to tween
 	this._properties = properties;
