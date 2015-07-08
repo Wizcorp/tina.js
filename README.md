@@ -4,7 +4,7 @@
 
 **Tweening and INterpolations for Animation**
 
-Animation library to easily create and customisable tweens, timelines, sequences and other playable components.
+Animation library to easily create customisable tweens, timelines, sequences and other playable components.
 
 * **Easy to use**, friendly API
 * **Easy to debug**
@@ -114,11 +114,12 @@ To **manually update** TINA
 	var myTweener = new TINA.Timer();
 	var myTween = new TINA.Tween(myObject, ['x']).to(duration, { x: 1 }).start();
 
-	update() {
+	function update() {
 		TINA.update();
+		requestAnimationFrame(update);
 	}
 
-	requestAnimationFrame(update)
+	requestAnimationFrame(update);
 ```
 
 To create a **timeline**:
