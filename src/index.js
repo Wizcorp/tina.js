@@ -32,7 +32,7 @@
  * timelines, sequences and other playable components.
  *
  * Note: if you want a particular component to be added
- * create an issue or contribute at https://github.com/Wizcorp/TINA
+ * create an issue or contribute at https://github.com/Wizcorp/tina
  */
 
 // Method to trigger automatic update of TINA
@@ -305,5 +305,16 @@ if (typeof document[hidden] === 'undefined') {
 	}, false);
 }
 
-window.TINA    = TINA;
+(function (root) {
+	if (typeof define === 'function' && define.amd) {
+		// AMD
+		define([], function () {
+			return TINA;
+		});
+	} else {
+		// Global variable
+		root.TINA = TINA;
+	}
+})(this);
+
 module.exports = TINA;

@@ -135,8 +135,8 @@ require.define = function (name, exports) {
     exports: exports
   };
 };
-require.register("TINA/Delay.js", function (exports, module) {
-var Playable = require('TINA/Playable.js');
+require.register("tina/src/Delay.js", function (exports, module) {
+var Playable = require('tina/src/Playable.js');
 
 /**
  * @classdesc
@@ -152,7 +152,7 @@ Delay.prototype.constructor = Delay;
 module.exports = Delay;
 });
 
-require.register("TINA/DoublyList.js", function (exports, module) {
+require.register("tina/src/DoublyList.js", function (exports, module) {
 /**
  * DOUBLY LIST Class
  *
@@ -262,7 +262,7 @@ DoublyList.prototype.clear = function () {
 };
 });
 
-require.register("TINA/easing.js", function (exports, module) {
+require.register("tina/src/easing.js", function (exports, module) {
 /**
  *
  * @file A set of ease functions
@@ -280,7 +280,7 @@ require.register("TINA/easing.js", function (exports, module) {
  * All the ease functions are continuous for times t in [0, 1]
  *
  * Note: if you want a particular easing method to be added
- * create an issue or contribute at https://github.com/Wizcorp/TINA
+ * create an issue or contribute at https://github.com/Wizcorp/tina
  */
 
 // Math constants (for readability)
@@ -474,7 +474,7 @@ exports.backInOut = function(t, e) {
 
 });
 
-require.register("TINA", function (exports, module) {
+require.register("tina", function (exports, module) {
 // Why using TINA?
 // - Easy to use, friendly API
 // - Open source and MIT License
@@ -509,7 +509,7 @@ require.register("TINA", function (exports, module) {
  * timelines, sequences and other playable components.
  *
  * Note: if you want a particular component to be added
- * create an issue or contribute at https://github.com/Wizcorp/TINA
+ * create an issue or contribute at https://github.com/Wizcorp/tina
  */
 
 // Method to trigger automatic update of TINA
@@ -528,19 +528,19 @@ var requestAnimFrame = (function(){
 var clock = window.performance || Date;
 
 var TINA = {
-	Tweener:       require('TINA/Tweener.js'),
-	Timer:         require('TINA/Timer.js'),
-	Ticker:        require('TINA/Ticker.js'),
-	Playable:      require('TINA/Playable.js'),
+	Tweener:       require('tina/src/Tweener.js'),
+	Timer:         require('tina/src/Timer.js'),
+	Ticker:        require('tina/src/Ticker.js'),
+	Playable:      require('tina/src/Playable.js'),
 	// Controller:    require('./Controller'), // TODO
-	Tween:         require('TINA/Tween.js'),
+	Tween:         require('tina/src/Tween.js'),
 	// TweenRelative: require('./TweenRelative'), // TODO
-	Timeline:      require('TINA/Timeline.js'),
-	Sequence:      require('TINA/Sequence.js'),
-	Recorder:      require('TINA/Recorder.js'),
-	Delay:         require('TINA/Delay.js'),
-	easing:        require('TINA/easing.js'),
-	interpolation: require('TINA/interpolation.js'),
+	Timeline:      require('tina/src/Timeline.js'),
+	Sequence:      require('tina/src/Sequence.js'),
+	Recorder:      require('tina/src/Recorder.js'),
+	Delay:         require('tina/src/Delay.js'),
+	easing:        require('tina/src/easing.js'),
+	interpolation: require('tina/src/interpolation.js'),
 
 	_tweeners: [],
 	_tweeners: [],
@@ -782,12 +782,23 @@ if (typeof document[hidden] === 'undefined') {
 	}, false);
 }
 
-window.TINA    = TINA;
+(function (root) {
+	if (typeof define === 'function' && define.amd) {
+		// AMD
+		define([], function () {
+			return TINA;
+		});
+	} else {
+		// Global variable
+		root.TINA = TINA;
+	}
+})(this);
+
 module.exports = TINA;
 
 });
 
-require.register("TINA/interpolation.js", function (exports, module) {
+require.register("tina/src/interpolation.js", function (exports, module) {
 /**
  *
  * @file A set of interpolation functions
@@ -805,7 +816,7 @@ require.register("TINA/interpolation.js", function (exports, module) {
  * Define how to interpolate between object a and b.
  * 
  * Note: if you want a particular interpolation method to be added
- * create an issue or contribute at https://github.com/Wizcorp/TINA
+ * create an issue or contribute at https://github.com/Wizcorp/tina
  */
 
 // TODO: Test them all!
@@ -1253,7 +1264,7 @@ exports.simplex2d = (function() {
 })();
 });
 
-require.register("TINA/Playable.js", function (exports, module) {
+require.register("tina/src/Playable.js", function (exports, module) {
 /** @class */
 function Playable() {
 	this._startTime = 0;
@@ -1456,9 +1467,9 @@ Playable.prototype._moveTo = function (time, dt) {
 Playable.prototype._update  = function () {};
 });
 
-require.register("TINA/Player.js", function (exports, module) {
-var DoublyList = require('TINA/DoublyList.js');
-var Playable   = require('TINA/Playable.js');
+require.register("tina/src/Player.js", function (exports, module) {
+var DoublyList = require('tina/src/DoublyList.js');
+var Playable   = require('tina/src/Playable.js');
 
 function PlayableHandle(playable) {
 	this.playable = playable;
@@ -1665,8 +1676,8 @@ Player.prototype.debug = function (debug) {
 };
 });
 
-require.register("TINA/Recorder.js", function (exports, module) {
-var Playable = require('TINA/Playable.js');
+require.register("tina/src/Recorder.js", function (exports, module) {
+var Playable = require('tina/src/Playable.js');
 
 function ObjectRecorder(object, properties) {
 	this.object      = object;
@@ -1811,8 +1822,8 @@ Recorder.prototype.update = function (dt) {
 
 });
 
-require.register("TINA/Sequence.js", function (exports, module) {
-var Timeline = require('TINA/Timeline.js');
+require.register("tina/src/Sequence.js", function (exports, module) {
+var Timeline = require('tina/src/Timeline.js');
 
 /**
  *
@@ -1846,8 +1857,8 @@ Sequence.prototype.wait = function (duration) {
 };
 });
 
-require.register("TINA/Ticker.js", function (exports, module) {
-var Tweener = require('TINA/Tweener.js');
+require.register("tina/src/Ticker.js", function (exports, module) {
+var Tweener = require('tina/src/Tweener.js');
 
 /**
  *
@@ -1914,8 +1925,8 @@ Ticker.prototype.convertToTimeUnits = function(nbTicks) {
 
 });
 
-require.register("TINA/Timeline.js", function (exports, module) {
-var Player = require('TINA/Player.js');
+require.register("tina/src/Timeline.js", function (exports, module) {
+var Player = require('tina/src/Player.js');
 
 /**
  *
@@ -2001,8 +2012,8 @@ Timeline.prototype._update = function (dt) {
 };
 });
 
-require.register("TINA/Timer.js", function (exports, module) {
-var Tweener = require('TINA/Tweener.js');
+require.register("tina/src/Timer.js", function (exports, module) {
+var Tweener = require('tina/src/Tweener.js');
 
 // Performance.now gives better precision than Date.now
 var clock = window.performance || Date;
@@ -2069,12 +2080,12 @@ Timer.prototype.convertToTimeUnits = function(seconds) {
 };
 });
 
-require.register("TINA/Tween.js", function (exports, module) {
-var Playable      = require('TINA/Playable.js');
-var updateMethods = require('TINA/updateMethods.js');
+require.register("tina/src/Tween.js", function (exports, module) {
+var Playable      = require('tina/src/Playable.js');
+var updateMethods = require('tina/src/updateMethods.js');
 
-var easingFunctions        = require('TINA/easing.js');
-var interpolationFunctions = require('TINA/interpolation.js');
+var easingFunctions        = require('tina/src/easing.js');
+var interpolationFunctions = require('tina/src/interpolation.js');
 
 function TimeFrame(start, duration) {
 	this.start    = start;
@@ -2294,9 +2305,9 @@ Tween.prototype._update = function () {
 };
 });
 
-require.register("TINA/Tweener.js", function (exports, module) {
-var Player = require('TINA/Player.js');
-var Delay  = require('TINA/Delay.js');
+require.register("tina/src/Tweener.js", function (exports, module) {
+var Player = require('tina/src/Player.js');
+var Delay  = require('tina/src/Delay.js');
 
 /**
  * @classdesc
@@ -2391,7 +2402,7 @@ Tweener.prototype._delay = function (playable, delay) {
 };
 });
 
-require.register("TINA/updateMethods.js", function (exports, module) {
+require.register("tina/src/updateMethods.js", function (exports, module) {
 // The file is a good representation of the constant fight between maintainability and performance
 // For performance reasons several update methods are created
 // The appropriate method should be used for tweening. The selection depends on:
@@ -2470,4 +2481,4 @@ function updatePIE(object, t) {
 module.exports = [[[update, updateP], [updateI, updatePI]], [[updateE, updatePE], [updateIE, updatePIE]]];
 });
 
-require("TINA");
+require("tina");
