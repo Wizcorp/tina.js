@@ -30,7 +30,7 @@ Include tina's build in your html using either the [minified library](https://ra
 ## API
 
 To create and start a tween (it will be automaticall updated):
-```
+``` javascript
 	var myObject = { x: 0 };
 	var duration = 2;
 	var myTween = new TINA.Tween(myObject, ['x']).to(duration, { x: 1 }).start();
