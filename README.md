@@ -146,11 +146,37 @@ To create a **sequence**:
 A **tweener** is responsible for tweening playable components.
 The tweener can be either a **timer** or a **ticker**.
 
+If no tweener is specified, any started playable will be tweened by the default tweener.
+``` javascript
+	// myTween will be tweened by the default tweener
+	var myTween = new TINA.Tween(myObject, ['x'])
+		.to(1, { x: 5 })
+		.start();
+```
+
+To manually specify a tweener for a playable component:
+``` javascript
+	// myTween will be tweened by myTimer
+	var myTween = new TINA.Tween(myObject, ['x'])
+		.to(1, { x: 5 })
+		.tweener(myTweener)
+		.start();
+```
+
+To specify the default tweener for every tween:
+``` javascript
+	// I choose a timer as my tweener
+	var myTimer = new TINA.Timer().useAsDefault();
+	// myTween will be attached to myTimer and will take 0.5 seconds to tween
+	var myTween = new TINA.Tween(myObject, ['x']).to(30, { x: 5 }).start();
+```
+
 #### Timer
 At every update the timer increases the time of all its tweens by a time proportional to the time elapsed since the previous update.
-To create a timer:
+To create a default timer that will update automatically:
 ``` javascript
-	var myTimer = new TINA.Timer();
+	var tups = 60;
+	var myTimer = new TINA.Timer(tups).useAsDefault().start();
 ```
 
 To create a timer and update it manually:
@@ -168,7 +194,9 @@ To create a timer and update it manually:
 
 It is possible to specify the speed at which time will elapse for the timer.
 This flexbility allows the user to use units that he is comfortable with:
-either 1 unit per second, 24, 60 or 1000 per second (or even 237 units per second if you come from another planet).
+
+Either 1 unit per second, 24 u/s, 60 u/s or 1000 u/s (or even 237.6 u/s if you come from another planet).
+
 By default the timer goes at a speed of 1 unit per second.
 The following example demonstrates how to create a timer that goes at a speed of 60 units per second.
 Therefore, at 60 updates per second, each new update increases the time of the timer by 1.
@@ -220,33 +248,6 @@ At every update the time will increase by the specified tupt:
 	var tupt = 2; // Time units per tick/update
 	var myTicker = new TINA.Ticker(tupt);
 ```
-
-If no tweener is specified, any started playable will be tweened by the default tweener.
-``` javascript
-	// myTween will be tweened by the default tweener
-	var myTween = new TINA.Tween(myObject, ['x'])
-		.to(1, { x: 5 })
-		.start();
-```
-
-To manually specify a tweener for a playable component:
-``` javascript
-	var myTimer = new TINA.Timer().useAsDefault();
-	// myTween will be tweened by myTimer
-	var myTween = new TINA.Tween(myObject, ['x'])
-		.to(1, { x: 5 })
-		.tweener(myTimer)
-		.start();
-```
-
-To specify the default tweener:
-``` javascript
-	var tups = 60;
-	var myTimer = new TINA.Timer(tups).useAsDefault();
-	// myTween will be attached to myTimer and will take 0.5 seconds to tween
-	var myTween = new TINA.Tween(myObject, ['x']).to(30, { x: 5 }).start();
-```
-
 
 In the case when tweeners automatically update, TINA can be used as the main loop of the application.
 ``` javascript
