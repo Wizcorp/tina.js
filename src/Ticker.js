@@ -8,6 +8,10 @@ var Tweener = require('./Tweener');
  *
  */
 function Ticker(tupt) {
+	if ((this instanceof Ticker) === false) {
+		return new Ticker(tupt);
+	}
+
 	Tweener.call(this);
 
 	// Time units per tick (tupt)

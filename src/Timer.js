@@ -11,6 +11,10 @@ var clock = window.performance || Date;
  *
  */
 function Timer(tups) {
+	if ((this instanceof Timer) === false) {
+		return new Timer(tups);
+	}
+
 	Tweener.call(this);
 
 	// Time units per second (tups)

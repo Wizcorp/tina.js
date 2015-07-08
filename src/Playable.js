@@ -54,20 +54,18 @@ Playable.prototype._pause    = function () { if (this._onPause    !== null) { th
 Playable.prototype._resume   = function () { if (this._onResume   !== null) { this._onResume();   } };
 
 Playable.prototype.delay = function (delay) {
-	var player = this._player;
-	if (player === null) {
-		player = TINA.getRunningTweener();
+	if (this._player === null) {
+		this._player = TINA._getDefaultTweener();
 	}
-	this._player = player;
 
-	player._delay(this, delay);
+	this._player._delay(this, delay);
 	return this;
 };
 
 Playable.prototype.start = function (timeOffset) {
 	var player = this._player;
 	if (player === null) {
-		player = TINA.getRunningTweener();
+		player = TINA._getDefaultTweener();
 	}
 
 	if (player._add(this) === false) {

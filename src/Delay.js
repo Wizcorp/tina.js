@@ -6,6 +6,10 @@ var Playable = require('./Playable');
  */
 
 function Delay(duration) {
+	if ((this instanceof Delay) === false) {
+		return new Delay(duration);
+	}
+
 	Playable.call(this);
 	this._duration = duration;
 }

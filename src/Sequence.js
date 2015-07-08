@@ -13,6 +13,10 @@ var Timeline = require('./Timeline');
  */
 
 function Sequence() {
+	if ((this instanceof Sequence) === false) {
+		return new Sequence();
+	}
+
 	Timeline.call(this);
 }
 Sequence.prototype = Object.create(Timeline.prototype);
@@ -26,7 +30,7 @@ Sequence.prototype.add = function (playable) {
 	return this;
 };
 
-Sequence.prototype.wait = function (duration) {
+Sequence.prototype.addDelay = function (duration) {
 	this._duration += duration;
 	return this;
 };

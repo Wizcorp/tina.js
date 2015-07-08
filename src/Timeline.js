@@ -13,6 +13,10 @@ var Player = require('./Player');
  */
 
 function Timeline() {
+	if ((this instanceof Timeline) === false) {
+		return new Timeline();
+	}
+
 	Player.call(this);
 }
 Timeline.prototype = Object.create(Player.prototype);
