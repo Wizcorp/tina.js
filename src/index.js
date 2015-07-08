@@ -55,6 +55,7 @@ var TINA = {
 	Timer:         require('./Timer'),
 	Ticker:        require('./Ticker'),
 	Playable:      require('./Playable'),
+	Player:        require('./Player'),
 	// Controller:    require('./Controller'), // TODO
 	Tween:         require('./Tween'),
 	// TweenRelative: require('./TweenRelative'), // TODO
