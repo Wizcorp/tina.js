@@ -37,14 +37,14 @@ To create and start a tween (it will be automaticall updated):
 ```
 
 To create and start a tween on several properties:
-```
+``` javascript
 	var myObject = { x: 0, y: 5 };
 	var duration = 2;
 	var myTween = new TINA.Tween(myObject, ['x', 'y']).to(duration, { x: 1, y: 0 }).start();
 ```
 
 To create several transitions:
-```
+``` javascript
 	var myObject = { x: 0 };
 	var duration1 = 2;
 	var duration2 = 1;
@@ -52,12 +52,12 @@ To create several transitions:
 ```
 
 To start a tween after a given delay:
-```
+``` javascript
 	var myTween = new TINA.Tween(myObject, ['x']).to(duration, { x: 1 }).delay(1);
 ```
 
 To add callbacks on specific events:
-```
+``` javascript
 	var myTween = new TINA.Tween(myObject, ['x']).to(duration, { x: 1 }).delay(1);
 
 	myTween.onStart(function () {
@@ -74,30 +74,30 @@ To add callbacks on specific events:
 ```
 
 To use an easing function:
-```
+``` javascript
 	var myObject = { x: 0 };
 	var easingParameter = 2;
 	var myTween = new TINA.Tween(myObject, ['abc']).to(duration, { x: 1 }, 'elasticInOut', easingParameter).start();
 ```
 
 To use interpolation functions (allows to tween other types that number):
-```
+``` javascript
 	var myObject = { vec: [0, 1, 0] };
 	var myTween = new TINA.Tween(myObject, ['abc']).interpolations({ abc: 'vector' }).to(duration, { vec: [0, 2, 1] }).start();
 ```
 
 To create a tweener:
-```
+``` javascript
 	var myTweener = new TINA.Timer();
 ```
 
 To create the tweener that updates automatically:
-```
+``` javascript
 	var myTweener = new TINA.Timer().start();
 ```
 
 To manually update TINA
-```
+``` javascript
 	var myTweener = new TINA.Timer();
 	var myTween = new TINA.Tween(myObject, ['x']).to(duration, { x: 1 }).start();
 	onRequestAnimationFrame() {
@@ -106,13 +106,14 @@ To manually update TINA
 ```
 
 ## How to build
-You would need to have component and uglify installed
+You would need to have component and uglify installed:
 
 ```
 	npm install -g component
 	npm install -g uglifyjs
 ```
 
+If component and uglify are already install, use the following command to build:
 ```
 	component build; mv build/build.js build/tina.js; uglifyjs build/tina.js -o build/tina.min.js
 ```
