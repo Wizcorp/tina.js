@@ -704,10 +704,6 @@ var TINA = {
 		return this;
 	},
 
-	add: function (tweener) {
-		this._tweeners.push(tweener);
-	},
-
 	setDefaultTweener: function (tweener) {
 		this._defaultTweener = tweener;
 	},
@@ -726,11 +722,21 @@ var TINA = {
 		this._tweeners.push(tweener);
 	},
 
+	add: function (tweener) {
+		this._tweeners.push(tweener);
+		return this;
+	},
+
 	_remove: function (tweener) {
 		var tweenerIdx = this._tweeners.indexOf(tweener);
 		if (tweenerIdx !== -1) {
 			this._tweeners.splice(tweenerIdx, 1);
 		}
+	},
+
+	remove: function (tweener) {
+		this._remove(tweener);
+		return this;
 	},
 
 	_getDefaultTweener: function () {
@@ -2226,13 +2232,17 @@ Tween.prototype.reset = function () {
 Tween.prototype.interpolations = function (interpolations) {
 	// The API allows to pass interpolation names that will be replaced
 	// by the corresponding interpolation functions
-	var interpolatedProperties = Object.keys(interpolations);
-	for (var p = 0; p < interpolatedProperties.length; p += 1) {
-		var property = interpolatedProperties[p];
+	for (var p = 0; p < this._properties.length; p += 1) {
+		var property = this._properties[p];
 		var interpolation = interpolations[property];
+		if (interpolation === undefined) {
+			interpolations[property] = interpolationFunctions.linear;
+			continue;
+		}
+
 		if (typeof(interpolation) === 'string') {
 			// Replacing interpolation name by interpolation function
-			if (interpolations[property] === undefined) {
+			if (interpolationFunctions[interpolation] === undefined) {
 				console.warn('[Tween.interpolations] Given interpolation does not exist');
 				interpolations[property] = interpolationFunctions.linear;
 			} else {

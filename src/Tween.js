@@ -111,6 +111,8 @@ Tween.prototype = Object.create(Playable.prototype);
 Tween.prototype.constructor = Tween;
 module.exports = Tween;
 
+Tween.prototype.Transition = Transition;
+
 Tween.prototype.reset = function () {
 	this._current     = 0;
 	this._transitions = [];
@@ -121,13 +123,17 @@ Tween.prototype.reset = function () {
 Tween.prototype.interpolations = function (interpolations) {
 	// The API allows to pass interpolation names that will be replaced
 	// by the corresponding interpolation functions
-	var interpolatedProperties = Object.keys(interpolations);
-	for (var p = 0; p < interpolatedProperties.length; p += 1) {
-		var property = interpolatedProperties[p];
+	for (var p = 0; p < this._properties.length; p += 1) {
+		var property = this._properties[p];
 		var interpolation = interpolations[property];
+		if (interpolation === undefined) {
+			interpolations[property] = interpolationFunctions.linear;
+			continue;
+		}
+
 		if (typeof(interpolation) === 'string') {
 			// Replacing interpolation name by interpolation function
-			if (interpolations[property] === undefined) {
+			if (interpolationFunctions[interpolation] === undefined) {
 				console.warn('[Tween.interpolations] Given interpolation does not exist');
 				interpolations[property] = interpolationFunctions.linear;
 			} else {
@@ -182,9 +188,10 @@ Tween.prototype.to = function (duration, toObject, easing, easingParam, interpol
 		}
 	}
 
-	// Getting 'to' object of previous transition, if any,
-	// as 'from' object for new transition
+	// Getting previous transition ending as the beginning for the new transition
 	var fromObject = this._getLastTransitionEnding();
+
+	var Transition = this.Transition;
 	var transition = new Transition(
 		this._properties,
 		fromObject,

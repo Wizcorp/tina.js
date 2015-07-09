@@ -1,22 +1,3 @@
-// Why using TINA?
-// - Easy to use, friendly API
-// - Open source and MIT License
-// - High flexibility (tween parameters can be easily be modified after creation and even when they are running)
-// - High customizability (possibility to integrate easing and interpolation functions)
-// - A consequent library of easing and interpolation methods
-// - Running options (delay, speed, iterations, pingpong, persist) TODO
-// - Easy to debug (thanks to a smart warning system)
-// - Useful components such as Timeline, Sequence, Delay and Recorder
-// - Possibility to alter objects while they are tweening (enabled by relative tweening) TODO
-// - Optimised in speed for handling large amounts of tweens (also fast for small amounts)
-// - Good synchronisation between tweens
-// - No rounding errors on classical tweens => the last property value is reached
-// - Managed lost page focus
-// - Starting/Stopping a playable within the callback of another playable
-//   will not result in any error or unwanted side effect
-
-// Warning: Using relative tweens will lead to rounding errors (very small but existant nonetheless).
-// If you know how to make relative tweens without rounding errors you might be a genius, please contribute
 
 /**
  *
@@ -58,7 +39,9 @@ var TINA = {
 	Player:        require('./Player'),
 	// Controller:    require('./Controller'), // TODO
 	Tween:         require('./Tween'),
-	// TweenRelative: require('./TweenRelative'), // TODO
+	// Warning: Using relative tweens will lead to rounding errors (very small but existant nonetheless).
+	// If you know how to make relative tweens without rounding errors you might be a genius, please contribute
+	TweenRelative: require('./TweenRelative'),
 	Timeline:      require('./Timeline'),
 	Sequence:      require('./Sequence'),
 	Recorder:      require('./Recorder'),
@@ -223,10 +206,6 @@ var TINA = {
 		return this;
 	},
 
-	add: function (tweener) {
-		this._tweeners.push(tweener);
-	},
-
 	setDefaultTweener: function (tweener) {
 		this._defaultTweener = tweener;
 	},
@@ -245,11 +224,21 @@ var TINA = {
 		this._tweeners.push(tweener);
 	},
 
+	add: function (tweener) {
+		this._tweeners.push(tweener);
+		return this;
+	},
+
 	_remove: function (tweener) {
 		var tweenerIdx = this._tweeners.indexOf(tweener);
 		if (tweenerIdx !== -1) {
 			this._tweeners.splice(tweenerIdx, 1);
 		}
+	},
+
+	remove: function (tweener) {
+		this._remove(tweener);
+		return this;
 	},
 
 	_getDefaultTweener: function () {

@@ -32,9 +32,10 @@ Include tina's build in your html using either the [minified library](https://ra
 
 ## API
 
-Existing playable components are: Tween, Timeline, Sequence, Recorder, Delay.
+Existing playable components are: Tween, Timeline, Sequence, Timer, Ticker, Recorder, Delay.
 The following is a non-exhaustive list of possibilities offered by the API.
 
+### Tween
 To create and start a **tween** (it will be automaticall updated):
 ``` javascript
 	var myObject = { x: 0 };
@@ -42,7 +43,7 @@ To create and start a **tween** (it will be automaticall updated):
 	var myTween = new TINA.Tween(myObject, ['x']).to(duration, { x: 1 }).start();
 ```
 
-To create a **tween** without affecting it to a variable:
+To create and start **tween** without affecting it to a variable:
 ``` javascript
 	TINA.Tween(myObject, ['x']).to(duration, { x: 1 }).start();
 ```
@@ -55,14 +56,14 @@ To tween an **array**:
 		.start();
 ```
 
-To create and start a tween on **several properties**:
+To tween **several properties**:
 ``` javascript
 	var myTween = new TINA.Tween(myObject, ['x', 'y'])
 		.to(duration, { x: 1, y: 0 })
 		.start();
 ```
 
-To create **several transitions**:
+To chain **several transitions**:
 ``` javascript
 	var myTween = new TINA.Tween(myObject, ['x'])
 		.to(duration1, { x: 1 })
@@ -70,7 +71,36 @@ To create **several transitions**:
 		.start();
 ```
 
-To start a tween after a given **delay**:
+To **ease** the tweening:
+``` javascript
+	var myObject = { x: 0 };
+	var easingParameter = 2;
+
+	var myTween = new TINA.Tween(myObject, ['x'])
+		.to(duration, { x: 1 }, 'elasticInOut', easingParameter)
+		.start();
+	// or
+	var myTween = new TINA.Tween(myObject, ['x'])
+		.to(duration, { x: 1 }, TINA.easing.elasticInOut, easingParameter)
+		.start();
+```
+
+To use **interpolation** functions:
+``` javascript
+	var myObject = { abc: 'Hello' };
+
+	var myTween = new TINA.Tween(myObject, ['abc'])
+		.to(duration, { abc: 'World' })
+		.interpolations({ abc: 'string' })
+		.start();
+	// or
+	var myTween = new TINA.Tween(myObject, ['abc'])
+		.to(duration, { abc: 'World' })
+		.interpolations({ abc: TINA.interpolation.string })
+		.start();
+```
+
+To start tweening after a given **delay**:
 ``` javascript
 	var myTween = new TINA.Tween(myObject, ['x']).to(duration, { x: 1 }).delay(1);
 ```
@@ -91,35 +121,8 @@ To add **callbacks** on specific events:
 		.delay(1);
 ```
 
-To use an **easing** function:
-``` javascript
-	var myObject = { x: 0 };
-	var easingParameter = 2;
-
-	var myTween = new TINA.Tween(myObject, ['x'])
-		.to(duration, { x: 1 }, 'elasticInOut', easingParameter)
-		.start();
-	// or
-	var myTween = new TINA.Tween(myObject, ['x'])
-		.to(duration, { x: 1 }, TINA.easing.elasticInOut, easingParameter)
-		.start();
-```
-
-To use **interpolation** functions:
-``` javascript
-	var myObject = { abc: 'Hello' };
-
-	var myTween = new TINA.Tween(myObject, ['abc'])
-		.interpolations({ abc: 'string' })
-		.to(duration, { abc: 'World' })
-		.start();
-	// or
-	var myTween = new TINA.Tween(myObject, ['abc'])
-		.interpolations({ abc: TINA.interpolation.string })
-		.to(duration, { abc: 'World' })
-		.start();
-```
-
+### Timeline
+Timelines are used to play tweens in parallel.
 To create a **timeline**:
 ``` javascript
 	var timePosTweenA = 0;
@@ -130,6 +133,8 @@ To create a **timeline**:
 		.start();
 ```
 
+### Sequence
+Sequences are used to chain tweens.
 To create a **sequence**:
 ``` javascript
  	// 1 second delay between the end of myTweenB and the start of myTweenC
@@ -139,6 +144,31 @@ To create a **sequence**:
 		.addDelay(1)
 		.add(myTweenC)
 		.start();
+```
+
+### Delay
+To create a **delay**:
+``` javascript
+	var myDelay = new TINA.Delay(duration);
+```
+Delays can be used as ```setTimeout``` that would be synchronised with all the other tweens.
+It can also be used to apply some treatment to objects for a given duration.
+For example, moving a particle for a fixed duration and then destroy it:
+``` javascript
+	var particleSpeedX = 5;
+	var particleSpeedY = 0;
+	var myParticle = new Particle();
+	var myDelay = new TINA.Delay(duration)
+		.onUpdate(function (time, dt) {
+			myParticle.x += particleSpeedX * dt;
+			myParticle.y += particleSpeedY * dt;
+
+			particleSpeedX *= Math.pow(0.9, dt);
+			particleSpeedY += gravity * dt;
+		})
+		.onComplete(function () {
+			myParticle.destroy()
+		});
 ```
 
 ### Tweener
@@ -156,7 +186,7 @@ If no tweener is specified, any started playable will be tweened by the default 
 
 To manually specify a tweener for a playable component:
 ``` javascript
-	// myTween will be tweened by myTimer
+	// myTween will be tweened by myTweener
 	var myTween = new TINA.Tween(myObject, ['x'])
 		.to(1, { x: 5 })
 		.tweener(myTweener)
@@ -165,23 +195,22 @@ To manually specify a tweener for a playable component:
 
 To specify the default tweener for every tween:
 ``` javascript
-	// I choose a timer as my tweener
+	// I choose a timer as my default tweener
 	var myTimer = new TINA.Timer().useAsDefault();
 	// myTween will be attached to myTimer and will take 0.5 seconds to tween
-	var myTween = new TINA.Tween(myObject, ['x']).to(30, { x: 5 }).start();
+	var myTween = new TINA.Tween(myObject, ['x']).to(0.5, { x: 5 }).start();
 ```
 
 #### Timer
 At every update the timer increases the time of all its tweens by a time proportional to the time elapsed since the previous update.
 To create a default timer that will update automatically:
 ``` javascript
-	var tups = 60;
-	var myTimer = new TINA.Timer(tups).useAsDefault().start();
+	var myTimer = new TINA.Timer().useAsDefault().start();
 ```
 
 To create a timer and update it manually:
 ``` javascript
-	var myTimer = new TINA.Timer();
+	var myTimer = new TINA.Timer().useAsDefault();
 	TINA.add(myTimer);
 
 	function update() {
@@ -193,13 +222,12 @@ To create a timer and update it manually:
 ```
 
 It is possible to specify the speed at which time will elapse for the timer.
-This flexbility allows the user to use units that he is comfortable with:
-
-Either 1 unit per second, 24 u/s, 60 u/s or 1000 u/s (or even 237.6 u/s if you come from another planet).
+This flexbility allows the user to use units that he is comfortable with.
+It could be ```1 unit per second```, ```24 u/s```, ```60 u/s``` or ```1000 u/s``` (or even ```237.6 u/s``` if you come from another planet).
 
 By default the timer goes at a speed of 1 unit per second.
-The following example demonstrates how to create a timer that goes at a speed of 60 units per second.
-Therefore, at 60 updates per second, each new update increases the time of the timer by 1.
+The following example demonstrates how to create a timer that goes at a speed of 60 units per second
+(Therefore, at 60 updates per second, each new update increases the time of the timer by 1).
 ``` javascript
 	var tups = 60; // Time units per second
 	var myTimer = new TINA.Timer(tups);
@@ -226,12 +254,12 @@ At every update the time is increased by a fixed amount.
 
 To create a ticker with **automatic updates**:
 ``` javascript
-	var myTicker = new TINA.Ticker().start();
+	var myTicker = new TINA.Ticker().useAsDefault().start();
 ```
 
 To create a ticker and update it manually:
 ``` javascript
-	var myTicker = new TINA.Ticker();
+	var myTicker = new TINA.Ticker().useAsDefault();
 	TINA.add(new TINA.Ticker());
 
 	function update() {
@@ -243,7 +271,7 @@ To create a ticker and update it manually:
 ```
 
 Similarly to a timer it is possible to specify how fast the time goes for a ticker.
-At every update the time will increase by the specified tupt:
+At every update the time will increase by the given ```tupt```:
 ``` javascript
 	var tupt = 2; // Time units per tick/update
 	var myTicker = new TINA.Ticker(tupt);
@@ -255,6 +283,9 @@ In the case when tweeners automatically update, TINA can be used as the main loo
 	// dt is the time elapsed since the previous update of TINA
 	// both durations are in milliseconds
 	TINA.onUpdate(function (t, dt) {
+		// At this point,
+		// all my tweens are up to date
+		// for the current iteration
 		myGameLogic.update(t, dt);
 		myPhysics.update(dt);
 		myRenderer.update();
