@@ -479,25 +479,6 @@ exports.backInOut = function(t, e) {
 });
 
 require.register("tina", function (exports, module) {
-// Why using TINA?
-// - Easy to use, friendly API
-// - Open source and MIT License
-// - High flexibility (tween parameters can be easily be modified after creation and even when they are running)
-// - High customizability (possibility to integrate easing and interpolation functions)
-// - A consequent library of easing and interpolation methods
-// - Running options (delay, speed, iterations, pingpong, persist) TODO
-// - Easy to debug (thanks to a smart warning system)
-// - Useful components such as Timeline, Sequence, Delay and Recorder
-// - Possibility to alter objects while they are tweening (enabled by relative tweening) TODO
-// - Optimised in speed for handling large amounts of tweens (also fast for small amounts)
-// - Good synchronisation between tweens
-// - No rounding errors on classical tweens => the last property value is reached
-// - Managed lost page focus
-// - Starting/Stopping a playable within the callback of another playable
-//   will not result in any error or unwanted side effect
-
-// Warning: Using relative tweens will lead to rounding errors (very small but existant nonetheless).
-// If you know how to make relative tweens without rounding errors you might be a genius, please contribute
 
 /**
  *
@@ -539,7 +520,9 @@ var TINA = {
 	Player:        require('tina/src/Player.js'),
 	// Controller:    require('./Controller'), // TODO
 	Tween:         require('tina/src/Tween.js'),
-	// TweenRelative: require('./TweenRelative'), // TODO
+	// Warning: Using relative tweens will lead to rounding errors (very small but existant nonetheless).
+	// If you know how to make relative tweens without rounding errors you might be a genius, please contribute
+	TweenRelative: require('./TweenRelative'),
 	Timeline:      require('tina/src/Timeline.js'),
 	Sequence:      require('tina/src/Sequence.js'),
 	Recorder:      require('tina/src/Recorder.js'),
@@ -2222,6 +2205,8 @@ Tween.prototype = Object.create(Playable.prototype);
 Tween.prototype.constructor = Tween;
 module.exports = Tween;
 
+Tween.prototype.Transition = Transition;
+
 Tween.prototype.reset = function () {
 	this._current     = 0;
 	this._transitions = [];
@@ -2297,9 +2282,10 @@ Tween.prototype.to = function (duration, toObject, easing, easingParam, interpol
 		}
 	}
 
-	// Getting 'to' object of previous transition, if any,
-	// as 'from' object for new transition
+	// Getting previous transition ending as the beginning for the new transition
 	var fromObject = this._getLastTransitionEnding();
+
+	var Transition = this.Transition;
 	var transition = new Transition(
 		this._properties,
 		fromObject,

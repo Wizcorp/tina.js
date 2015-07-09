@@ -151,7 +151,7 @@ To create a **delay**:
 ``` javascript
 	var myDelay = new TINA.Delay(duration);
 ```
-Delays can be used as ```setTimeout``` that would be synchronised with all the other tweens.
+Delays can be used as a ```setTimeout``` that would be synchronised with all the other tweens.
 It can also be used to apply some treatment to objects for a given duration.
 For example, moving a particle for a fixed duration and then destroy it:
 ``` javascript
@@ -202,7 +202,7 @@ To specify the default tweener for every tween:
 ```
 
 #### Timer
-At every update the timer increases the time of all its tweens by a time proportional to the time elapsed since the previous update.
+At every update its internal time is increased by a fixed proportion of the time elapsed since the previous update.
 To create a default timer that will update automatically:
 ``` javascript
 	var myTimer = new TINA.Timer().useAsDefault().start();
@@ -226,31 +226,30 @@ This flexbility allows the user to use units that he is comfortable with.
 It could be ```1 unit per second```, ```24 u/s```, ```60 u/s``` or ```1000 u/s``` (or even ```237.6 u/s``` if you come from another planet).
 
 By default the timer goes at a speed of 1 unit per second.
-The following example demonstrates how to create a timer that goes at a speed of 60 units per second
-(Therefore, at 60 updates per second, each new update increases the time of the timer by 1).
+Every second, the time will increase by the given ```tups```:
 ``` javascript
 	var tups = 60; // Time units per second
 	var myTimer = new TINA.Timer(tups);
 ```
 
-Effect of changing the tups of a timer:
+Effect of different values for the ```tups```:
 ``` javascript
 	var myTimer1 = new TINA.Timer(1);
 	var myTimer60 = new TINA.Timer(60);
 	var myTimer1000 = new TINA.Timer(1000);
 
 	// The following will tween myObject in 10 seconds
-	TINA.Tween(myObject, ['x']).to(10, { x: 1}).tweener(myTimer1);
+	TINA.Tween(myObject, ['x']).to(10, { x: 1 }).tweener(myTimer1);
 
 	// The following will tween myObject in 1 / 6 seconds
-	TINA.Tween(myObject, ['x']).to(10, { x: 1}).tweener(myTimer60);
+	TINA.Tween(myObject, ['x']).to(10, { x: 1 }).tweener(myTimer60);
 
 	// The following will tween myObject in 0.01 seconds
-	TINA.Tween(myObject, ['x']).to(10, { x: 1}).tweener(myTimer1000);
+	TINA.Tween(myObject, ['x']).to(10, { x: 1 }).tweener(myTimer1000);
 ```
 
 #### Ticker
-At every update the time is increased by a fixed amount.
+At every update its internal time is increased by a fixed amount.
 
 To create a ticker with **automatic updates**:
 ``` javascript
@@ -277,6 +276,23 @@ At every update the time will increase by the given ```tupt```:
 	var myTicker = new TINA.Ticker(tupt);
 ```
 
+Effect of different values for the ```tupt```:
+``` javascript
+	var myTicker01 = new TINA.Ticker(0.1);
+	var myTicker1 = new TINA.Ticker(1);
+	var myTicker10 = new TINA.Ticker(10);
+
+	// The following will tween myObject in 100 updates
+	TINA.Tween(myObject, ['x']).to(10, { x: 1 }).tweener(myTicker01);
+
+	// The following will tween myObject in 10 updates
+	TINA.Tween(myObject, ['x']).to(10, { x: 1 }).tweener(myTicker1);
+
+	// The following will tween myObject in 1 update
+	TINA.Tween(myObject, ['x']).to(10, { x: 1 }).tweener(myTicker10);
+```
+
+#### TINA's update callback
 In the case when tweeners automatically update, TINA can be used as the main loop of the application.
 ``` javascript
 	// t is the total time elapsed since TINA started
