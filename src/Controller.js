@@ -1,31 +1,38 @@
+Playable = require('./Playable');
+
 /** @class */
-function Controller() {
-	// Advanced features
+function Controller(playable) {
+	Playable.call(this);
+
+	this._playable = playable;
+
 	this._speed      = 1;     // Running speed of the playable
 	this._iterations = 1;     // Number of times to iterate the playable
 	this._persist    = false; // To keep the playable running instead of completing
 	this._pingpong   = false; // To make the playable go backward on even iterations
 	this._pongping   = false; // To make the playable go backward on odd iterations
 };
+Controller.prototype = Object.create(Playable.prototype);
+Controller.prototype.constructor = Controller;
 module.exports = Controller;
 
-Controller.prototype._advanced = true;
+myTween = new TINA.Tween().control();
 
 Object.defineProperty(Controller.prototype, 'speed', {
 	get: function () { return this._speed; },
 	set: function (speed) {
-		var dt = this._timeNow - this._timeStart;
+		var dt = this._time - this._startTime;
 		if (speed === 0) {
 			// Setting timeStart as if new speed was 1
-			this._timeStart = this._timeNow - dt * this._speed;
+			this._startTime = this._time - dt * this._speed;
 		} else {
 			if (this._speed === 0) {
 				// If current speed is 0,
 				// it corresponds to a virtual speed of 1
 				// when it comes to determing where timeStart is
-				this._timeStart = this._timeNow - dt / speed;
+				this._startTime = this._time - dt / speed;
 			} else {
-				this._timeStart = this._timeNow - dt * this._speed / speed;
+				this._startTime = this._time - dt * this._speed / speed;
 			}
 		}
 
@@ -37,9 +44,9 @@ Object.defineProperty(Controller.prototype, 'time', {
 	get: function () {
 		if(this._speed === 0) {
 			// Speed is virtually 1
-			return this._timeNow - this._timeStart;
+			return this._time - this._startTime;
 		} else {
-			return (this._timeNow - this._timeStart) * this._speed;
+			return (this._time - this._startTime) * this._speed;
 		},
 	set: function (time) {
 		this.goTo(time);
@@ -59,10 +66,10 @@ Controller.prototype.goToEnd = function () {
 Controller.prototype.goTo = function (time) {
 	if(this._speed === 0) {
 		// Speed is virtually 1
-		this._timeStart = this._timeNow - time;
+		this._startTime = this._time - time;
 	} else {
 		// Offsetting timeStart with respect to timeNow and speed
-		this._timeStart = this._timeNow - time / this._speed;
+		this._startTime = this._time - time / this._speed;
 	}
 	return this;
 };
@@ -95,9 +102,9 @@ Controller.prototype.pongping = function (pongping) {
 	return this;
 };
 
-Controller.prototype._update = function (time) {
+Controller.prototype._update = function (time, dt) {
 	// Converting absolute time into relative time
-	var t = (time - this._timeStart) * this._speed;
+	var t = (time - this._startTime) * this._speed;
 
 	// Iteration at current update
 	var currentIteration = t / this._duration;
@@ -117,19 +124,19 @@ Controller.prototype._update = function (time) {
 
 	// Callback triggered before resetting time
 	if (this._onUpdate !== null) {
-		var dt = time - this._timeNow;
+		var dt = time - this._time;
 		this._onUpdate(t, dt);
 	}
 	
 	if (timeOverflow === undefined) {
-		this._timeNow = time;
+		this._time = time;
 		// Not completed, no overflow
 		return;
 	}
 
 	if (currentIteration < this._iterations) {
 		// Keep playing, no overflow
-		this._timeNow = time;
+		this._time = time;
 		return;
 	}
 
@@ -140,24 +147,24 @@ Controller.prototype._update = function (time) {
 			// Time flows positively
 			// The end is the end
 			if (this._speed === 0) {
-				this._timeStart = time - this._duration * this._iterations;
+				this._startTime = time - this._duration * this._iterations;
 			} else {
-				this._timeStart = time - (this._duration * this._iterations) / this._speed;
+				this._startTime = time - (this._duration * this._iterations) / this._speed;
 			}
 		} else {
 			// Time flows negatively
 			// The beginning is the end (is the beginning, c.f Smashing Pumpkins)
-			this._timeStart = time;
+			this._startTime = time;
 		}
 
 		// No overflow
-		this._timeNow = time;
+		this._time = time;
 		return;
 	}
 
 	// Direction of the playable
-	dt = time - this._timeNow;
-	this._timeNow = time;
+	dt = time - this._time;
+	this._time = time;
 
 	// The playable completes
 	return this._complete(timeOverflow, dt);
