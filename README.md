@@ -4,6 +4,8 @@
 
 **Tweening and INterpolations for Animation**
 
+## Warning: Still in beta version!
+
 Animation library to easily create customisable tweens, timelines, sequences and other playable components.
 
 * **Easy to use**, friendly API
