@@ -73,4 +73,61 @@ function updatePIE(object, t) {
 	}
 };
 
-module.exports = [[[update, updateP], [updateI, updatePI]], [[updateE, updatePE], [updateIE, updatePIE]]];
+var updateMethods = [
+	[
+		[update, updateP],
+		[updateI, updatePI]
+	], [
+		[updateE, updatePE],
+		[updateIE, updatePIE]
+	]
+];
+
+function Transition(properties, from, to, start, duration, easing, easingParam, interpolations, interpolationParams) {
+	this.start    = start;
+	this.end      = start + duration;
+	this.duration = duration;
+
+	this.from = from;
+	this.to   = to;
+
+	// Easing flag - Whether an easing function is used
+	// 0 => Using linear easing
+	// 1 => Using custom easing
+	var easingFlag;
+	if (easing) {
+		easingFlag = 1;
+		this.easing = easing;
+		this.easingParam = easingParam;
+	} else {
+		easingFlag = 0;
+	}
+
+	// Interpolation flag - Whether an interpolation function is used
+	// 0 => No Interpolation
+	// 1 => At least one interpolation
+	var interpFlag;
+	if (interpolations === null) {
+		interpFlag = 0;
+	} else {
+		interpFlag = 1;
+		this.interps = interpolations;
+		this.interpParams = interpolationParams || {};
+	}
+
+	// Property flag - Whether the transition has several properties
+	// 0 => Only one property
+	// 1 => Several properties
+	var propsFlag;
+	if (properties.length === 1) {
+		propsFlag = 0;
+		this.prop = properties[0];
+	} else {
+		propsFlag  = 1;
+		this.props = properties;
+	}
+
+	this.update = updateMethods[easingFlag][interpFlag][propsFlag];
+}
+
+module.exports = Transition;

@@ -16,9 +16,11 @@
 		"src/Ticker.js",
 		"src/Timeline.js",
 		"src/Timer.js",
+		"src/Transition.js",
+		"src/TransitionRelative.js",
 		"src/Tween.js",
 		"src/Tweener.js",
-		"src/updateMethods.js"
+		"src/TweenRelative.js"
 	],
 	"repository": {
 		"type": "git",
