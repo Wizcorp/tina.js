@@ -2528,11 +2528,11 @@ Tween.prototype.from = function (fromObject) {
 };
 
 Tween.prototype._setFrom = function () {
-	// Copying properties of given object
+	// Copying properties of tweened object
 	this._from = {};
 	for (var p = 0; p < this._properties.length; p += 1) {
 		var property = this._properties[p];
-		this._from[property] = fromObject[property];
+		this._from[property] = this._object[property];
 	}
 
 	return this._from;
