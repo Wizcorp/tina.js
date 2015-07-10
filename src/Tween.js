@@ -1,64 +1,18 @@
-var Playable      = require('./Playable');
-var updateMethods = require('./updateMethods');
+var Playable   = require('./Playable');
+var Transition = require('./Transition');
 
 var easingFunctions        = require('./easing');
 var interpolationFunctions = require('./interpolation');
 
-function TimeFrame(start, duration) {
-	this.start    = start;
-	this.end      = start + duration;
-	this.duration = duration;
-}
-
-function Transition(properties, from, to, start, duration, easing, easingParam, interpolations, interpolationParams) {
-	TimeFrame.call(this, start, duration);
-
-	this.from = from;
-	this.to   = to;
-
-	// Easing flag - Whether an easing function is used
-	// 0 => Using linear easing
-	// 1 => Using custom easing
-	var easingFlag;
-	if (easing) {
-		easingFlag = 1;
-		this.easing = easing;
-		this.easingParam = easingParam;
-	} else {
-		easingFlag = 0;
-	}
-
-	// Interpolation flag - Whether an interpolation function is used
-	// 0 => No Interpolation
-	// 1 => At least one interpolation
-	var interpFlag;
-	if (interpolations === null) {
-		interpFlag = 0;
-	} else {
-		interpFlag = 1;
-		this.interps = interpolations;
-		this.interpParams = interpolationParams || {};
-	}
-
-	// Property flag - Whether the transition has several properties
-	// 0 => Only one property
-	// 1 => Using custom easing
-	var propsFlag;
-	if (properties.length === 1) {
-		propsFlag = 0;
-		this.prop = properties[0];
-	} else {
-		propsFlag  = 1;
-		this.props = properties;
-	}
-
-	this.update = updateMethods[easingFlag][interpFlag][propsFlag];
-}
 
 // Temporisation, used for waiting
 function Temporisation(start, duration, toObject) {
-	TimeFrame.call(this, start, duration);
+	this.start    = start;
+	this.end      = start + duration;
+	this.duration = duration;
+
 	this.to = toObject;
+
 	this.update = function () {};
 }
 
@@ -156,7 +110,7 @@ Tween.prototype.from = function (fromObject) {
 	return this;
 };
 
-Tween.prototype._setFromObject = function (fromObject) {
+Tween.prototype._setFrom = function () {
 	// Copying properties of given object
 	this._from = {};
 	for (var p = 0; p < this._properties.length; p += 1) {
@@ -171,7 +125,7 @@ Tween.prototype._getLastTransitionEnding = function () {
 	if (this._transitions.length > 0) {
 		return this._transitions[this._transitions.length - 1].to;
 	} else {
-		return (this._from === null) ? this._setFromObject(this._object) : this._from;
+		return (this._from === null) ? this._setFrom() : this._from;
 	}
 };
 

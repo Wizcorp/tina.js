@@ -23,7 +23,7 @@ var requestAnimFrame = (function(){
 		window.mozRequestAnimationFrame    || 
 		window.oRequestAnimationFrame      || 
 		window.msRequestAnimationFrame     || 
-		function( callback ){
+		function(callback){
 			window.setTimeout(callback, 1000 / 60);
 		};
 })();
@@ -39,8 +39,7 @@ var TINA = {
 	Player:        require('./Player'),
 	// Controller:    require('./Controller'), // TODO
 	Tween:         require('./Tween'),
-	// Warning: Using relative tweens will lead to rounding errors (very small but existant nonetheless).
-	// If you know how to make relative tweens without rounding errors you might be a genius, please contribute
+	// Warning: Using relative tweens can lead to rounding errors (very small).
 	TweenRelative: require('./TweenRelative'),
 	Timeline:      require('./Timeline'),
 	Sequence:      require('./Sequence'),

@@ -1,12 +1,14 @@
 Playable = require('./Playable');
 
 /** @class */
-function Controller(playable) {
+function Controller(playable, speed) {
 	Playable.call(this);
 
-	this._playable = playable;
+	if (speed === null || speed === undefined) {
+		speed = 1;
+	}
 
-	this._speed      = 1;     // Running speed of the playable
+	this._speed      = speed; // Running speed of the playable
 	this._iterations = 1;     // Number of times to iterate the playable
 	this._persist    = false; // To keep the playable running instead of completing
 	this._pingpong   = false; // To make the playable go backward on even iterations
@@ -16,7 +18,8 @@ Controller.prototype = Object.create(Playable.prototype);
 Controller.prototype.constructor = Controller;
 module.exports = Controller;
 
-myTween = new TINA.Tween().control();
+var myTween = new TINA.Tween(myObject, ['x']).to(5, { x: 2 })
+var myController = new Controller(myTween, speed).iterations(2).persist(true).start();
 
 Object.defineProperty(Controller.prototype, 'speed', {
 	get: function () { return this._speed; },
@@ -29,7 +32,7 @@ Object.defineProperty(Controller.prototype, 'speed', {
 			if (this._speed === 0) {
 				// If current speed is 0,
 				// it corresponds to a virtual speed of 1
-				// when it comes to determing where timeStart is
+				// when it comes to determing where the starting time is
 				this._startTime = this._time - dt / speed;
 			} else {
 				this._startTime = this._time - dt * this._speed / speed;
@@ -120,7 +123,7 @@ Controller.prototype._update = function (time, dt) {
 		t = this._duration - t;
 	}
 
-	var timeOverflow = this._doUpdate(t);
+	this._playable._upate(t);
 
 	// Callback triggered before resetting time
 	if (this._onUpdate !== null) {

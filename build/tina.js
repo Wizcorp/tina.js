@@ -479,25 +479,6 @@ exports.backInOut = function(t, e) {
 });
 
 require.register("tina", function (exports, module) {
-// Why using TINA?
-// - Easy to use, friendly API
-// - Open source and MIT License
-// - High flexibility (tween parameters can be easily be modified after creation and even when they are running)
-// - High customizability (possibility to integrate easing and interpolation functions)
-// - A consequent library of easing and interpolation methods
-// - Running options (delay, speed, iterations, pingpong, persist) TODO
-// - Easy to debug (thanks to a smart warning system)
-// - Useful components such as Timeline, Sequence, Delay and Recorder
-// - Possibility to alter objects while they are tweening (enabled by relative tweening) TODO
-// - Optimised in speed for handling large amounts of tweens (also fast for small amounts)
-// - Good synchronisation between tweens
-// - No rounding errors on classical tweens => the last property value is reached
-// - Managed lost page focus
-// - Starting/Stopping a playable within the callback of another playable
-//   will not result in any error or unwanted side effect
-
-// Warning: Using relative tweens will lead to rounding errors (very small but existant nonetheless).
-// If you know how to make relative tweens without rounding errors you might be a genius, please contribute
 
 /**
  *
@@ -523,7 +504,7 @@ var requestAnimFrame = (function(){
 		window.mozRequestAnimationFrame    || 
 		window.oRequestAnimationFrame      || 
 		window.msRequestAnimationFrame     || 
-		function( callback ){
+		function(callback){
 			window.setTimeout(callback, 1000 / 60);
 		};
 })();
@@ -539,7 +520,8 @@ var TINA = {
 	Player:        require('tina/src/Player.js'),
 	// Controller:    require('./Controller'), // TODO
 	Tween:         require('tina/src/Tween.js'),
-	// TweenRelative: require('./TweenRelative'), // TODO
+	// Warning: Using relative tweens can lead to rounding errors (very small).
+	TweenRelative: require('tina/src/TweenRelative.js'),
 	Timeline:      require('tina/src/Timeline.js'),
 	Sequence:      require('tina/src/Sequence.js'),
 	Recorder:      require('tina/src/Recorder.js'),
@@ -2108,21 +2090,96 @@ Timer.prototype.convertToTimeUnits = function(seconds) {
 };
 });
 
-require.register("tina/src/Tween.js", function (exports, module) {
-var Playable      = require('tina/src/Playable.js');
-var updateMethods = require('tina/src/updateMethods.js');
+require.register("tina/src/Transition.js", function (exports, module) {
+// The file is a good representation of the constant fight between maintainability and performance
+// For performance reasons several update methods are created
+// The appropriate method should be used for tweening. The selection depends on:
+// 	- The number of props to tween
+//  - Whether or not an easing is being used
+//  - Whether or not an interpolation is being used
 
-var easingFunctions        = require('tina/src/easing.js');
-var interpolationFunctions = require('tina/src/interpolation.js');
+// One property
+function update(object, t) {
+	var p = this.prop;
+	object[p] = this.from[p] * (1 - t) + this.to[p] * t;
+};
 
-function TimeFrame(start, duration) {
+// Several Properties
+function updateP(object, t) {
+	var q = this.props;
+	for (var i = 0; i < this.props.length; i += 1) {
+		var p = q[i];
+		object[p] = this.from[p] * (1 - t) + this.to[p] * t;
+	}
+};
+
+// Interpolation
+function updateI(object, t) {
+	var p = this.prop;
+	object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);
+};
+
+// Interpolation
+// Several Properties
+function updatePI(object, t) {
+	var q = this.props;
+	for (var i = 0; i < q.length; i += 1) {
+		var p = q[i];
+		object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);
+	}
+};
+
+// Easing
+function updateE(object, t) {
+	t = this.easing(t, this.easingParam);
+	var p = this.prop;
+	object[p] = this.from[p] * (1 - t) + this.to[p] * t;
+};
+
+// Easing
+// Several Properties
+function updatePE(object, t) {
+	var q = this.props;
+	t = this.easing(t, this.easingParam);
+	for (var i = 0; i < q.length; i += 1) {
+		var p = q[i];
+		object[p] = this.from[p] * (1 - t) + this.to[p] * t;
+	}
+};
+
+// Easing
+// Interpolation
+function updateIE(object, t) {
+	var p = this.prop;
+	object[p] = this.interps[p](this.easing(t, this.easingParam), this.from[p], this.to[p], this.interpParams[p]);
+};
+
+// Easing
+// Interpolation
+// Several Properties
+function updatePIE(object, t) {
+	var q = this.props;
+	t = this.easing(t, this.easingParam);
+	for (var i = 0; i < q.length; i += 1) {
+		var p = q[i];
+		object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);
+	}
+};
+
+var updateMethods = [
+	[
+		[update, updateP],
+		[updateI, updatePI]
+	], [
+		[updateE, updatePE],
+		[updateIE, updatePIE]
+	]
+];
+
+function Transition(properties, from, to, start, duration, easing, easingParam, interpolations, interpolationParams) {
 	this.start    = start;
 	this.end      = start + duration;
 	this.duration = duration;
-}
-
-function Transition(properties, from, to, start, duration, easing, easingParam, interpolations, interpolationParams) {
-	TimeFrame.call(this, start, duration);
 
 	this.from = from;
 	this.to   = to;
@@ -2153,7 +2210,7 @@ function Transition(properties, from, to, start, duration, easing, easingParam, 
 
 	// Property flag - Whether the transition has several properties
 	// 0 => Only one property
-	// 1 => Using custom easing
+	// 1 => Several properties
 	var propsFlag;
 	if (properties.length === 1) {
 		propsFlag = 0;
@@ -2166,10 +2223,213 @@ function Transition(properties, from, to, start, duration, easing, easingParam, 
 	this.update = updateMethods[easingFlag][interpFlag][propsFlag];
 }
 
+module.exports = Transition;
+});
+
+require.register("tina/src/TransitionRelative.js", function (exports, module) {
+
+// One property
+function update(object, t) {
+	var p = this.prop;
+	var now = this.from[p] * (1 - t) + this.to[p] * t;
+	object[p] = object[p] + (now - this.prev);
+	this.prev = now;
+};
+
+// Several Properties
+function updateP(object, t) {
+	var q = this.props;
+	for (var i = 0; i < this.props.length; i += 1) {
+		var p = q[i];
+		var now = this.from[p] * (1 - t) + this.to[p] * t;
+		object[p] = object[p] + (now - this.prev[p]);
+		this.prev[p] = now;
+	}
+};
+
+// Interpolation
+function updateI(object, t) {
+	var p  = this.prop;
+	var now = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);
+	object[p] = object[p] + (now - this.prev);
+	this.prev = now;
+};
+
+// Interpolation
+// Several Properties
+function updatePI(object, t) {
+	var q = this.properties;
+	for (var i = 0; i < q.length; i += 1) {
+		var p = q[i];
+		var now = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);
+		object[p] = object[p] + (now - this.prev[p]);
+		this.prev[p] = now;
+	}
+};
+
+// Easing
+function updateE(object, t) {
+	t = this.easing(t, this.easingParams);
+	var p = this.prop;
+	var now = this.from[p] * (1 - t) + this.to[p] * t;
+	object[p] = object[p] + (now - this.prev);
+	this.prev = now;
+};
+
+// Easing
+// Several Properties
+function updatePE(object, t) {
+	var q = this.properties;
+	t = this.easing(t, this.easingParams);
+	for (var i = 0; i < q.length; i += 1) {
+		var p = q[i];
+		var now = this.from[p] * (1 - t) + this.to[p] * t;
+		object[p] = object[p] + (now - this.prev[p]);
+		this.prev[p] = now;
+	}
+};
+
+// Easing
+// Interpolation
+function updateIE(object, t) {
+	var p = this.prop;
+	var now = this.interps[p](this.easing(t, this.easingParams), this.from[p], this.to[p], this.interpParams[p]);
+	object[p] = object[p] + (now - this.prev);
+	this.prev = now;
+};
+
+// Easing
+// Interpolation
+// Several Properties
+function updatePIE(object, t) {
+	var q = this.properties;
+	t = this.easing(t, this.easingParams);
+	for (var i = 0; i < q.length; i += 1) {
+		var p = q[i];
+		var now = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);
+		object[p] = object[p] + (now - this.prev[p]);
+		this.prev[p] = now;
+	}
+};
+
+var updateMethods = [
+	[
+		[update, updateP],
+		[updateI, updatePI]
+	], [
+		[updateE, updatePE],
+		[updateIE, updatePIE]
+	]
+];
+
+function Transition(properties, from, to, start, duration, easing, easingParam, interpolations, interpolationParams) {
+	this.start    = start;
+	this.end      = start + duration;
+	this.duration = duration;
+
+	this.from = from;
+	this.to   = to;
+
+	// Easing flag - Whether an easing function is used
+	// 0 => Using linear easing
+	// 1 => Using custom easing
+	var easingFlag;
+	if (easing) {
+		easingFlag = 1;
+		this.easing = easing;
+		this.easingParam = easingParam;
+	} else {
+		easingFlag = 0;
+	}
+
+	// Interpolation flag - Whether an interpolation function is used
+	// 0 => No Interpolation
+	// 1 => At least one interpolation
+	var interpFlag;
+	if (interpolations === null) {
+		interpFlag = 0;
+	} else {
+		interpFlag = 1;
+		this.interps = interpolations;
+		this.interpParams = interpolationParams || {};
+	}
+
+	// Property flag - Whether the transition has several properties
+	// 0 => Only one property
+	// 1 => Several properties
+	var propsFlag;
+	if (properties.length === 1) {
+		propsFlag = 0;
+		this.prop = properties[0];
+		this.prev = 0;
+	} else {
+		propsFlag  = 1;
+		this.props = properties;
+		this.prev  = {};
+		for (var p = 0; p < properties.length; p += 1) {
+			this.prev[properties[p]] = 0;
+		}
+	}
+
+	this.update = updateMethods[easingFlag][interpFlag][propsFlag];
+}
+
+module.exports = Transition;
+
+
+// exports.number = function (a, b) {
+// 	return a + b;
+// }
+
+// exports.vector = function (a, b) {
+// 	var n = a.length;
+// 	var addition = [];
+// 	for (var i = 0; i < n; a += 1) {
+// 		addition[i] = a[i] + b[i];
+// 	}
+
+// 	return addition;
+// }
+
+// exports.number = function (a, b) {
+// 	return a - b;
+// }
+
+// exports.vector = function (a, b) {
+// 	var n = a.length;
+// 	var difference = [];
+// 	for (var i = 0; i < n; a += 1) {
+// 		difference[i] = a[i] - b[i];
+// 	}
+
+// 	return difference;
+// }
+
+// function update(object, t) {
+// 	var prop = this.prop;
+// 	var now  = this.from[p] * (1 - t) + this.to[p] * t;
+
+// 	object[p] = this.addition[p](object[p], this.difference[p](now, this.prev));
+// 	this.prev = now;
+// };
+});
+
+require.register("tina/src/Tween.js", function (exports, module) {
+var Playable   = require('tina/src/Playable.js');
+var Transition = require('tina/src/Transition.js');
+
+var easingFunctions        = require('tina/src/easing.js');
+var interpolationFunctions = require('tina/src/interpolation.js');
+
+
 // Temporisation, used for waiting
 function Temporisation(start, duration, toObject) {
-	TimeFrame.call(this, start, duration);
+	this.start    = start;
+	this.end      = start + duration;
+	this.duration = duration;
+
 	this.to = toObject;
+
 	this.update = function () {};
 }
 
@@ -2222,6 +2482,8 @@ Tween.prototype = Object.create(Playable.prototype);
 Tween.prototype.constructor = Tween;
 module.exports = Tween;
 
+Tween.prototype.Transition = Transition;
+
 Tween.prototype.reset = function () {
 	this._current     = 0;
 	this._transitions = [];
@@ -2265,7 +2527,7 @@ Tween.prototype.from = function (fromObject) {
 	return this;
 };
 
-Tween.prototype._setFromObject = function (fromObject) {
+Tween.prototype._setFrom = function () {
 	// Copying properties of given object
 	this._from = {};
 	for (var p = 0; p < this._properties.length; p += 1) {
@@ -2280,7 +2542,7 @@ Tween.prototype._getLastTransitionEnding = function () {
 	if (this._transitions.length > 0) {
 		return this._transitions[this._transitions.length - 1].to;
 	} else {
-		return (this._from === null) ? this._setFromObject(this._object) : this._from;
+		return (this._from === null) ? this._setFrom() : this._from;
 	}
 };
 
@@ -2297,9 +2559,10 @@ Tween.prototype.to = function (duration, toObject, easing, easingParam, interpol
 		}
 	}
 
-	// Getting 'to' object of previous transition, if any,
-	// as 'from' object for new transition
+	// Getting previous transition ending as the beginning for the new transition
 	var fromObject = this._getLastTransitionEnding();
+
+	var Transition = this.Transition;
 	var transition = new Transition(
 		this._properties,
 		fromObject,
@@ -2451,83 +2714,43 @@ Tweener.prototype.useAsDefault = function () {
 };
 });
 
-require.register("tina/src/updateMethods.js", function (exports, module) {
-// The file is a good representation of the constant fight between maintainability and performance
-// For performance reasons several update methods are created
-// The appropriate method should be used for tweening. The selection depends on:
-// 	- The number of props to tween
-//  - Whether or not an easing is being used
-//  - Whether or not an interpolation is being used
+require.register("tina/src/TweenRelative.js", function (exports, module) {
+var Tween              = require('tina/src/Tween.js');
+var TransitionRelative = require('tina/src/TransitionRelative.js');
 
-// One property
-function update(object, t) {
-	var p = this.prop;
-	object[p] = this.from[p] * (1 - t) + this.to[p] * t;
-};
+/**
+ *
+ * @classdesc
+ * Manages transition of properties of an object
+ *
+ * @param {object} object     - Object to tween
+ * @param {array}  properties - Properties of the object to tween
+ *
+ */
 
-// Several Properties
-function updateP(object, t) {
-	var q = this.props;
-	for (var i = 0; i < this.props.length; i += 1) {
-		var p = q[i];
-		object[p] = this.from[p] * (1 - t) + this.to[p] * t;
+function TweenRelative(object, properties) {
+	if ((this instanceof TweenRelative) === false) {
+		return new TweenRelative(object, properties);
 	}
-};
 
-// Interpolation
-function updateI(object, t) {
-	var p = this.prop;
-	object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);
-};
+	Tween.call(this, object, properties);
+}
+TweenRelative.prototype = Object.create(Tween.prototype);
+TweenRelative.prototype.constructor = TweenRelative;
+module.exports = TweenRelative;
 
-// Interpolation
-// Several Properties
-function updatePI(object, t) {
-	var q = this.props;
-	for (var i = 0; i < q.length; i += 1) {
-		var p = q[i];
-		object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);
+TweenRelative.prototype._setFrom = function () {
+	// Setting all the initial properties to 0
+	this._from = {};
+	for (var p = 0; p < this._properties.length; p += 1) {
+		var property = this._properties[p];
+		this._from[property] = 0;
 	}
+
+	return this._from;
 };
 
-// Easing
-function updateE(object, t) {
-	t = this.easing(t, this.easingParam);
-	var p = this.prop;
-	object[p] = this.from[p] * (1 - t) + this.to[p] * t;
-};
-
-// Easing
-// Several Properties
-function updatePE(object, t) {
-	var q = this.props;
-	t = this.easing(t, this.easingParam);
-	for (var i = 0; i < q.length; i += 1) {
-		var p = q[i];
-		object[p] = this.from[p] * (1 - t) + this.to[p] * t;
-	}
-};
-
-// Easing
-// Interpolation
-function updateIE(object, t) {
-	var p = this.prop;
-	object[p] = this.interps[p](this.easing(t, this.easingParam), this.from[p], this.to[p], this.interpParams[p]);
-};
-
-// Easing
-// Interpolation
-// Several Properties
-function updatePIE(object, t) {
-	var q = this.props;
-	t = this.easing(t, this.easingParam);
-	for (var i = 0; i < q.length; i += 1) {
-		var p = q[i];
-		object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);
-	}
-};
-
-module.exports = [[[update, updateP], [updateI, updatePI]], [[updateE, updatePE], [updateIE, updatePIE]]];
+TweenRelative.prototype.Transition = TransitionRelative;
 });
 
 require("tina");

@@ -1,58 +1,5 @@
-var Tween         = require('./Tween');
-var updateMethods = require('./updateMethodsRelative');
-
-function TimeFrame(start, duration) {
-	this.start    = start;
-	this.end      = start + duration;
-	this.duration = duration;
-}
-
-function Transition(properties, from, to, start, duration, easing, easingParam, interpolations, interpolationParams) {
-	TimeFrame.call(this, start, duration);
-
-	this.from = from;
-	this.to   = to;
-
-	// Easing flag - Whether an easing function is used
-	// 0 => Using linear easing
-	// 1 => Using custom easing
-	var easingFlag;
-	if (easing) {
-		easingFlag = 1;
-		this.easing = easing;
-		this.easingParam = easingParam;
-	} else {
-		easingFlag = 0;
-	}
-
-	// Interpolation flag - Whether an interpolation function is used
-	// 0 => No Interpolation
-	// 1 => At least one interpolation
-	var interpFlag;
-	if (interpolations === null) {
-		interpFlag = 0;
-	} else {
-		interpFlag = 1;
-		this.interps = interpolations;
-		this.interpParams = interpolationParams || {};
-	}
-
-	// Property flag - Whether the transition has several properties
-	// 0 => Only one property
-	// 1 => Using custom easing
-	var propsFlag;
-	if (properties.length === 1) {
-		propsFlag = 0;
-		this.prop = properties[0];
-		this.prev = 0;
-	} else {
-		propsFlag  = 1;
-		this.props = properties;
-		this.prev  = {};
-	}
-
-	this.update = updateMethods[easingFlag][interpFlag][propsFlag];
-}
+var Tween              = require('./Tween');
+var TransitionRelative = require('./TransitionRelative');
 
 /**
  *
@@ -69,10 +16,21 @@ function TweenRelative(object, properties) {
 		return new TweenRelative(object, properties);
 	}
 
-	Tween.call(this);
+	Tween.call(this, object, properties);
 }
 TweenRelative.prototype = Object.create(Tween.prototype);
 TweenRelative.prototype.constructor = TweenRelative;
 module.exports = TweenRelative;
+
+TweenRelative.prototype._setFrom = function () {
+	// Setting all the initial properties to 0
+	this._from = {};
+	for (var p = 0; p < this._properties.length; p += 1) {
+		var property = this._properties[p];
+		this._from[property] = 0;
+	}
+
+	return this._from;
+};
 
 TweenRelative.prototype.Transition = TransitionRelative;
