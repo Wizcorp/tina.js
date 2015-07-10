@@ -1,8 +1,7 @@
 # TINA
+**Tweening and INterpolations for Animation**
 
 [![Install with NPM](https://nodei.co/npm/tina.png?downloads=true&stars=true)](https://nodei.co/npm/tina/)
-
-**Tweening and INterpolations for Animation**
 
 ## Warning: Still in beta version!
 
