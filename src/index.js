@@ -247,7 +247,7 @@ var TINA = {
 		} else {
 			// Is the default tweener running?
 			var idx = this._tweeners.indexOf(this._defaultTweener);
-			if (idx !== -1) {
+			if (idx === -1) {
 				// Not running, starting it
 				this._defaultTweener.start();
 			}
