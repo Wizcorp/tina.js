@@ -1,8 +1,10 @@
 /** @class */
 function Playable() {
-	this._startTime = 0;
-	this._time      = 0;
-	this._duration  = 0;
+	this._startTime  = 0;
+	this._time       = 0;
+	this._duration   = 0;
+	this._iterations = 1;
+	this._persist    = false;
 
 	this._handle = null;
 	this._player = null;
@@ -38,6 +40,16 @@ Playable.prototype.goToBeginning = function () {
 
 Playable.prototype.goToEnd = function () {
 	this.goTo(this.getDuration());
+	return this;
+};
+
+Playable.prototype.iterations = function (iterations) {
+	this._iterations = iterations;
+	return this;
+};
+
+Playable.prototype.persist = function (persist) {
+	this._persist = persist;
 	return this;
 };
 
@@ -123,6 +135,13 @@ Playable.prototype.pause = function () {
 };
 
 Playable.prototype._complete = function (overflow) {
+	if (this._persist === true) {
+		// Playable is persisting
+		// i.e it never completes
+		this._startTime += overflow;
+		return;
+	}
+
 	// Removing playable before it completes
 	// So that the playable can be started again within _onComplete callback
 	if (this._player._finish(this) === false) {
@@ -137,20 +156,47 @@ Playable.prototype._complete = function (overflow) {
 
 
 Playable.prototype._moveTo = function (time, dt) {
-	this._time = time - this._startTime;
-
 	// Computing overflow and clamping time
 	var overflow;
-	if (dt > 0) {
-		if (this._time >= this._duration) {
-			overflow = this._time - this._duration;
-			dt -= overflow;
-			this._time = this._duration;
+	if (this._iterations === 1) {
+		// Converting into time relative to when the playable was started
+		this._time = time - this._startTime;
+		if (dt > 0) {
+			if (this._time >= this._duration) {
+				overflow = this._time - this._duration;
+				dt -= overflow;
+				this._time = this._duration;
+			}
+		} else if (dt < 0) {
+			if (this._time <= 0) {
+				overflow = this._time;
+				dt -= overflow;
+				this._time = 0;
+			}
 		}
-	} else if ((dt < 0) && (this._time <= 0)) {
-		overflow = this._time;
-		dt -= overflow;
-		this._time = 0;
+	} else {
+		time = (time - this._startTime);
+
+		// Iteration at current update
+		var iteration = time / this._duration;
+
+		if (dt > 0) {
+			if (iteration < this._iterations) {
+				this._time = time % this._duration;
+			} else {
+				overflow = (iteration - this._iterations) * this._duration;
+				dt -= overflow;
+				this._time = this._duration;
+			}
+		} else if (dt < 0) {
+			if (0 < iteration) {
+				this._time = time % this._duration;
+			} else {
+				overflow = iteration * this._duration;
+				dt -= overflow;
+				this._time = 0;
+			}
+		}
 	}
 
 	this._update(dt);

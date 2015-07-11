@@ -14,14 +14,13 @@ Animation library to easily create customisable tweens, timelines, sequences and
 * A consequent library of **easing and interpolation methods**
 * A variety of components such as **Timeline**, **Sequence** and **Recorder**
 * **High flexibility** (tween parameters can easily be modified after creation and even when they are running)
-* **High customizability** (possibility to integrate custom easing and interpolation functions and playable components)
+* **Running options**: delay, iterations, persist (speed, and pingpong coming soon)
+* **High customizability** (possibility to use custom easing and interpolation functions and playable components)
 * **Good synchronisation** between tweens
 * Possibility to alter objects while they are tweening (enabled by relative tweening)
 * No rounding errors on classical tweens (the last property value is guaranteed to be reached)
 * Managed loss of focus of the page (user changes tab or minimise the application)
 * Creation and removal of tweens within the callback of another tween will not result in any unwanted side effect
-
-* Coming Soon: Running options (delay, speed, iterations, pingpong, persist)
 
 ## How to use
 
