@@ -596,6 +596,11 @@ var TINA = {
 		}
 	},
 
+	reset: function () {
+		this._startTime = clock.now();
+		this._time = 0;
+	},
+
 	start: function () {
 		if (this._running === true) {
 			console.warn('[TINA.start] TINA is already running');
@@ -688,6 +693,7 @@ var TINA = {
 
 	setDefaultTweener: function (tweener) {
 		this._defaultTweener = tweener;
+		this._tweeners.push(this._defaultTweener);
 	},
 
 	getDefaultTweener: function () {
@@ -725,14 +731,15 @@ var TINA = {
 		if (this._defaultTweener === null) {
 			var DefaultTweener = this.Timer;
 			this._defaultTweener = new DefaultTweener().start();
-		} else {
-			// Is the default tweener running?
-			var idx = this._tweeners.indexOf(this._defaultTweener);
-			if (idx === -1) {
-				// Not running, starting it
-				this._defaultTweener.start();
-			}
 		}
+		//  else {
+		// 	// Is the default tweener running?
+		// 	var idx = this._tweeners.indexOf(this._defaultTweener);
+		// 	if (idx === -1) {
+		// 		// Not running, starting it
+		// 		this._defaultTweener.start();
+		// 	}
+		// }
 
 		return this._defaultTweener;
 	}
@@ -1259,9 +1266,10 @@ exports.simplex2d = (function() {
 require.register("tina/src/Playable.js", function (exports, module) {
 /** @class */
 function Playable() {
-	this._startTime = 0;
-	this._time      = 0;
-	this._duration  = 0;
+	this._startTime  = 0;
+	this._time       = 0;
+	this._duration   = 0;
+	this._iterations = 1;
 
 	this._handle = null;
 	this._player = null;
@@ -1297,6 +1305,11 @@ Playable.prototype.goToBeginning = function () {
 
 Playable.prototype.goToEnd = function () {
 	this.goTo(this.getDuration());
+	return this;
+};
+
+Playable.prototype.iterations = function (iterations) {
+	this._iterations = iterations;
 	return this;
 };
 
@@ -1382,6 +1395,13 @@ Playable.prototype.pause = function () {
 };
 
 Playable.prototype._complete = function (overflow) {
+	// if (this._persist === true) {
+	// 	// Playable is persisting
+	// 	// i.e it never completes
+	// 	this._startTime += overflow;
+	// 	return;
+	// }
+
 	// Removing playable before it completes
 	// So that the playable can be started again within _onComplete callback
 	if (this._player._finish(this) === false) {
@@ -1396,20 +1416,47 @@ Playable.prototype._complete = function (overflow) {
 
 
 Playable.prototype._moveTo = function (time, dt) {
-	this._time = time - this._startTime;
-
 	// Computing overflow and clamping time
 	var overflow;
-	if (dt > 0) {
-		if (this._time >= this._duration) {
-			overflow = this._time - this._duration;
-			dt -= overflow;
-			this._time = this._duration;
+	if (this._iterations === 1) {
+		// Converting into time relative to when the playable was started
+		this._time = time - this._startTime;
+		if (dt > 0) {
+			if (this._time >= this._duration) {
+				overflow = this._time - this._duration;
+				dt -= overflow;
+				this._time = this._duration;
+			}
+		} else if (dt < 0) {
+			if (this._time <= 0) {
+				overflow = this._time;
+				dt -= overflow;
+				this._time = 0;
+			}
 		}
-	} else if ((dt < 0) && (this._time <= 0)) {
-		overflow = this._time;
-		dt -= overflow;
-		this._time = 0;
+	} else {
+		time = (time - this._startTime);
+
+		// Iteration at current update
+		var iteration = time / this._duration;
+
+		if (dt > 0) {
+			if (iteration < this._iterations) {
+				this._time = time % this._duration;
+			} else {
+				overflow = (iteration - this._iterations) * this._duration;
+				dt -= overflow;
+				this._time = this._duration;
+			}
+		} else if (dt < 0) {
+			if (0 < iteration) {
+				this._time = time % this._duration;
+			} else {
+				overflow = iteration * this._duration;
+				dt -= overflow;
+				this._time = 0;
+			}
+		}
 	}
 
 	this._update(dt);
@@ -2590,25 +2637,26 @@ Tween.prototype.wait = function (duration) {
 Tween.prototype._update = function () {
 	// Finding transition corresponding to current time
 	var transition = this._transitions[this._current];
+
 	while (transition.end <= this._time) {
 		if (this._current === (this._transitions.length - 1)) {
 			transition.update(this._object, 1);
 			return;
-		} else {
-			transition = this._transitions[++this._current];
 		}
+
+		transition = this._transitions[++this._current];
 	}
 
 	while (this._time <= transition.start) {
 		if (this._current === 0) {
 			transition.update(this._object, 0);
 			return;
-		} else {
-			transition = this._transitions[--this._current];
 		}
+
+		transition = this._transitions[--this._current];
 	}
 
-	// Computing transition at given time
+	// Updating the object with respect to the current transition and time
 	transition.update(this._object, (this._time - transition.start) / transition.duration);
 };
 });

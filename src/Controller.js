@@ -85,11 +85,6 @@ Controller.prototype.getAbsoluteDuration = function () {
 	return this._duration * this._iterations / this._speed;
 };
 
-Controller.prototype.iterations = function (iterations) {
-	this._iterations = iterations;
-	return this;
-};
-
 Controller.prototype.persist = function (persist) {
 	this._persist = persist;
 	return this;

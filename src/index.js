@@ -115,6 +115,11 @@ var TINA = {
 		}
 	},
 
+	reset: function () {
+		this._startTime = clock.now();
+		this._time = 0;
+	},
+
 	start: function () {
 		if (this._running === true) {
 			console.warn('[TINA.start] TINA is already running');
@@ -207,6 +212,7 @@ var TINA = {
 
 	setDefaultTweener: function (tweener) {
 		this._defaultTweener = tweener;
+		this._tweeners.push(this._defaultTweener);
 	},
 
 	getDefaultTweener: function () {
@@ -244,14 +250,15 @@ var TINA = {
 		if (this._defaultTweener === null) {
 			var DefaultTweener = this.Timer;
 			this._defaultTweener = new DefaultTweener().start();
-		} else {
-			// Is the default tweener running?
-			var idx = this._tweeners.indexOf(this._defaultTweener);
-			if (idx === -1) {
-				// Not running, starting it
-				this._defaultTweener.start();
-			}
 		}
+		//  else {
+		// 	// Is the default tweener running?
+		// 	var idx = this._tweeners.indexOf(this._defaultTweener);
+		// 	if (idx === -1) {
+		// 		// Not running, starting it
+		// 		this._defaultTweener.start();
+		// 	}
+		// }
 
 		return this._defaultTweener;
 	}

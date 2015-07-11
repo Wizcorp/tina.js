@@ -9,19 +9,18 @@ Animation library to easily create customisable tweens, timelines, sequences and
 
 * **Easy to use**, friendly API
 * **Easy to debug**
-* **High performance** (optimised for speed)
+* **High performance**
 * **Open source** and MIT License
-* A consequent library of easing and interpolation methods
+* A consequent library of **easing and interpolation methods**
 * A variety of components such as **Timeline**, **Sequence** and **Recorder**
 * **High flexibility** (tween parameters can easily be modified after creation and even when they are running)
-* **High customizability** (possibility to integrate custom easing and interpolation functions and playable components)
-* Good synchronisation between tweens
+* **Running options**: delay, iterations, persist (speed, and pingpong coming soon)
+* **High customizability** (possibility to use custom easing and interpolation functions and playable components)
+* **Good synchronisation** between tweens
+* Possibility to alter objects while they are tweening (enabled by relative tweening)
 * No rounding errors on classical tweens (the last property value is guaranteed to be reached)
 * Managed loss of focus of the page (user changes tab or minimise the application)
 * Creation and removal of tweens within the callback of another tween will not result in any unwanted side effect
-
-* Coming Soon: Running options (delay, speed, iterations, pingpong, persist)
-* Coming Soon: Possibility to alter objects while they are tweening (enabled by relative tweening)
 
 ## How to use
 
@@ -37,16 +36,21 @@ Existing playable components are: Tween, Timeline, Sequence, Timer, Ticker, Reco
 The following is a non-exhaustive list of possibilities offered by the API.
 
 ### Tween
-To create and start a **tween** (it will be automaticall updated):
+To create and start a **tween** (it will be automatically updated):
 ``` javascript
 	var myObject = { x: 0 };
+	var propertiesToTween = ['x'];
 	var duration = 2; // in seconds
-	var myTween = new TINA.Tween(myObject, ['x']).to(duration, { x: 1 }).start();
+	var myTween = new TINA.Tween(myObject, propertiesToTween)
+		.to(duration, { x: 1 })
+		.start();
 ```
 
-To create and start **tween** without affecting it to a variable:
+To create and start a **tween** without affecting it to a variable:
 ``` javascript
-	TINA.Tween(myObject, ['x']).to(duration, { x: 1 }).start();
+	TINA.Tween(myObject, ['x'])
+		.to(duration, { x: 1 })
+		.start();
 ```
 
 To tween an **array**:

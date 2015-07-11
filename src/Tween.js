@@ -173,24 +173,25 @@ Tween.prototype.wait = function (duration) {
 Tween.prototype._update = function () {
 	// Finding transition corresponding to current time
 	var transition = this._transitions[this._current];
+
 	while (transition.end <= this._time) {
 		if (this._current === (this._transitions.length - 1)) {
 			transition.update(this._object, 1);
 			return;
-		} else {
-			transition = this._transitions[++this._current];
 		}
+
+		transition = this._transitions[++this._current];
 	}
 
 	while (this._time <= transition.start) {
 		if (this._current === 0) {
 			transition.update(this._object, 0);
 			return;
-		} else {
-			transition = this._transitions[--this._current];
 		}
+
+		transition = this._transitions[--this._current];
 	}
 
-	// Computing transition at given time
+	// Updating the object with respect to the current transition and time
 	transition.update(this._object, (this._time - transition.start) / transition.duration);
 };
