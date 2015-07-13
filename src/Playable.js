@@ -2,61 +2,60 @@
 function Playable() {
 	this._startTime  = 0;
 	this._time       = 0;
-	this._duration   = 0;
-	this._iterations = 1;
-	this._persist    = false;
+	this._speed      = 1;
 
 	this._handle = null;
 	this._player = null;
 
+	// Callbacks
 	this._onStart    = null;
 	this._onPause    = null;
 	this._onResume   = null;
 	this._onUpdate   = null;
 	this._onStop     = null;
-	this._onComplete = null;
 };
 module.exports = Playable;
 
-Playable.prototype.tweener = function (tweener) {
-	this._player = tweener;
-	return this;
-};
+Object.defineProperty(Playable.prototype, 'speed', {
+	get: function () { return this._speed; },
+	set: function (speed) {
+		if ((this._player !== null) && (this._player._duration !== undefined)) {
+			console.warn('[Playable.speed] Changing the speed of a playable that is attached to ', this._player, ' is not recommended');
+		}
 
-Playable.prototype.getDuration = function () {
-	return this._duration;
-};
+		var dt = this._time - this._startTime;
+		if (speed === 0) {
+			// Setting timeStart as if new speed was 1
+			this._startTime = this._time - dt * this._speed;
+		} else {
+			if (this._speed === 0) {
+				// If current speed is 0,
+				// it corresponds to a virtual speed of 1
+				// when it comes to determing where the starting time is
+				this._startTime = this._time - dt / speed;
+			} else {
+				this._startTime = this._time - dt * this._speed / speed;
+			}
+		}
 
-Playable.prototype.goTo = function (time) {
-	// Offsetting start time with respect to current time
-	this._startTime = this._time - time;
-	return this;
-};
+		this._speed = speed;
+	}
+});
 
-Playable.prototype.goToBeginning = function () {
-	this.goTo(0);
-	return this;
-};
+Object.defineProperty(Playable.prototype, 'time', {
+	get: function () { return this._time; },
+	set: function (time) {
+		if ((this._player !== null) && (this._player._duration !== undefined)) {
+			console.warn('[Playable.time] Changing the time of a playable that is attached to ', this._player, ' is not recommended');
+		}
 
-Playable.prototype.goToEnd = function () {
-	this.goTo(this.getDuration());
-	return this;
-};
-
-Playable.prototype.iterations = function (iterations) {
-	this._iterations = iterations;
-	return this;
-};
-
-Playable.prototype.persist = function (persist) {
-	this._persist = persist;
-	return this;
-};
+		this.goTo(time);
+	}
+});
 
 Playable.prototype.onStart    = function (onStart)    { this._onStart    = onStart;    return this; };
 Playable.prototype.onUpdate   = function (onUpdate)   { this._onUpdate   = onUpdate;   return this; };
 Playable.prototype.onStop     = function (onStop)     { this._onStop     = onStop;     return this; };
-Playable.prototype.onComplete = function (onComplete) { this._onComplete = onComplete; return this; };
 Playable.prototype.onPause    = function (onPause)    { this._onPause    = onPause;    return this; };
 Playable.prototype.onResume   = function (onResume)   { this._onResume   = onResume;   return this; };
 
@@ -65,11 +64,48 @@ Playable.prototype._stop     = function () { if (this._onStop     !== null) { th
 Playable.prototype._pause    = function () { if (this._onPause    !== null) { this._onPause();    } };
 Playable.prototype._resume   = function () { if (this._onResume   !== null) { this._onResume();   } };
 
+Playable.prototype.tweener = function (tweener) {
+	this._player = tweener;
+	return this;
+};
+
+Playable.prototype.goTo = function (timePosition, iteration) {
+	if (this._iterations === 1) {
+		if(this._speed === 0) {
+			// Speed is virtually 1
+			this._startTime += this._time - timePosition;
+		} else {
+			// Offsetting starting time with respect to current time and speed
+			this._startTime += (this._time - timePosition) / this._speed;
+		}
+	} else {
+		iteration = iteration || 0;
+		if(this._speed === 0) {
+			// Speed is virtually 1
+			this._startTime += this._time - timePosition - iteration * this._duration;
+		} else {
+			// Offsetting starting time with respect to current time and speed
+			this._startTime += (this._time - timePosition - iteration * this._duration) / this._speed;
+		}
+	}
+
+	this._time = timePosition;
+	// iteration = iteration || 0;
+	// // Offsetting start time with respect to current time and given iteration
+	// this._startTime = this._time - time - iteration * this._duration;
+	return this;
+};
+
+Playable.prototype.rewind = function () {
+	this.goTo(0, 0);
+	return this;
+};
+
 Playable.prototype.delay = function (delay) {
 	if (this._player === null) {
 		this._player = TINA._getDefaultTweener();
 	}
-
+	// TODO: add _delay method to TINA
 	this._player._delay(this, delay);
 	return this;
 };
@@ -93,7 +129,6 @@ Playable.prototype.start = function (timeOffset) {
 	return this;
 };
 
-
 Playable.prototype._start = function (player, timeOffset) {
 	this._player = player;
 	this._startTime = -timeOffset;
@@ -105,7 +140,7 @@ Playable.prototype._start = function (player, timeOffset) {
 
 Playable.prototype.stop = function () {
 	// Stopping playable without performing any additional update nor completing
-	if (this._player._finish(this) === false) {
+	if (this._player._inactivate(this) === false) {
 		// Could not be stopped
 		return this;
 	}
@@ -125,7 +160,7 @@ Playable.prototype.resume = function () {
 };
 
 Playable.prototype.pause = function () {
-	if (this._player._finish(this) === false) {
+	if (this._player._inactivate(this) === false) {
 		// Could not be paused
 		return this;
 	}
@@ -134,33 +169,15 @@ Playable.prototype.pause = function () {
 	return this;
 };
 
-Playable.prototype._complete = function (overflow) {
-	if (this._persist === true) {
-		// Playable is persisting
-		// i.e it never completes
-		this._startTime += overflow;
-		return;
-	}
-
-	// Removing playable before it completes
-	// So that the playable can be started again within _onComplete callback
-	if (this._player._finish(this) === false) {
-		// Could not be completed
-		return this;
-	}
-
-	if (this._onComplete !== null) { 
-		this._onComplete(overflow);
-	}
-};
-
 
 Playable.prototype._moveTo = function (time, dt) {
+	dt *= this._speed;
+
 	// Computing overflow and clamping time
 	var overflow;
 	if (this._iterations === 1) {
 		// Converting into time relative to when the playable was started
-		this._time = time - this._startTime;
+		this._time = (time - this._startTime) * this._speed;
 		if (dt > 0) {
 			if (this._time >= this._duration) {
 				overflow = this._time - this._duration;
@@ -175,7 +192,7 @@ Playable.prototype._moveTo = function (time, dt) {
 			}
 		}
 	} else {
-		time = (time - this._startTime);
+		time = (time - this._startTime) * this._speed;
 
 		// Iteration at current update
 		var iteration = time / this._duration;
@@ -186,7 +203,7 @@ Playable.prototype._moveTo = function (time, dt) {
 			} else {
 				overflow = (iteration - this._iterations) * this._duration;
 				dt -= overflow;
-				this._time = this._duration;
+				this._time = this._duration * (1 - (Math.ceil(this._iterations) - this._iterations));
 			}
 		} else if (dt < 0) {
 			if (0 < iteration) {
@@ -195,6 +212,24 @@ Playable.prototype._moveTo = function (time, dt) {
 				overflow = iteration * this._duration;
 				dt -= overflow;
 				this._time = 0;
+			}
+		}
+
+		if ((this._pingpong === true)) {
+			if (Math.ceil(this._iterations) === this._iterations) {
+				if (overflow === undefined) {
+					if ((Math.ceil(iteration) & 1) === 0) {
+						this._time = this._duration - this._time;
+					}
+				} else {
+					if ((Math.ceil(iteration) & 1) === 1) {
+						this._time = this._duration - this._time;
+					}
+				}
+			} else {
+				if ((Math.ceil(iteration) & 1) === 0) {
+					this._time = this._duration - this._time;
+				}
 			}
 		}
 	}
@@ -209,36 +244,6 @@ Playable.prototype._moveTo = function (time, dt) {
 		this._complete(overflow);
 	}
 };
-
-// Playable.prototype._moveToward = function (dt) {
-// 	this._time += dt;
-
-// 	// Computing overflow and clamping time
-// 	var overflow;
-// 	if (dt > 0) {
-// 		if (this._time >= this._duration) {
-// 			overflow = this._time - this._duration;
-// 			dt -= overflow;
-// 			this._time = this._duration;
-// 		}
-// 	} else if (dt < 0) {
-// 		if (this._time <= 0) {
-// 			overflow = this._time;
-// 			dt -= overflow;
-// 			this._time = 0;
-// 		}
-// 	}
-
-// 	this._update(dt);
-
-// 	if (this._onUpdate !== null) {
-// 		this._onUpdate(this._time, dt);
-// 	}
-
-// 	if (overflow !== undefined) {
-// 		this._complete(overflow);
-// 	}
-// };
 
 // Overridable method
 Playable.prototype._update  = function () {};

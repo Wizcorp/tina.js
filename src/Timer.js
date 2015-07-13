@@ -19,7 +19,7 @@ function Timer(tups) {
 
 	// Time units per second (tups)
 	// Every second, 'tups' time units elapse
-	this._tups = tups || 1;
+	this._tups = tups || 1000;
 }
 Timer.prototype = Object.create(Tweener.prototype);
 Timer.prototype.constructor = Timer;

@@ -13,6 +13,7 @@ function Ticker(tupt) {
 	}
 
 	Tweener.call(this);
+	SOmethingElse.call(this);
 
 	// Time units per tick (tupt)
 	// Every second, 'tupt' time units elapse

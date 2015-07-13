@@ -32,21 +32,21 @@ var requestAnimFrame = (function(){
 var clock = window.performance || Date;
 
 var TINA = {
-	Tweener:       require('./Tweener'),
-	Timer:         require('./Timer'),
-	Ticker:        require('./Ticker'),
-	Playable:      require('./Playable'),
-	Player:        require('./Player'),
-	// Controller:    require('./Controller'), // TODO
-	Tween:         require('./Tween'),
-	// Warning: Using relative tweens can lead to rounding errors (very small).
-	TweenRelative: require('./TweenRelative'),
-	Timeline:      require('./Timeline'),
-	Sequence:      require('./Sequence'),
-	Recorder:      require('./Recorder'),
-	Delay:         require('./Delay'),
-	easing:        require('./easing'),
-	interpolation: require('./interpolation'),
+	Tweener:         require('./Tweener'),
+	Timer:           require('./Timer'),
+	Ticker:          require('./Ticker'),
+	Playable:        require('./Playable'),
+	BoundedPlayable: require('./BoundedPlayable'),
+	PlayableHandler: require('./PlayableHandler'),
+	BoundedPlayer:   require('./BoundedPlayer'),
+	Player:          require('./Player'),
+	Tween:           require('./Tween'),
+	Timeline:        require('./Timeline'),
+	Sequence:        require('./Sequence'),
+	Recorder:        require('./Recorder'),
+	Delay:           require('./Delay'),
+	easing:          require('./easing'),
+	interpolation:   require('./interpolation'),
 
 	_tweeners: [],
 	_defaultTweener: null,
@@ -61,6 +61,8 @@ var TINA = {
 	_onResume: null,
 	_onUpdate: null,
 	_onStop:   null,
+
+	_pauseOnLostFocus: false,
 
 	onStart: function (onStart) {
 		this._onStart = onStart;
@@ -126,11 +128,10 @@ var TINA = {
 			return this;
 		}
 
-		var self = this;
-		var selfUpdate = function () {
-			if (self._running === true) {
-				self.update();
-				requestAnimFrame(selfUpdate);
+		function updateTINA() {
+			if (TINA._running === true) {
+				TINA.update();
+				requestAnimFrame(updateTINA);
 			}
 		}
 
@@ -149,7 +150,7 @@ var TINA = {
 		this._running = true;
 
 		// Starting the animation loop
-		requestAnimFrame(selfUpdate);
+		requestAnimFrame(updateTINA);
 		return this;
 	},
 
@@ -210,6 +211,11 @@ var TINA = {
 		return this;
 	},
 
+	pauseOnLostFocus: function (pauseOnLostFocus) {
+		this._pauseOnLostFocus = pauseOnLostFocus;
+		return this;
+	},
+
 	setDefaultTweener: function (tweener) {
 		this._defaultTweener = tweener;
 		this._tweeners.push(this._defaultTweener);
@@ -248,17 +254,11 @@ var TINA = {
 
 	_getDefaultTweener: function () {
 		if (this._defaultTweener === null) {
+			// If a default tweener is required but non exist
+			// Then it is started in addition to being created
 			var DefaultTweener = this.Timer;
 			this._defaultTweener = new DefaultTweener().start();
 		}
-		//  else {
-		// 	// Is the default tweener running?
-		// 	var idx = this._tweeners.indexOf(this._defaultTweener);
-		// 	if (idx === -1) {
-		// 		// Not running, starting it
-		// 		this._defaultTweener.start();
-		// 	}
-		// }
 
 		return this._defaultTweener;
 	}
@@ -292,14 +292,14 @@ if (typeof document[hidden] === 'undefined') {
 		if (document[hidden]) {
 			// document is hiding
 			wasRunning = TINA.isRunning();
-			if (wasRunning) {
+			if (wasRunning && TINA._pauseOnLostFocus) {
 				TINA.pause();
 			}
 		}
 
 		if (!document[hidden]) {
 			// document is back (we missed you buddy)
-			if (wasRunning) {
+			if (wasRunning && TINA._pauseOnLostFocus) {
 				// Running TINA only if it was running when the document focus was lost
 				TINA.resume();
 			}

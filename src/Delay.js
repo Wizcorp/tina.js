@@ -1,4 +1,4 @@
-var Playable = require('./Playable');
+var BoundedPlayable = require('./BoundedPlayable');
 
 /**
  * @classdesc
@@ -10,9 +10,9 @@ function Delay(duration) {
 		return new Delay(duration);
 	}
 
-	Playable.call(this);
+	BoundedPlayable.call(this);
 	this._duration = duration;
 }
-Delay.prototype = Object.create(Playable.prototype);
+Delay.prototype = Object.create(BoundedPlayable.prototype);
 Delay.prototype.constructor = Delay;
 module.exports = Delay;
