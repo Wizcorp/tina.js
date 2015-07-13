@@ -91,6 +91,25 @@ PlayableHandler.prototype._remove = function (playable) {
 	return false;
 };
 
+PlayableHandler.prototype.remove = function (playable) {
+	this._remove(playable);
+	playable._stop();
+	return this;
+};
+
+PlayableHandler.prototype.removeAll = function () {
+	// Stopping all active playables
+	var handle = this._activePlayables.first; 
+	while (handle !== null) {
+		var next = handle.next;
+		this.remove(handle.object);
+		handle = next;
+	}
+
+	this._handlePlayablesToRemove();
+	return this;
+};
+
 PlayableHandler.prototype.possess = function (playable) {
 	if (playable._handle === null) {
 		return false;
@@ -124,22 +143,6 @@ PlayableHandler.prototype.clear = function () {
 	this._activePlayables.clear();
 	this._inactivePlayables.clear();
 	this._playablesToRemove.clear();
-	return this;
-};
-
-PlayableHandler.prototype.stop = function () {
-	// Stopping all active playables
-	var handle = this._activePlayables.first; 
-	while (handle !== null) {
-		var next = handle.next;
-		var playable = handle.object;
-		playable.stop();
-		handle = next;
-	}
-
-	this._handlePlayablesToRemove();
-
-	this._stop();
 	return this;
 };
 

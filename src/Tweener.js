@@ -16,22 +16,8 @@ module.exports = Tweener;
 
 Tweener.prototype._inactivate = function (playable) {
 	// In a tweener, a playable that finishes is simply removed
-	playable._handle = this._playablesToRemove.add(playable._handle);
+	this._remove(playable);
 };
-
-// Tweener.prototype.stop = function () {
-// 	// Stopping all active playables and removing them right away
-// 	while (this._activePlayables.length > 0) {
-// 		var playable = this._activePlayables.pop();
-// 		playable._handle = null;
-// 		playable._stop();
-// 	}
-
-// 	this._handlePlayablesToRemove();
-
-// 	this._stop();
-// 	return this;
-// };
 
 Tweener.prototype._moveTo = function (time, dt) {
 	this._time = this._getElapsedTime(time - this._startTime);
