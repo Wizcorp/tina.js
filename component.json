@@ -1,15 +1,19 @@
 {
 	"name": "tina",
-	"version": "0.1.6",
+	"version": "0.2.0",
 	"description": "Tweening and INterpolations for Animation",
   	"main": "src/index.js",
 	"scripts": [
+		"src/BoundedPlayable.js",
+		"src/BoundedPlayer.js",
 		"src/Delay.js",
 		"src/DoublyList.js",
 		"src/easing.js",
 		"src/index.js",
+		"src/inherit.js",
 		"src/interpolation.js",
 		"src/Playable.js",
+		"src/PlayableHandler.js",
 		"src/Player.js",
 		"src/Recorder.js",
 		"src/Sequence.js",
@@ -19,8 +23,7 @@
 		"src/Transition.js",
 		"src/TransitionRelative.js",
 		"src/Tween.js",
-		"src/Tweener.js",
-		"src/TweenRelative.js"
+		"src/Tweener.js"
 	],
 	"repository": {
 		"type": "git",

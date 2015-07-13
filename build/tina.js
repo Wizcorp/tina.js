@@ -135,8 +135,272 @@ require.define = function (name, exports) {
     exports: exports
   };
 };
-require.register("tina/src/Delay.js", function (exports, module) {
+require.register("tina/src/BoundedPlayable.js", function (exports, module) {
 var Playable = require('tina/src/Playable.js');
+
+/** @class */
+
+// A playable with its time 
+function BoundedPlayable() {
+	Playable.call(this);
+	this._duration   = 0;
+
+	// Playing options
+	this._iterations = 1; // Number of times to iterate the playable
+	this._persist    = false; // To keep the playable running instead of completing
+	this._pingpong   = false; // To make the playable go backward on even iterations
+
+	this._onComplete = null;
+};
+BoundedPlayable.prototype = Object.create(Playable.prototype);
+BoundedPlayable.prototype.constructor = BoundedPlayable;
+module.exports = BoundedPlayable;
+
+BoundedPlayable.prototype.onComplete = function (onComplete) {
+	this._onComplete = onComplete;
+	return this;
+};
+
+BoundedPlayable.prototype.getDuration = function () {
+	// Duration from outside the playable
+	return this._duration * this._iterations / this._speed;
+};
+
+BoundedPlayable.prototype.goToEnd = function () {
+	this.goTo(this.getDuration(), this._iterations - 1);
+	return this;
+};
+
+BoundedPlayable.prototype.loop = function () {
+	return this.iterations(Infinity);
+};
+
+BoundedPlayable.prototype.iterations = function (iterations) {
+	if (iterations < 0) {
+		console.warn('[BoundedPlayable.iterations] Number of iterations cannot be negative');
+		return this;
+	}
+
+	this._iterations = iterations;
+	return this;
+};
+
+BoundedPlayable.prototype.persist = function (persist) {
+	this._persist = persist;
+	return this;
+};
+
+BoundedPlayable.prototype.pingpong = function (pingpong) {
+	this._pingpong = pingpong;
+	return this;
+};
+
+BoundedPlayable.prototype._complete = function (overflow) {
+	if (this._persist === true) {
+		// BoundedPlayable is persisting
+		// i.e it never completes
+		this._startTime += overflow;
+		return;
+	}
+
+	// Removing playable before it completes
+	// So that the playable can be started again within _onComplete callback
+	if (this._player._inactivate(this) === false) {
+		// Could not be completed
+		return this;
+	}
+
+	if (this._onComplete !== null) { 
+		this._onComplete(overflow);
+	}
+};
+
+
+BoundedPlayable.prototype._moveTo = function (time, dt) {
+	dt *= this._speed;
+
+	// Computing overflow and clamping time
+	var overflow;
+	if (this._iterations === 1) {
+		// Converting into time relative to when the playable was started
+		this._time = (time - this._startTime) * this._speed;
+		if (dt > 0) {
+			if (this._time >= this._duration) {
+				overflow = this._time - this._duration;
+				dt -= overflow;
+				this._time = this._duration;
+			}
+		} else if (dt < 0) {
+			if (this._time <= 0) {
+				overflow = this._time;
+				dt -= overflow;
+				this._time = 0;
+			}
+		}
+	} else {
+		time = (time - this._startTime) * this._speed;
+
+		// Iteration at current update
+		var iteration = time / this._duration;
+
+		if (dt > 0) {
+			if (iteration < this._iterations) {
+				this._time = time % this._duration;
+			} else {
+				overflow = (iteration - this._iterations) * this._duration;
+				dt -= overflow;
+				this._time = this._duration * (1 - (Math.ceil(this._iterations) - this._iterations));
+			}
+		} else if (dt < 0) {
+			if (0 < iteration) {
+				this._time = time % this._duration;
+			} else {
+				overflow = iteration * this._duration;
+				dt -= overflow;
+				this._time = 0;
+			}
+		}
+
+		if ((this._pingpong === true)) {
+			if (Math.ceil(this._iterations) === this._iterations) {
+				if (overflow === undefined) {
+					if ((Math.ceil(iteration) & 1) === 0) {
+						this._time = this._duration - this._time;
+					}
+				} else {
+					if ((Math.ceil(iteration) & 1) === 1) {
+						this._time = this._duration - this._time;
+					}
+				}
+			} else {
+				if ((Math.ceil(iteration) & 1) === 0) {
+					this._time = this._duration - this._time;
+				}
+			}
+		}
+	}
+
+	this._update(dt);
+
+	if (this._onUpdate !== null) {
+		this._onUpdate(this._time, dt);
+	}
+
+	if (overflow !== undefined) {
+		this._complete(overflow);
+	}
+};
+
+// Overridable method
+BoundedPlayable.prototype._update  = function () {};
+});
+
+require.register("tina/src/BoundedPlayer.js", function (exports, module) {
+var BoundedPlayable = require('tina/src/BoundedPlayable.js');
+var PlayableHandler = require('tina/src/PlayableHandler.js');
+
+var inherit = require('tina/src/inherit.js');
+
+/**
+ * @classdesc
+ * Manages the update of a list of playable with respect to a given elapsed time.
+ */
+function BoundedPlayer() {
+	PlayableHandler.call(this);
+	BoundedPlayable.call(this);
+}
+BoundedPlayer.prototype = Object.create(BoundedPlayable.prototype);
+BoundedPlayer.prototype.constructor = BoundedPlayer;
+inherit(BoundedPlayer, PlayableHandler);
+
+module.exports = BoundedPlayer;
+
+BoundedPlayer.prototype._delay = function () {
+	this._warn('[BoundedPlayer._delay] This player does not support the delay functionality', this);
+};
+
+BoundedPlayer.prototype._moveTo = function (time, dt) {
+	dt *= this._speed;
+
+	// Computing overflow and clamping time
+	var overflow;
+	if (this._iterations === 1) {
+		// Converting into time relative to when the playable was started
+		this._time = (time - this._startTime) * this._speed;
+		if (dt > 0) {
+			if (this._time >= this._duration) {
+				overflow = this._time - this._duration;
+				dt -= overflow;
+				this._time = this._duration;
+			}
+		} else if (dt < 0) {
+			if (this._time <= 0) {
+				overflow = this._time;
+				dt -= overflow;
+				this._time = 0;
+			}
+		}
+	} else {
+		time = (time - this._startTime) * this._speed;
+
+		// Iteration at current update
+		var iteration = time / this._duration;
+
+		if (dt > 0) {
+			if (iteration < this._iterations) {
+				this._time = time % this._duration;
+			} else {
+				overflow = (iteration - this._iterations) * this._duration;
+				dt -= overflow;
+				this._time = this._duration * (1 - (Math.ceil(this._iterations) - this._iterations));
+			}
+		} else if (dt < 0) {
+			if (0 < iteration) {
+				this._time = time % this._duration;
+			} else {
+				overflow = iteration * this._duration;
+				dt -= overflow;
+				this._time = 0;
+			}
+		}
+
+		if ((this._pingpong === true)) {
+			if (Math.ceil(this._iterations) === this._iterations) {
+				if (overflow === undefined) {
+					if ((Math.ceil(iteration) & 1) === 0) {
+						this._time = this._duration - this._time;
+					}
+				} else {
+					if ((Math.ceil(iteration) & 1) === 1) {
+						this._time = this._duration - this._time;
+					}
+				}
+			} else {
+				if ((Math.ceil(iteration) & 1) === 0) {
+					this._time = this._duration - this._time;
+				}
+			}
+		}
+	}
+
+	this._updatePlayableList(); // <- This is the difference from Playable._moveTo
+	this._update(dt);
+
+	if (this._onUpdate !== null) {
+		this._onUpdate(this._time, dt);
+	}
+
+	if (overflow !== undefined) {
+		this._complete(overflow);
+	}
+};
+
+// Overridable method
+BoundedPlayer.prototype._updatePlayableList = function () {};
+});
+
+require.register("tina/src/Delay.js", function (exports, module) {
+var BoundedPlayable = require('tina/src/BoundedPlayable.js');
 
 /**
  * @classdesc
@@ -148,10 +412,10 @@ function Delay(duration) {
 		return new Delay(duration);
 	}
 
-	Playable.call(this);
+	BoundedPlayable.call(this);
 	this._duration = duration;
 }
-Delay.prototype = Object.create(Playable.prototype);
+Delay.prototype = Object.create(BoundedPlayable.prototype);
 Delay.prototype.constructor = Delay;
 module.exports = Delay;
 });
@@ -513,21 +777,21 @@ var requestAnimFrame = (function(){
 var clock = window.performance || Date;
 
 var TINA = {
-	Tweener:       require('tina/src/Tweener.js'),
-	Timer:         require('tina/src/Timer.js'),
-	Ticker:        require('tina/src/Ticker.js'),
-	Playable:      require('tina/src/Playable.js'),
-	Player:        require('tina/src/Player.js'),
-	// Controller:    require('./Controller'), // TODO
-	Tween:         require('tina/src/Tween.js'),
-	// Warning: Using relative tweens can lead to rounding errors (very small).
-	TweenRelative: require('tina/src/TweenRelative.js'),
-	Timeline:      require('tina/src/Timeline.js'),
-	Sequence:      require('tina/src/Sequence.js'),
-	Recorder:      require('tina/src/Recorder.js'),
-	Delay:         require('tina/src/Delay.js'),
-	easing:        require('tina/src/easing.js'),
-	interpolation: require('tina/src/interpolation.js'),
+	Tweener:         require('tina/src/Tweener.js'),
+	Timer:           require('tina/src/Timer.js'),
+	Ticker:          require('tina/src/Ticker.js'),
+	Playable:        require('tina/src/Playable.js'),
+	BoundedPlayable: require('tina/src/BoundedPlayable.js'),
+	PlayableHandler: require('tina/src/PlayableHandler.js'),
+	BoundedPlayer:   require('tina/src/BoundedPlayer.js'),
+	Player:          require('tina/src/Player.js'),
+	Tween:           require('tina/src/Tween.js'),
+	Timeline:        require('tina/src/Timeline.js'),
+	Sequence:        require('tina/src/Sequence.js'),
+	Recorder:        require('tina/src/Recorder.js'),
+	Delay:           require('tina/src/Delay.js'),
+	easing:          require('tina/src/easing.js'),
+	interpolation:   require('tina/src/interpolation.js'),
 
 	_tweeners: [],
 	_defaultTweener: null,
@@ -542,6 +806,8 @@ var TINA = {
 	_onResume: null,
 	_onUpdate: null,
 	_onStop:   null,
+
+	_pauseOnLostFocus: false,
 
 	onStart: function (onStart) {
 		this._onStart = onStart;
@@ -607,11 +873,10 @@ var TINA = {
 			return this;
 		}
 
-		var self = this;
-		var selfUpdate = function () {
-			if (self._running === true) {
-				self.update();
-				requestAnimFrame(selfUpdate);
+		function updateTINA() {
+			if (TINA._running === true) {
+				TINA.update();
+				requestAnimFrame(updateTINA);
 			}
 		}
 
@@ -630,7 +895,7 @@ var TINA = {
 		this._running = true;
 
 		// Starting the animation loop
-		requestAnimFrame(selfUpdate);
+		requestAnimFrame(updateTINA);
 		return this;
 	},
 
@@ -691,6 +956,11 @@ var TINA = {
 		return this;
 	},
 
+	pauseOnLostFocus: function (pauseOnLostFocus) {
+		this._pauseOnLostFocus = pauseOnLostFocus;
+		return this;
+	},
+
 	setDefaultTweener: function (tweener) {
 		this._defaultTweener = tweener;
 		this._tweeners.push(this._defaultTweener);
@@ -729,17 +999,11 @@ var TINA = {
 
 	_getDefaultTweener: function () {
 		if (this._defaultTweener === null) {
+			// If a default tweener is required but non exist
+			// Then it is started in addition to being created
 			var DefaultTweener = this.Timer;
 			this._defaultTweener = new DefaultTweener().start();
 		}
-		//  else {
-		// 	// Is the default tweener running?
-		// 	var idx = this._tweeners.indexOf(this._defaultTweener);
-		// 	if (idx === -1) {
-		// 		// Not running, starting it
-		// 		this._defaultTweener.start();
-		// 	}
-		// }
 
 		return this._defaultTweener;
 	}
@@ -773,14 +1037,14 @@ if (typeof document[hidden] === 'undefined') {
 		if (document[hidden]) {
 			// document is hiding
 			wasRunning = TINA.isRunning();
-			if (wasRunning) {
+			if (wasRunning && TINA._pauseOnLostFocus) {
 				TINA.pause();
 			}
 		}
 
 		if (!document[hidden]) {
 			// document is back (we missed you buddy)
-			if (wasRunning) {
+			if (wasRunning && TINA._pauseOnLostFocus) {
 				// Running TINA only if it was running when the document focus was lost
 				TINA.resume();
 			}
@@ -795,6 +1059,16 @@ if (typeof document[hidden] === 'undefined') {
 
 module.exports = TINA;
 
+});
+
+require.register("tina/src/inherit.js", function (exports, module) {
+module.exports = function (subobject, superobject) {
+	var prototypes = Object.keys(superobject.prototype);
+	for (var p = 0; p < prototypes.length; p += 1) {
+		var prototypeName = prototypes[p];
+		subobject.prototype[prototypeName] = superobject.prototype[prototypeName];
+	}
+};
 });
 
 require.register("tina/src/interpolation.js", function (exports, module) {
@@ -877,6 +1151,14 @@ exports.colorRGBToHexa = function(t, a, b) {
 	return '#' + cr.toString(16) + cg.toString(16) + cb.toString(16);
 };
 
+exports.colorRGBToString = function(t, a, b) {
+	var cr = Math.round(a.r * (1 - t) + b.r * t);
+	var cg = Math.round(a.g * (1 - t) + b.g * t);
+	var cb = Math.round(a.b * (1 - t) + b.b * t);
+
+	return 'rgb(' + cr.toString(16) + ',' + cg.toString(16) + ',' + cb.toString(16) + ')';
+};
+
 exports.colorRGBAToString = function(t, a, b) {
 	var cr = Math.round(a.r * (1 - t) + b.r * t);
 	var cg = Math.round(a.g * (1 - t) + b.g * t);
@@ -886,7 +1168,7 @@ exports.colorRGBAToString = function(t, a, b) {
 	return 'rgba(' + cr.toString(16) + ',' + cg.toString(16) + ',' + cb.toString(16) + ',' + ca + ')';
 };
 
-// Interpolation between 2 strings a and b
+// Interpolation between 2 strings a and b (yes that's possible)
 // Returns a string of the same size as b
 exports.string = function(t, a, b) {
 	var nbCharsA = a.length;
@@ -908,7 +1190,6 @@ exports.string = function(t, a, b) {
 	return newString;
 };
 
-// TODO: introduce c = control points
 // Bezier, c = array of control points in ]-Inf, +Inf[
 exports.bezierQuadratic = function(t, a, b, c) {
 	var u = 1 - t;
@@ -1268,55 +1549,60 @@ require.register("tina/src/Playable.js", function (exports, module) {
 function Playable() {
 	this._startTime  = 0;
 	this._time       = 0;
-	this._duration   = 0;
-	this._iterations = 1;
+	this._speed      = 1;
 
 	this._handle = null;
 	this._player = null;
 
+	// Callbacks
 	this._onStart    = null;
 	this._onPause    = null;
 	this._onResume   = null;
 	this._onUpdate   = null;
 	this._onStop     = null;
-	this._onComplete = null;
 };
 module.exports = Playable;
 
-Playable.prototype.tweener = function (tweener) {
-	this._player = tweener;
-	return this;
-};
+Object.defineProperty(Playable.prototype, 'speed', {
+	get: function () { return this._speed; },
+	set: function (speed) {
+		if ((this._player !== null) && (this._player._duration !== undefined)) {
+			console.warn('[Playable.speed] Changing the speed of a playable that is attached to ', this._player, ' is not recommended');
+		}
 
-Playable.prototype.getDuration = function () {
-	return this._duration;
-};
+		var dt = this._time - this._startTime;
+		if (speed === 0) {
+			// Setting timeStart as if new speed was 1
+			this._startTime = this._time - dt * this._speed;
+		} else {
+			if (this._speed === 0) {
+				// If current speed is 0,
+				// it corresponds to a virtual speed of 1
+				// when it comes to determing where the starting time is
+				this._startTime = this._time - dt / speed;
+			} else {
+				this._startTime = this._time - dt * this._speed / speed;
+			}
+		}
 
-Playable.prototype.goTo = function (time) {
-	// Offsetting start time with respect to current time
-	this._startTime = this._time - time;
-	return this;
-};
+		this._speed = speed;
+	}
+});
 
-Playable.prototype.goToBeginning = function () {
-	this.goTo(0);
-	return this;
-};
+Object.defineProperty(Playable.prototype, 'time', {
+	get: function () { return this._time; },
+	set: function (time) {
+		if ((this._player !== null) && (this._player._duration !== undefined)) {
+			console.warn('[Playable.time] Changing the time of a playable that is attached to ', this._player, ' is not recommended');
+		}
 
-Playable.prototype.goToEnd = function () {
-	this.goTo(this.getDuration());
-	return this;
-};
-
-Playable.prototype.iterations = function (iterations) {
-	this._iterations = iterations;
-	return this;
-};
+		this.goTo(time);
+	}
+});
 
 Playable.prototype.onStart    = function (onStart)    { this._onStart    = onStart;    return this; };
 Playable.prototype.onUpdate   = function (onUpdate)   { this._onUpdate   = onUpdate;   return this; };
 Playable.prototype.onStop     = function (onStop)     { this._onStop     = onStop;     return this; };
-Playable.prototype.onComplete = function (onComplete) { this._onComplete = onComplete; return this; };
 Playable.prototype.onPause    = function (onPause)    { this._onPause    = onPause;    return this; };
 Playable.prototype.onResume   = function (onResume)   { this._onResume   = onResume;   return this; };
 
@@ -1325,11 +1611,48 @@ Playable.prototype._stop     = function () { if (this._onStop     !== null) { th
 Playable.prototype._pause    = function () { if (this._onPause    !== null) { this._onPause();    } };
 Playable.prototype._resume   = function () { if (this._onResume   !== null) { this._onResume();   } };
 
+Playable.prototype.tweener = function (tweener) {
+	this._player = tweener;
+	return this;
+};
+
+Playable.prototype.goTo = function (timePosition, iteration) {
+	if (this._iterations === 1) {
+		if(this._speed === 0) {
+			// Speed is virtually 1
+			this._startTime += this._time - timePosition;
+		} else {
+			// Offsetting starting time with respect to current time and speed
+			this._startTime += (this._time - timePosition) / this._speed;
+		}
+	} else {
+		iteration = iteration || 0;
+		if(this._speed === 0) {
+			// Speed is virtually 1
+			this._startTime += this._time - timePosition - iteration * this._duration;
+		} else {
+			// Offsetting starting time with respect to current time and speed
+			this._startTime += (this._time - timePosition - iteration * this._duration) / this._speed;
+		}
+	}
+
+	this._time = timePosition;
+	// iteration = iteration || 0;
+	// // Offsetting start time with respect to current time and given iteration
+	// this._startTime = this._time - time - iteration * this._duration;
+	return this;
+};
+
+Playable.prototype.rewind = function () {
+	this.goTo(0, 0);
+	return this;
+};
+
 Playable.prototype.delay = function (delay) {
 	if (this._player === null) {
 		this._player = TINA._getDefaultTweener();
 	}
-
+	// TODO: add _delay method to TINA
 	this._player._delay(this, delay);
 	return this;
 };
@@ -1353,7 +1676,6 @@ Playable.prototype.start = function (timeOffset) {
 	return this;
 };
 
-
 Playable.prototype._start = function (player, timeOffset) {
 	this._player = player;
 	this._startTime = -timeOffset;
@@ -1365,7 +1687,7 @@ Playable.prototype._start = function (player, timeOffset) {
 
 Playable.prototype.stop = function () {
 	// Stopping playable without performing any additional update nor completing
-	if (this._player._finish(this) === false) {
+	if (this._player._inactivate(this) === false) {
 		// Could not be stopped
 		return this;
 	}
@@ -1385,7 +1707,7 @@ Playable.prototype.resume = function () {
 };
 
 Playable.prototype.pause = function () {
-	if (this._player._finish(this) === false) {
+	if (this._player._inactivate(this) === false) {
 		// Could not be paused
 		return this;
 	}
@@ -1394,33 +1716,15 @@ Playable.prototype.pause = function () {
 	return this;
 };
 
-Playable.prototype._complete = function (overflow) {
-	// if (this._persist === true) {
-	// 	// Playable is persisting
-	// 	// i.e it never completes
-	// 	this._startTime += overflow;
-	// 	return;
-	// }
-
-	// Removing playable before it completes
-	// So that the playable can be started again within _onComplete callback
-	if (this._player._finish(this) === false) {
-		// Could not be completed
-		return this;
-	}
-
-	if (this._onComplete !== null) { 
-		this._onComplete(overflow);
-	}
-};
-
 
 Playable.prototype._moveTo = function (time, dt) {
+	dt *= this._speed;
+
 	// Computing overflow and clamping time
 	var overflow;
 	if (this._iterations === 1) {
 		// Converting into time relative to when the playable was started
-		this._time = time - this._startTime;
+		this._time = (time - this._startTime) * this._speed;
 		if (dt > 0) {
 			if (this._time >= this._duration) {
 				overflow = this._time - this._duration;
@@ -1435,7 +1739,7 @@ Playable.prototype._moveTo = function (time, dt) {
 			}
 		}
 	} else {
-		time = (time - this._startTime);
+		time = (time - this._startTime) * this._speed;
 
 		// Iteration at current update
 		var iteration = time / this._duration;
@@ -1446,7 +1750,7 @@ Playable.prototype._moveTo = function (time, dt) {
 			} else {
 				overflow = (iteration - this._iterations) * this._duration;
 				dt -= overflow;
-				this._time = this._duration;
+				this._time = this._duration * (1 - (Math.ceil(this._iterations) - this._iterations));
 			}
 		} else if (dt < 0) {
 			if (0 < iteration) {
@@ -1455,6 +1759,24 @@ Playable.prototype._moveTo = function (time, dt) {
 				overflow = iteration * this._duration;
 				dt -= overflow;
 				this._time = 0;
+			}
+		}
+
+		if ((this._pingpong === true)) {
+			if (Math.ceil(this._iterations) === this._iterations) {
+				if (overflow === undefined) {
+					if ((Math.ceil(iteration) & 1) === 0) {
+						this._time = this._duration - this._time;
+					}
+				} else {
+					if ((Math.ceil(iteration) & 1) === 1) {
+						this._time = this._duration - this._time;
+					}
+				}
+			} else {
+				if ((Math.ceil(iteration) & 1) === 0) {
+					this._time = this._duration - this._time;
+				}
 			}
 		}
 	}
@@ -1470,43 +1792,12 @@ Playable.prototype._moveTo = function (time, dt) {
 	}
 };
 
-// Playable.prototype._moveToward = function (dt) {
-// 	this._time += dt;
-
-// 	// Computing overflow and clamping time
-// 	var overflow;
-// 	if (dt > 0) {
-// 		if (this._time >= this._duration) {
-// 			overflow = this._time - this._duration;
-// 			dt -= overflow;
-// 			this._time = this._duration;
-// 		}
-// 	} else if (dt < 0) {
-// 		if (this._time <= 0) {
-// 			overflow = this._time;
-// 			dt -= overflow;
-// 			this._time = 0;
-// 		}
-// 	}
-
-// 	this._update(dt);
-
-// 	if (this._onUpdate !== null) {
-// 		this._onUpdate(this._time, dt);
-// 	}
-
-// 	if (overflow !== undefined) {
-// 		this._complete(overflow);
-// 	}
-// };
-
 // Overridable method
 Playable.prototype._update  = function () {};
 });
 
-require.register("tina/src/Player.js", function (exports, module) {
+require.register("tina/src/PlayableHandler.js", function (exports, module) {
 var DoublyList = require('tina/src/DoublyList.js');
-var Playable   = require('tina/src/Playable.js');
 
 function PlayableHandle(playable) {
 	this.playable = playable;
@@ -1517,8 +1808,7 @@ function PlayableHandle(playable) {
  * @classdesc
  * Manages the update of a list of playable with respect to a given elapsed time.
  */
-function Player() {
-	Playable.call(this);
+function PlayableHandler() {
 	// A DoublyList, rather than an Array, is used to store playables.
 	// It allows for faster removal and is similar in speed for iterations.
 
@@ -1528,7 +1818,7 @@ function Player() {
 	// (KUDOs to the JS engines guys)
 
 	// List of active playables handled by this player
-	this._activePlayables = new DoublyList();
+	this._activePlayables   = new DoublyList();
 
 	// List of inactive playables handled by this player
 	this._inactivePlayables = new DoublyList();
@@ -1542,9 +1832,171 @@ function Player() {
 	// Whether to trigger the debugger on warnings
 	this._debug = false;
 }
+module.exports = PlayableHandler;
+
+PlayableHandler.prototype._add = function (playable) {
+	if (playable._handle === null) {
+		// Playable can be added
+		playable._handle = this._inactivePlayables.add(playable);
+		return true;
+	}
+
+	// Playable is already handled, either by this player or by another one
+	if (playable._handle.container === this._playablesToRemove) {
+		// Playable was being removed, removing from playables to remove
+		playable._handle = this._playablesToRemove.remove(playable._handle);
+		return true;
+	}
+
+	if (playable._handle.container === this._activePlayables) {
+		this._warn('[PlayableHandler._add] Playable is already present, and active');
+		return false;
+	}
+
+	if (playable._handle.container === this._inactivePlayables) {
+		this._warn('[PlayableHandler._add] Playable is already present, but inactive (could be starting)');
+		return false;
+	}
+
+	this._warn('[PlayableHandler._add] Playable is used elsewhere');
+	return false;
+};
+
+PlayableHandler.prototype._remove = function (playable) {
+	if (playable._handle === null) {
+		this._warn('[PlayableHandler._remove] Playable is not being used');
+		return false;
+	}
+
+	// Playable is handled, either by this player or by another one
+	if (playable._handle.container === this._activePlayables) {
+		// Playable was active, adding to remove list
+		playable._handle = this._playablesToRemove.add(playable._handle);
+		return true;
+	}
+
+	if (playable._handle.container === this._inactivePlayables) {
+		// Playable was being started, removing from starting playables
+		playable._handle = this._inactivePlayables.remove(playable._handle);
+		return true;
+	}
+
+	if (playable._handle.container === this._playablesToRemove) {
+		this._warn('[PlayableHandler._remove] Playable is already being removed');
+		return false;
+	}
+
+	this._warn('[PlayableHandler._add] Playable is used elsewhere');
+	return false;
+};
+
+PlayableHandler.prototype.possess = function (playable) {
+	if (playable._handle === null) {
+		return false;
+	}
+
+	return (playable._handle.container === this._activePlayables) || (playable._handle.container === this._inactivePlayables);
+};
+
+PlayableHandler.prototype._inactivate = function (playable) {
+	this._activePlayables.remove(playable._handle);
+
+	// Playable is moved to the list of inactive playables
+	playable._handle = this._inactivePlayables.add(playable);
+};
+
+PlayableHandler.prototype._handlePlayablesToRemove = function () {
+	while (this._playablesToRemove.length > 0) {
+		// O(1) where O stands for "Oh yeah"
+
+		// Removing from list of playables to remove
+		var handle = this._playablesToRemove.pop();
+
+		// Removing from list of active playables
+		var playable = handle.object;
+		playable._handle = this._activePlayables.remove(handle);
+	}
+};
+
+PlayableHandler.prototype.clear = function () {
+	this._handledPlayables.clear();
+	this._activePlayables.clear();
+	this._inactivePlayables.clear();
+	this._playablesToRemove.clear();
+	return this;
+};
+
+PlayableHandler.prototype.stop = function () {
+	// Stopping all active playables
+	var handle = this._activePlayables.first; 
+	while (handle !== null) {
+		var next = handle.next;
+		var playable = handle.object;
+		playable.stop();
+		handle = next;
+	}
+
+	this._handlePlayablesToRemove();
+
+	this._stop();
+	return this;
+};
+
+PlayableHandler.prototype._warn = function (warning) {
+	if (this._silent === false) {
+		console.warn(warning);
+	}
+
+	if (this._debug === true) {
+		debugger;
+	}
+};
+
+PlayableHandler.prototype.silent = function (silent) {
+	this._silent = silent;
+	return this;
+};
+
+PlayableHandler.prototype.debug = function (debug) {
+	this._debug = debug;
+	return this;
+};
+
+});
+
+require.register("tina/src/Player.js", function (exports, module) {
+var Delay           = require('tina/src/Delay.js');
+var Playable        = require('tina/src/Playable.js');
+var PlayableHandler = require('tina/src/PlayableHandler.js');
+
+var inherit = require('tina/src/inherit.js');
+
+/**
+ * @classdesc
+ * Manages the update of a list of playable with respect to a given elapsed time.
+ */
+function Player() {
+	Playable.call(this);
+	PlayableHandler.call(this);
+}
 Player.prototype = Object.create(Playable.prototype);
 Player.prototype.constructor = Player;
+inherit(Player, PlayableHandler);
+
 module.exports = Player;
+
+Player.prototype._delay = function (playable, delay) {
+	if (delay <= 0) {
+		this._warn('[Tweener.add] Delay null or negative (' + delay + ').' +
+			'Starting the playable with a delay of 0.');
+		playable.start();
+		return;
+	}
+
+	Delay(delay).tweener(this).onComplete(function (timeOverflow) {
+		playable.start(timeOverflow);
+	}).start();
+};
 
 Player.prototype._moveTo = function (time, dt) {
 	this._time = time - this._startTime;
@@ -1577,151 +2029,26 @@ Player.prototype._moveTo = function (time, dt) {
 	}
 };
 
-Player.prototype._add = function (playable) {
-	if (playable._handle === null) {
-		// Playable can be added
-		playable._handle = this._inactivePlayables.add(playable);
-		return true;
-	}
-
-	// Playable is already handled, either by this player or by another one
-	if (playable._handle.container === this._playablesToRemove) {
-		// Playable was being removed, removing from playables to remove
-		playable._handle = this._playablesToRemove.remove(playable._handle);
-		return true;
-	}
-
-	if (playable._handle.container === this._activePlayables) {
-		this._warn('[Player._add] Playable is already present, and active');
-		return false;
-	}
-
-	if (playable._handle.container === this._inactivePlayables) {
-		this._warn('[Player._add] Playable is already present, but inactive (could be starting)');
-		return false;
-	}
-
-	this._warn('[Player._add] Playable is used elsewhere');
-	return false;
-};
-
-Player.prototype._remove = function (playable) {
-	if (playable._handle === null) {
-		this._warn('[Player._remove] Playable is not being used');
-		return false;
-	}
-
-	// Playable is handled, either by this player or by another one
-	if (playable._handle.container === this._activePlayables) {
-		// Playable was active, adding to remove list
-		playable._handle = this._playablesToRemove.add(playable._handle);
-		return true;
-	}
-
-	if (playable._handle.container === this._inactivePlayables) {
-		// Playable was being started, removing from starting playables
-		playable._handle = this._inactivePlayables.remove(playable._handle);
-		return true;
-	}
-
-	if (playable._handle.container === this._playablesToRemove) {
-		this._warn('[Player._remove] Playable is already being removed');
-		return false;
-	}
-
-	this._warn('[Player._add] Playable is used elsewhere');
-	return false;
-};
-
-Player.prototype.possess = function (playable) {
-	if (playable._handle === null) {
-		return false;
-	}
-
-	return (playable._handle.container === this._activePlayables) || (playable._handle.container === this._inactivePlayables);
-};
-
-Player.prototype._finish = function (playable) {
-	this._activePlayables.remove(playable._handle);
-
-	// Playable is moved to the list of inactive playables
-	playable._handle = this._inactivePlayables.add(playable);
-};
-
-Player.prototype._handlePlayablesToRemove = function () {
-	while (this._playablesToRemove.length > 0) {
-		// O(1) where O stands for "Oh yeah"
-
-		// Removing from list of playables to remove
-		var handle = this._playablesToRemove.pop();
-
-		// Removing from list of active playables
-		var playable = handle.object;
-		playable._handle = this._activePlayables.remove(handle);
-	}
-};
-
 // Overridable method
 Player.prototype._updatePlayableList = function () {};
 
-Player.prototype.clear = function () {
-	this._handledPlayables.clear();
-	this._activePlayables.clear();
-	this._inactivePlayables.clear();
-	this._playablesToRemove.clear();
-	return this;
-};
-
-Player.prototype.stop = function () {
-	// Stopping all active playables
-	var handle = this._activePlayables.first; 
-	while (handle !== null) {
-		var next = handle.next;
-		var playable = handle.object;
-		playable.stop();
-		handle = next;
-	}
-
-	this._handlePlayableToRemove();
-
-	this._stop();
-	return this;
-};
-
-Player.prototype._delay = function () {
-	this._warn('[Player._delay] This player does not support the delay functionality');
-};
-
-Player.prototype._warn = function (warning) {
-	if (this._silent === false) {
-		console.warn(warning);
-	}
-
-	if (this._debug === true) {
-		debugger;
-	}
-};
-
-Player.prototype.silent = function (silent) {
-	this._silent = silent;
-	return this;
-};
-
-Player.prototype.debug = function (debug) {
-	this._debug = debug;
-	return this;
-};
 });
 
 require.register("tina/src/Recorder.js", function (exports, module) {
-var Playable = require('tina/src/Playable.js');
+var BoundedPlayable = require('tina/src/BoundedPlayable.js');
 
-function ObjectRecorder(object, properties) {
+function ObjectRecorder(object, properties, onIn, onOut) {
 	this.object      = object;
 	this.properties  = properties;
 	this.timestamps  = [];
 	this.records     = [];
 	this.playingHead = 1;
+
+	// Whether or not the playing head is within the recording duration
+	this.isIn = false;
+
+	this.onIn  = onIn  || null;
+	this.onOut = onOut || null;
 }
 
 ObjectRecorder.prototype.record = function (time) {
@@ -1736,6 +2063,24 @@ ObjectRecorder.prototype.play = function (time, smooth) {
 	var nbProperties = this.properties.length;
 	var lastRecord   = this.timestamps.length - 1;
 	var playingHead  = this.playingHead;
+
+	var isIn = (this.timestamps[0] <= time) && (time <= this.timestamps[lastRecord]);
+	if (isIn === true) {
+		if (this.playing === false) {
+			this.playing = true;
+			if (this.onIn !== null) {
+				this.onIn();
+			}
+		}
+	} else {
+		if (this.playing === true) {
+			this.playing = false;
+			if (this.onOut !== null) {
+				this.onOut();
+			}
+		}
+		return;
+	}
 
 	while ((playingHead < lastRecord) && (time <= this.timestamps[playingHead])) {
 		playingHead += 1;
@@ -1782,13 +2127,20 @@ function Recorder() {
 		return new Recorder();
 	}
 
-	Playable.call(this);
+	BoundedPlayable.call(this);
 
-	// Never ends
+	// Can end only in playing mode
+	// TODO: set starting time and duration when switching to playing mode
 	this._duration = Infinity;
 
-	// List of objects and properties to records
-	this._objectRecorders = [];
+	// List of objects and properties recorded
+	this._recordedObjects = [];
+
+	// List of objects and properties recording
+	this._recordingObjects = {};
+
+	// List of object labels
+	this._recordingObjectLabels = [];
 
 	// Whether the recorder is in recording mode
 	this._recording = true;
@@ -1798,44 +2150,124 @@ function Recorder() {
 
 	// Whether the recorder enables interpolating at play time
 	this._smooth = false;
+
+	this._onStartRecording = null;
+	this._onStopRecording  = null;
+
+	this._onStartPlaying = null;
+	this._onStopPlaying  = null;
 }
-Recorder.prototype = Object.create(Playable.prototype);
+Recorder.prototype = Object.create(BoundedPlayable.prototype);
 Recorder.prototype.constructor = Recorder;
 module.exports = Recorder;
 
+Recorder.prototype.onStartRecording = function (onStartRecording) {
+	this._onStartRecording = onStartRecording;
+	return this;
+};
+
+Recorder.prototype.onStopRecording = function (onStopRecording) {
+	this._onStopRecording = onStopRecording;
+	return this;
+};
+
+Recorder.prototype.onStartPlaying = function (onStartPlaying) {
+	this._onStartPlaying = onStartPlaying;
+	return this;
+};
+
+Recorder.prototype.onStopPlaying = function (onStopPlaying) {
+	this._onStopPlaying = onStopPlaying;
+	return this;
+};
+
 Recorder.prototype.reset = function () {
-	this._objectRecorders = [];
+	this._recordedObjects       = [];
+	this._recordingObjects      = {};
+	this._recordingObjectLabels = [];
 	return this;
 };
 
-Recorder.prototype.record = function (object, properties) {
-	this._objectRecorders.push(new ObjectRecorder(object, properties));
+Recorder.prototype.record = function (label, object, properties, onIn, onOut) {
+	var objectRecorder = new ObjectRecorder(object, properties, onIn, onOut);
+	this._recordingObjects[label] = objectRecorder;
+	this._recordedObjects.push(objectRecorder);
+	this._recordingObjectLabels.push(label);
 	return this;
 };
 
-Recorder.prototype.remove = function (object) {
-	var nbObjectRecorders = this._objectRecorders.length;
-	for (var r = 0; r < nbObjectRecorders; r += 1) {
-		if (this._objectRecorders[r].object === object) {
-			this._objectRecorders.splice(1, r);
-			break;
+Recorder.prototype.stopRecordingObject = function (label) {
+	delete this._recordingObjects[label];
+	var labelIdx = this._recordingObjectLabels.indexOf(label);
+	if (labelIdx === -1) {
+		console.warn('[Recorder.stopRecordingObject] Trying to stop recording an object that is not being recording:', label);
+		return this;
+	}
+
+	this._recordingObjectLabels.splice(labelIdx, 1);
+	return this;
+};
+
+Recorder.prototype.removeRecordedObject = function (label) {
+	var recorder = this._recordingObjects[label];
+	delete this._recordingObjects[label];
+	var labelIdx = this._recordingObjectLabels.indexOf(label);
+	if (labelIdx !== -1) {
+		this._recordingObjectLabels.splice(labelIdx, 1);
+	}
+
+	var recorderIdx = this._recordedObjects.indexOf(recorder);
+	if (recorderIdx === -1) {
+		console.warn('[Recorder.removeRecordedObject] Trying to remove an object that was not recorded:', label);
+		return this;
+	}
+
+	this._recordingObjectLabels.splice(recorderIdx, 1);
+	return this;
+};
+
+Recorder.prototype.recording = function (recording) {
+	if (this._recording !== recording) {
+		this._recording = recording;
+		if (this._recording === true) {
+			if (this._playing === true) {
+				if (this._onStopPlaying !== null) {
+					this._onStopPlaying();
+				}
+				this._playing = false;
+			}
+
+			if (this._onStartRecording !== null) {
+				this._onStartRecording();
+			}
+		} else {
+			if (this._onStopRecording !== null) {
+				this._onStopRecording();
+			}
 		}
 	}
 	return this;
 };
 
-Recorder.prototype.recording = function (recording) {
-	this._recording = recordingMode;
-	if (this._recording === true) {
-		this._playing = false;
-	}
-	return this;
-};
-
 Recorder.prototype.playing = function (playing) {
-	this._playing = playingMode;
-	if (this._playing === true) {
-		this._recording = false;
+	if (this._playing !== playing) {
+		this._playing = playing;
+		if (this._playing === true) {
+			if (this._recording === true) {
+				if (this._onStopRecording !== null) {
+					this._onStopRecording();
+				}
+				this._recording = false;
+			}
+
+			if (this._onStartPlaying !== null) {
+				this._onStartPlaying();
+			}
+		} else {
+			if (this._onStopPlaying !== null) {
+				this._onStopPlaying();
+			}
+		}
 	}
 	return this;
 };
@@ -1845,18 +2277,19 @@ Recorder.prototype.smooth = function (smooth) {
 	return this;
 };
 
-Recorder.prototype.update = function (dt) {
+Recorder.prototype.update = function () {
 	if (this._recording) {
-		var nbObjectRecorders = this._objectRecorders.length;
-		for (var r = 0; r < nbObjectRecorders; r += 1) {
-			this._objectRecorders[r].record(this._time);
+		var nbRecordingObjects = this._recordingObjectLabels.length;
+		for (var r = 0; r < nbRecordingObjects; r += 1) {
+			var label = this._recordingObjectLabels[r];
+			this._recordingObjects[label].record(this._time);
 		}
 	}
 
 	if (this._playing) {
-		var nbObjectRecorders = this._objectRecorders.length;
-		for (var r = 0; r < nbObjectRecorders; r += 1) {
-			this._objectRecorders[r].play(this._time, this._smooth);
+		var nbObjectRecorded = this._recordedObjects.length;
+		for (var r = 0; r < nbObjectRecorded; r += 1) {
+			this._recordedObjects[r].play(this._time, this._smooth);
 		}
 	}
 };
@@ -1918,6 +2351,7 @@ function Ticker(tupt) {
 	}
 
 	Tweener.call(this);
+	SOmethingElse.call(this);
 
 	// Time units per tick (tupt)
 	// Every second, 'tupt' time units elapse
@@ -1975,7 +2409,7 @@ Ticker.prototype.convertToTimeUnits = function(nbTicks) {
 });
 
 require.register("tina/src/Timeline.js", function (exports, module) {
-var Player = require('tina/src/Player.js');
+var BoundedPlayer = require('tina/src/BoundedPlayer.js');
 
 /**
  *
@@ -1994,16 +2428,16 @@ function Timeline() {
 		return new Timeline();
 	}
 
-	Player.call(this);
+	BoundedPlayer.call(this);
 }
-Timeline.prototype = Object.create(Player.prototype);
+Timeline.prototype = Object.create(BoundedPlayer.prototype);
 Timeline.prototype.constructor = Timeline;
 module.exports = Timeline;
 
 Timeline.prototype.add = function (startTime, playable) {
 	playable._startTime = startTime;
 	this._add(playable);
-	this._duration = Math.max(this._duration, startTime + playable._duration);
+	this._duration = Math.max(this._duration, startTime + playable.getDuration());
 	return this;
 };
 
@@ -2011,12 +2445,12 @@ Timeline.prototype._computeDuration = function () {
 	var duration = 0;
 	for (var handle = this._inactivePlayables.first; handle !== null; handle = handle.next) {
 		var playable = handle.object;
-		duration = Math.max(duration, playable._startTime + playable._duration);
+		duration = Math.max(duration, playable._startTime + playable.getDuration());
 	}
 
 	for (handle = this._activePlayables.first; handle !== null; handle = handle.next) {
 		playable = handle.object;
-		duration = Math.max(duration, playable._startTime + playable._duration);
+		duration = Math.max(duration, playable._startTime + playable.getDuration());
 	}
 
 	this._duration = duration;
@@ -2028,7 +2462,7 @@ Timeline.prototype.remove = function (playable) {
 };
 
 Timeline.prototype._start = function (player, timeOffset) {
-	Player.prototype._start.call(this, player, timeOffset);
+	BoundedPlayer.prototype._start.call(this, player, timeOffset);
 
 	// Computing duration of the timeline
 	this._computeDuration();
@@ -2046,7 +2480,7 @@ Timeline.prototype._updatePlayableList = function () {
 		handle = handle.next;
 
 		var startTime = playable._startTime;
-		var endTime   = startTime + playable._duration;
+		var endTime   = startTime + playable.getDuration();
 		if (startTime <= this._time && this._time <= endTime) {
 			// O(1)
 			this._inactivePlayables.remove(playable._handle);
@@ -2087,7 +2521,7 @@ function Timer(tups) {
 
 	// Time units per second (tups)
 	// Every second, 'tups' time units elapse
-	this._tups = tups || 1;
+	this._tups = tups || 1000;
 }
 Timer.prototype = Object.create(Tweener.prototype);
 Timer.prototype.constructor = Timer;
@@ -2462,8 +2896,9 @@ module.exports = Transition;
 });
 
 require.register("tina/src/Tween.js", function (exports, module) {
-var Playable   = require('tina/src/Playable.js');
-var Transition = require('tina/src/Transition.js');
+var BoundedPlayable    = require('tina/src/BoundedPlayable.js');
+var Transition         = require('tina/src/Transition.js');
+var TransitionRelative = require('tina/src/TransitionRelative.js');
 
 var easingFunctions        = require('tina/src/easing.js');
 var interpolationFunctions = require('tina/src/interpolation.js');
@@ -2495,7 +2930,7 @@ function Tween(object, properties) {
 		return new Tween(object, properties);
 	}
 
-	Playable.call(this);
+	BoundedPlayable.call(this);
 
 	// Tweened object
 	this._object = object;
@@ -2524,12 +2959,17 @@ function Tween(object, properties) {
 
 	// List of transitions of the tween
 	this._transitions = [];
+
+	// Whether the tween is relative
 }
-Tween.prototype = Object.create(Playable.prototype);
+Tween.prototype = Object.create(BoundedPlayable.prototype);
 Tween.prototype.constructor = Tween;
 module.exports = Tween;
 
-Tween.prototype.Transition = Transition;
+Tween.prototype.relative = function (relative) {
+	this._relative = relative;
+	return this;
+};
 
 Tween.prototype.reset = function () {
 	this._current     = 0;
@@ -2579,7 +3019,7 @@ Tween.prototype._setFrom = function () {
 	this._from = {};
 	for (var p = 0; p < this._properties.length; p += 1) {
 		var property = this._properties[p];
-		this._from[property] = this._object[property];
+		this._from[property] = (this._relative) ? 0 : this._object[property];
 	}
 
 	return this._from;
@@ -2593,7 +3033,7 @@ Tween.prototype._getLastTransitionEnding = function () {
 	}
 };
 
-Tween.prototype.to = function (duration, toObject, easing, easingParam, interpolationParams) {
+Tween.prototype.to = function (toObject, duration, easing, easingParam, interpolationParams) {
 	// The API allows to pass interpolation names that will be replaced
 	// by the corresponding interpolation functions
 	if (typeof(easing) === 'string') {
@@ -2609,8 +3049,8 @@ Tween.prototype.to = function (duration, toObject, easing, easingParam, interpol
 	// Getting previous transition ending as the beginning for the new transition
 	var fromObject = this._getLastTransitionEnding();
 
-	var Transition = this.Transition;
-	var transition = new Transition(
+	var TransitionConstructor = (this._relative === true) ? TransitionRelative : Transition;
+	var transition = new TransitionConstructor(
 		this._properties,
 		fromObject,
 		toObject,
@@ -2663,7 +3103,6 @@ Tween.prototype._update = function () {
 
 require.register("tina/src/Tweener.js", function (exports, module) {
 var Player = require('tina/src/Player.js');
-var Delay  = require('tina/src/Delay.js');
 
 /**
  * @classdesc
@@ -2672,9 +3111,6 @@ var Delay  = require('tina/src/Delay.js');
 function Tweener() {
 	Player.call(this);
 
-	// A tweener has no end and never completes
-	this._duration = Infinity;
-
 	// TINA is the player for all the tweeners
 	this._player = TINA;
 }
@@ -2682,44 +3118,44 @@ Tweener.prototype = Object.create(Player.prototype);
 Tweener.prototype.constructor = Tweener;
 module.exports = Tweener;
 
-Tweener.prototype._finish = function (playable) {
+Tweener.prototype._inactivate = function (playable) {
 	// In a tweener, a playable that finishes is simply removed
 	playable._handle = this._playablesToRemove.add(playable._handle);
 };
 
-Tweener.prototype.stop = function () {
-	// Stopping all active playables and removing them right away
-	while (this._activePlayables.length > 0) {
-		var playable = this._activePlayables.pop();
-		playable._handle = null;
-		playable.stop();
-	}
+// Tweener.prototype.stop = function () {
+// 	// Stopping all active playables and removing them right away
+// 	while (this._activePlayables.length > 0) {
+// 		var playable = this._activePlayables.pop();
+// 		playable._handle = null;
+// 		playable._stop();
+// 	}
 
-	this._handlePlayableToRemove();
+// 	this._handlePlayablesToRemove();
 
-	this._stop();
-	return this;
-};
+// 	this._stop();
+// 	return this;
+// };
 
 Tweener.prototype._moveTo = function (time, dt) {
 	this._time = this._getElapsedTime(time - this._startTime);
 	dt = this._getSingleStepDuration(dt);
 
-	// Computing time overflow and clamping time
-	var overflow;
-	if (dt > 0) {
-		if (this._time >= this._duration) {
-			overflow = this._time - this._duration;
-			dt -= overflow;
-			this._time = this._duration;
-		}
-	} else if (dt < 0) {
-		if (this._time <= 0) {
-			overflow = this._time;
-			dt -= overflow;
-			this._time = 0;
-		}
-	}
+	// // Computing time overflow and clamping time
+	// var overflow;
+	// if (dt > 0) {
+	// 	if (this._time >= this._duration) {
+	// 		overflow = this._time - this._duration;
+	// 		dt -= overflow;
+	// 		this._time = this._duration;
+	// 	}
+	// } else if (dt < 0) {
+	// 	if (this._time <= 0) {
+	// 		overflow = this._time;
+	// 		dt -= overflow;
+	// 		this._time = 0;
+	// 	}
+	// }
 
 	this._handlePlayablesToRemove();
 
@@ -2737,68 +3173,12 @@ Tweener.prototype._moveTo = function (time, dt) {
 	if (this._onUpdate !== null) {
 		this._onUpdate(this._time, dt);
 	}
-
-	if (overflow !== undefined) {
-		this._complete(overflow);
-	}
-};
-
-Tweener.prototype._delay = function (playable, delay) {
-	if (delay <= 0) {
-		this._warn('[Tweener.add] Delay null or negative (' + delay + ').' +
-			'Starting the playable with a delay of 0.');
-		playable.start();
-		return;
-	}
-
-	var delayPlayable = new Delay(delay);
-	delayPlayable.tweener(this).onComplete(function (timeOverflow) {
-		playable.start(timeOverflow);
-	}).start();
 };
 
 Tweener.prototype.useAsDefault = function () {
 	TINA.setDefaultTweener(this);
+	return this;
 };
-});
-
-require.register("tina/src/TweenRelative.js", function (exports, module) {
-var Tween              = require('tina/src/Tween.js');
-var TransitionRelative = require('tina/src/TransitionRelative.js');
-
-/**
- *
- * @classdesc
- * Manages transition of properties of an object
- *
- * @param {object} object     - Object to tween
- * @param {array}  properties - Properties of the object to tween
- *
- */
-
-function TweenRelative(object, properties) {
-	if ((this instanceof TweenRelative) === false) {
-		return new TweenRelative(object, properties);
-	}
-
-	Tween.call(this, object, properties);
-}
-TweenRelative.prototype = Object.create(Tween.prototype);
-TweenRelative.prototype.constructor = TweenRelative;
-module.exports = TweenRelative;
-
-TweenRelative.prototype._setFrom = function () {
-	// Setting all the initial properties to 0
-	this._from = {};
-	for (var p = 0; p < this._properties.length; p += 1) {
-		var property = this._properties[p];
-		this._from[property] = 0;
-	}
-
-	return this._from;
-};
-
-TweenRelative.prototype.Transition = TransitionRelative;
 });
 
 require("tina");

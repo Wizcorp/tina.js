@@ -1,4 +1,4 @@
-var Player = require('./Player');
+var BoundedPlayer = require('./BoundedPlayer');
 
 /**
  *
@@ -17,16 +17,16 @@ function Timeline() {
 		return new Timeline();
 	}
 
-	Player.call(this);
+	BoundedPlayer.call(this);
 }
-Timeline.prototype = Object.create(Player.prototype);
+Timeline.prototype = Object.create(BoundedPlayer.prototype);
 Timeline.prototype.constructor = Timeline;
 module.exports = Timeline;
 
 Timeline.prototype.add = function (startTime, playable) {
 	playable._startTime = startTime;
 	this._add(playable);
-	this._duration = Math.max(this._duration, startTime + playable._duration);
+	this._duration = Math.max(this._duration, startTime + playable.getDuration());
 	return this;
 };
 
@@ -34,12 +34,12 @@ Timeline.prototype._computeDuration = function () {
 	var duration = 0;
 	for (var handle = this._inactivePlayables.first; handle !== null; handle = handle.next) {
 		var playable = handle.object;
-		duration = Math.max(duration, playable._startTime + playable._duration);
+		duration = Math.max(duration, playable._startTime + playable.getDuration());
 	}
 
 	for (handle = this._activePlayables.first; handle !== null; handle = handle.next) {
 		playable = handle.object;
-		duration = Math.max(duration, playable._startTime + playable._duration);
+		duration = Math.max(duration, playable._startTime + playable.getDuration());
 	}
 
 	this._duration = duration;
@@ -51,7 +51,7 @@ Timeline.prototype.remove = function (playable) {
 };
 
 Timeline.prototype._start = function (player, timeOffset) {
-	Player.prototype._start.call(this, player, timeOffset);
+	BoundedPlayer.prototype._start.call(this, player, timeOffset);
 
 	// Computing duration of the timeline
 	this._computeDuration();
@@ -69,7 +69,7 @@ Timeline.prototype._updatePlayableList = function () {
 		handle = handle.next;
 
 		var startTime = playable._startTime;
-		var endTime   = startTime + playable._duration;
+		var endTime   = startTime + playable.getDuration();
 		if (startTime <= this._time && this._time <= endTime) {
 			// O(1)
 			this._inactivePlayables.remove(playable._handle);

@@ -77,6 +77,14 @@ exports.colorRGBToHexa = function(t, a, b) {
 	return '#' + cr.toString(16) + cg.toString(16) + cb.toString(16);
 };
 
+exports.colorRGBToString = function(t, a, b) {
+	var cr = Math.round(a.r * (1 - t) + b.r * t);
+	var cg = Math.round(a.g * (1 - t) + b.g * t);
+	var cb = Math.round(a.b * (1 - t) + b.b * t);
+
+	return 'rgb(' + cr.toString(16) + ',' + cg.toString(16) + ',' + cb.toString(16) + ')';
+};
+
 exports.colorRGBAToString = function(t, a, b) {
 	var cr = Math.round(a.r * (1 - t) + b.r * t);
 	var cg = Math.round(a.g * (1 - t) + b.g * t);
@@ -86,7 +94,7 @@ exports.colorRGBAToString = function(t, a, b) {
 	return 'rgba(' + cr.toString(16) + ',' + cg.toString(16) + ',' + cb.toString(16) + ',' + ca + ')';
 };
 
-// Interpolation between 2 strings a and b
+// Interpolation between 2 strings a and b (yes that's possible)
 // Returns a string of the same size as b
 exports.string = function(t, a, b) {
 	var nbCharsA = a.length;
@@ -108,7 +116,6 @@ exports.string = function(t, a, b) {
 	return newString;
 };
 
-// TODO: introduce c = control points
 // Bezier, c = array of control points in ]-Inf, +Inf[
 exports.bezierQuadratic = function(t, a, b, c) {
 	var u = 1 - t;

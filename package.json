@@ -1,6 +1,6 @@
 {
   "name": "tina",
-  "version": "0.1.6",
+  "version": "0.2.0",
   "description": "Tweening and INterpolations for Animation",
   "main": "src/index.js",
   "scripts": {
@@ -11,13 +11,15 @@
     "url": "https://github.com/Wizcorp/tina.git"
   },
   "keywords": [
-    "Tweening",
-    "Interpolation",
-    "Easing",
-    "Animation",
-    "Timeline",
-    "Sequence",
-    "Recorder"
+    "tween",
+    "tweening",
+    "animation",
+    "easing",
+    "interpolation",
+    "animation",
+    "timeline",
+    "sequence",
+    "recorder"
   ],
   "author": "bchevalier",
   "license": "MIT",

@@ -1,5 +1,6 @@
-var Playable   = require('./Playable');
-var Transition = require('./Transition');
+var BoundedPlayable    = require('./BoundedPlayable');
+var Transition         = require('./Transition');
+var TransitionRelative = require('./TransitionRelative');
 
 var easingFunctions        = require('./easing');
 var interpolationFunctions = require('./interpolation');
@@ -31,7 +32,7 @@ function Tween(object, properties) {
 		return new Tween(object, properties);
 	}
 
-	Playable.call(this);
+	BoundedPlayable.call(this);
 
 	// Tweened object
 	this._object = object;
@@ -60,12 +61,17 @@ function Tween(object, properties) {
 
 	// List of transitions of the tween
 	this._transitions = [];
+
+	// Whether the tween is relative
 }
-Tween.prototype = Object.create(Playable.prototype);
+Tween.prototype = Object.create(BoundedPlayable.prototype);
 Tween.prototype.constructor = Tween;
 module.exports = Tween;
 
-Tween.prototype.Transition = Transition;
+Tween.prototype.relative = function (relative) {
+	this._relative = relative;
+	return this;
+};
 
 Tween.prototype.reset = function () {
 	this._current     = 0;
@@ -115,7 +121,7 @@ Tween.prototype._setFrom = function () {
 	this._from = {};
 	for (var p = 0; p < this._properties.length; p += 1) {
 		var property = this._properties[p];
-		this._from[property] = this._object[property];
+		this._from[property] = (this._relative) ? 0 : this._object[property];
 	}
 
 	return this._from;
@@ -129,7 +135,7 @@ Tween.prototype._getLastTransitionEnding = function () {
 	}
 };
 
-Tween.prototype.to = function (duration, toObject, easing, easingParam, interpolationParams) {
+Tween.prototype.to = function (toObject, duration, easing, easingParam, interpolationParams) {
 	// The API allows to pass interpolation names that will be replaced
 	// by the corresponding interpolation functions
 	if (typeof(easing) === 'string') {
@@ -145,8 +151,8 @@ Tween.prototype.to = function (duration, toObject, easing, easingParam, interpol
 	// Getting previous transition ending as the beginning for the new transition
 	var fromObject = this._getLastTransitionEnding();
 
-	var Transition = this.Transition;
-	var transition = new Transition(
+	var TransitionConstructor = (this._relative === true) ? TransitionRelative : Transition;
+	var transition = new TransitionConstructor(
 		this._properties,
 		fromObject,
 		toObject,
