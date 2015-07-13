@@ -12,7 +12,7 @@ Javascript Animation Library to easily create customisable tweens, timelines, se
 * **Easy to debug**
 * **Open source** and MIT License (use it as you please)
 * A consequent library of **easing and interpolation methods**
-* A variety of components such as **Timeline**, **Sequence** and **Recorder**
+* A variety of components such as **Timeline** and **Sequence** (**Recorder** coming soon)
 * **High flexibility** (tween parameters can easily be modified after creation and even when they are running)
 * **Running options**: delay, iterations, pingpong, persist and speed.
 * **High customizability** (possibility to use custom easing and interpolation functions and playable components)
