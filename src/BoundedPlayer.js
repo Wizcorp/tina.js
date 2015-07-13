@@ -8,8 +8,8 @@ var inherit = require('./inherit');
  * Manages the update of a list of playable with respect to a given elapsed time.
  */
 function BoundedPlayer() {
-	PlayableHandler.call(this);
 	BoundedPlayable.call(this);
+	PlayableHandler.call(this);
 }
 BoundedPlayer.prototype = Object.create(BoundedPlayable.prototype);
 BoundedPlayer.prototype.constructor = BoundedPlayer;
@@ -19,6 +19,27 @@ module.exports = BoundedPlayer;
 
 BoundedPlayer.prototype._delay = function () {
 	this._warn('[BoundedPlayer._delay] This player does not support the delay functionality', this);
+};
+
+BoundedPlayer.prototype.stop = function () {
+	// Stopping all active playables
+	var handle = this._activePlayables.first; 
+	while (handle !== null) {
+		var next = handle.next;
+		var playable = handle.object;
+		playable.stop();
+		handle = next;
+	}
+
+	this._handlePlayablesToRemove();
+
+	if (this._player._inactivate(this) === false) {
+		// Could not be stopped
+		return this;
+	}
+
+	this._stop();
+	return this;
 };
 
 BoundedPlayer.prototype._moveTo = function (time, dt) {

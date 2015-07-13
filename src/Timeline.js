@@ -45,11 +45,6 @@ Timeline.prototype._computeDuration = function () {
 	this._duration = duration;
 };
 
-Timeline.prototype.remove = function (playable) {
-	this._remove(playable);
-	return this;
-};
-
 Timeline.prototype._start = function (player, timeOffset) {
 	BoundedPlayer.prototype._start.call(this, player, timeOffset);
 

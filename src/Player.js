@@ -31,6 +31,18 @@ Player.prototype._delay = function (playable, delay) {
 	}).start();
 };
 
+Player.prototype.stop = function () {
+	this.removeAll();
+
+	if (this._player._inactivate(this) === false) {
+		// Could not be stopped
+		return this;
+	}
+
+	this._stop();
+	return this;
+};
+
 Player.prototype._moveTo = function (time, dt) {
 	this._time = time - this._startTime;
 

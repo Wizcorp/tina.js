@@ -200,10 +200,16 @@ var TINA = {
 
 	stop: function () {
 		this._running = false;
+console.log('Stopping TINA', this._tweeners.length);
 		var runningTweeners = this._tweeners.slice(0);
 		for (var t = 0; t < runningTweeners.length; t += 1) {
 			runningTweeners[t]._stop();
 		}
+
+		// Stopping the tweeners have the effect of automatically removing them from TINA
+		// In this case we want to keep them attached to TINA
+console.log('TINA stopped', this._tweeners.length, runningTweeners.length);
+		this._tweeners = runningTweeners;
 
 		if (this._onStop !== null) {
 			this._onStop();
@@ -240,7 +246,7 @@ var TINA = {
 		return this;
 	},
 
-	_remove: function (tweener) {
+	_inactivate: function (tweener) {
 		var tweenerIdx = this._tweeners.indexOf(tweener);
 		if (tweenerIdx !== -1) {
 			this._tweeners.splice(tweenerIdx, 1);
@@ -248,7 +254,7 @@ var TINA = {
 	},
 
 	remove: function (tweener) {
-		this._remove(tweener);
+		this._inactivate(tweener);
 		return this;
 	},
 

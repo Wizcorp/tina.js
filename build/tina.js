@@ -306,8 +306,8 @@ var inherit = require('tina/src/inherit.js');
  * Manages the update of a list of playable with respect to a given elapsed time.
  */
 function BoundedPlayer() {
-	PlayableHandler.call(this);
 	BoundedPlayable.call(this);
+	PlayableHandler.call(this);
 }
 BoundedPlayer.prototype = Object.create(BoundedPlayable.prototype);
 BoundedPlayer.prototype.constructor = BoundedPlayer;
@@ -317,6 +317,27 @@ module.exports = BoundedPlayer;
 
 BoundedPlayer.prototype._delay = function () {
 	this._warn('[BoundedPlayer._delay] This player does not support the delay functionality', this);
+};
+
+BoundedPlayer.prototype.stop = function () {
+	// Stopping all active playables
+	var handle = this._activePlayables.first; 
+	while (handle !== null) {
+		var next = handle.next;
+		var playable = handle.object;
+		playable.stop();
+		handle = next;
+	}
+
+	this._handlePlayablesToRemove();
+
+	if (this._player._inactivate(this) === false) {
+		// Could not be stopped
+		return this;
+	}
+
+	this._stop();
+	return this;
 };
 
 BoundedPlayer.prototype._moveTo = function (time, dt) {
@@ -945,10 +966,16 @@ var TINA = {
 
 	stop: function () {
 		this._running = false;
+console.log('Stopping TINA', this._tweeners.length);
 		var runningTweeners = this._tweeners.slice(0);
 		for (var t = 0; t < runningTweeners.length; t += 1) {
 			runningTweeners[t]._stop();
 		}
+
+		// Stopping the tweeners have the effect of automatically removing them from TINA
+		// In this case we want to keep them attached to TINA
+console.log('TINA stopped', this._tweeners.length, runningTweeners.length);
+		this._tweeners = runningTweeners;
 
 		if (this._onStop !== null) {
 			this._onStop();
@@ -985,7 +1012,7 @@ var TINA = {
 		return this;
 	},
 
-	_remove: function (tweener) {
+	_inactivate: function (tweener) {
 		var tweenerIdx = this._tweeners.indexOf(tweener);
 		if (tweenerIdx !== -1) {
 			this._tweeners.splice(tweenerIdx, 1);
@@ -993,7 +1020,7 @@ var TINA = {
 	},
 
 	remove: function (tweener) {
-		this._remove(tweener);
+		this._inactivate(tweener);
 		return this;
 	},
 
@@ -1890,6 +1917,25 @@ PlayableHandler.prototype._remove = function (playable) {
 	return false;
 };
 
+PlayableHandler.prototype.remove = function (playable) {
+	this._remove(playable);
+	playable._stop();
+	return this;
+};
+
+PlayableHandler.prototype.removeAll = function () {
+	// Stopping all active playables
+	var handle = this._activePlayables.first; 
+	while (handle !== null) {
+		var next = handle.next;
+		this.remove(handle.object);
+		handle = next;
+	}
+
+	this._handlePlayablesToRemove();
+	return this;
+};
+
 PlayableHandler.prototype.possess = function (playable) {
 	if (playable._handle === null) {
 		return false;
@@ -1923,22 +1969,6 @@ PlayableHandler.prototype.clear = function () {
 	this._activePlayables.clear();
 	this._inactivePlayables.clear();
 	this._playablesToRemove.clear();
-	return this;
-};
-
-PlayableHandler.prototype.stop = function () {
-	// Stopping all active playables
-	var handle = this._activePlayables.first; 
-	while (handle !== null) {
-		var next = handle.next;
-		var playable = handle.object;
-		playable.stop();
-		handle = next;
-	}
-
-	this._handlePlayablesToRemove();
-
-	this._stop();
 	return this;
 };
 
@@ -1996,6 +2026,18 @@ Player.prototype._delay = function (playable, delay) {
 	Delay(delay).tweener(this).onComplete(function (timeOverflow) {
 		playable.start(timeOverflow);
 	}).start();
+};
+
+Player.prototype.stop = function () {
+	this.removeAll();
+
+	if (this._player._inactivate(this) === false) {
+		// Could not be stopped
+		return this;
+	}
+
+	this._stop();
+	return this;
 };
 
 Player.prototype._moveTo = function (time, dt) {
@@ -2454,11 +2496,6 @@ Timeline.prototype._computeDuration = function () {
 	}
 
 	this._duration = duration;
-};
-
-Timeline.prototype.remove = function (playable) {
-	this._remove(playable);
-	return this;
 };
 
 Timeline.prototype._start = function (player, timeOffset) {
@@ -3120,22 +3157,8 @@ module.exports = Tweener;
 
 Tweener.prototype._inactivate = function (playable) {
 	// In a tweener, a playable that finishes is simply removed
-	playable._handle = this._playablesToRemove.add(playable._handle);
+	this._remove(playable);
 };
-
-// Tweener.prototype.stop = function () {
-// 	// Stopping all active playables and removing them right away
-// 	while (this._activePlayables.length > 0) {
-// 		var playable = this._activePlayables.pop();
-// 		playable._handle = null;
-// 		playable._stop();
-// 	}
-
-// 	this._handlePlayablesToRemove();
-
-// 	this._stop();
-// 	return this;
-// };
 
 Tweener.prototype._moveTo = function (time, dt) {
 	this._time = this._getElapsedTime(time - this._startTime);
