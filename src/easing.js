@@ -55,7 +55,7 @@ exports.trigo = function(t, n) {
 // Elastic, e = elasticity in ]0, +Inf[
 exports.elastic = function(t, e) {
 	if (t === 1) return 1;
-	e = 1 - 1 / (e + 1); // inversing e for user friendlyness
+	e /= (e + 1); // transforming e
 	var n = (1 + e) * Math.log(1 - t) / Math.log(e);
 	return Math.cos(n - PI_OVER_TWO) * Math.pow(e, n);
 };
@@ -131,14 +131,14 @@ exports.circInOut = function(t) {
 // Elastic, e = elasticity in ]0, +Inf[
 exports.elasticIn = function(t, e) {
 	if (t === 0) { return 0; }
-	e /= (e + 1); // transforming e for user friendlyness
+	e /= (e + 1); // transforming e
 	var n = (1 + e) * Math.log(t) / Math.log(e);
 	return Math.cos(n) * Math.pow(e, n);
 };
 
 exports.elasticOut = function(t, e) {
 	if (t === 1) { return 1; }
-	e /= (e + 1); // transforming e for user friendlyness
+	e /= (e + 1); // transforming e
 	var n = (1 + e) * Math.log(1 - t) / Math.log(e);
 	return 1.0 - Math.cos(n) * Math.pow(e, n);
 };
@@ -147,13 +147,13 @@ exports.elasticInOut = function(t, e) {
 	var n;
 	if (t < 0.5) {
 		if (t === 0) { return 0; }
-		e /= (e + 1); // transforming e for user friendlyness
+		e /= (e + 1); // transforming e
 		n = (1 + e) * Math.log(2 * t) / Math.log(e);
 		return 0.5 * Math.cos(n) * Math.pow(e, n);
 	}
 
 	if (t === 1) { return 1; }
-	e /= (e + 1); // transforming e for user friendlyness
+	e /= (e + 1); // transforming e
 	n = (1 + e) * Math.log(2 - 2 * t) / Math.log(e);
 	return 0.5 + 0.5 * (1.0 - Math.cos(n) * Math.pow(e, n));
 };
@@ -161,14 +161,14 @@ exports.elasticInOut = function(t, e) {
 // Bounce, e = elasticity in ]0, +Inf[
 exports.bounceIn = function(t, e) {
 	if (t === 0) { return 0; }
-	e /= (e + 1); // transforming e for user friendlyness
+	e /= (e + 1); // transforming e
 	var n = (1 + e) * Math.log(t) / Math.log(e);
 	return Math.abs(Math.cos(n) * Math.pow(e, n));
 };
 
 exports.bounceOut = function(t, e) {
 	if (t === 1) { return 1; }
-	e /= (e + 1); // transforming e for user friendlyness
+	e /= (e + 1); // transforming e
 	var n = (1 + e) * Math.log(1 - t) / Math.log(e);
 	return 1.0 - Math.abs(Math.cos(n) * Math.pow(e, n));
 };
@@ -177,13 +177,13 @@ exports.bounceInOut = function(t, e) {
 	var n;
 	if (t < 0.5) {
 		if (t === 0) { return 0; }
-		e /= (e + 1); // transforming e for user friendlyness
+		e /= (e + 1); // transforming e
 		n = (1 + e) * Math.log(2 * t) / Math.log(e);
 		return Math.abs(0.5 * Math.cos(n) * Math.pow(e, n));
 	}
 
 	if (t === 1) { return 1; }
-	e /= (e + 1); // transforming e for user friendlyness
+	e /= (e + 1); // transforming e
 	n = (1 + e) * Math.log(2 - 2 * t) / Math.log(e);
 	return 0.5 + 0.5 * (1.0 - Math.abs(Math.cos(n) * Math.pow(e, n)));
 };
