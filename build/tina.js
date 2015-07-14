@@ -773,7 +773,7 @@ require.register("tina/src/easing.js", function (exports, module) {
  * All the ease functions are continuous for times t in [0, 1]
  *
  * Note: if you want a particular easing method to be added
- * create an issue or contribute at https://github.com/Wizcorp/tina
+ * create an issue or contribute at https://github.com/Wizcorp/tina.js
  */
 
 // Math constants (for readability)
@@ -813,7 +813,7 @@ exports.trigo = function(t, n) {
 // Elastic, e = elasticity in ]0, +Inf[
 exports.elastic = function(t, e) {
 	if (t === 1) return 1;
-	e = 1 - 1 / (e + 1); // inversing e for user friendlyness
+	e /= (e + 1); // transforming e
 	var n = (1 + e) * Math.log(1 - t) / Math.log(e);
 	return Math.cos(n - PI_OVER_TWO) * Math.pow(e, n);
 };
@@ -889,14 +889,14 @@ exports.circInOut = function(t) {
 // Elastic, e = elasticity in ]0, +Inf[
 exports.elasticIn = function(t, e) {
 	if (t === 0) { return 0; }
-	e /= (e + 1); // transforming e for user friendlyness
+	e /= (e + 1); // transforming e
 	var n = (1 + e) * Math.log(t) / Math.log(e);
 	return Math.cos(n) * Math.pow(e, n);
 };
 
 exports.elasticOut = function(t, e) {
 	if (t === 1) { return 1; }
-	e /= (e + 1); // transforming e for user friendlyness
+	e /= (e + 1); // transforming e
 	var n = (1 + e) * Math.log(1 - t) / Math.log(e);
 	return 1.0 - Math.cos(n) * Math.pow(e, n);
 };
@@ -905,13 +905,13 @@ exports.elasticInOut = function(t, e) {
 	var n;
 	if (t < 0.5) {
 		if (t === 0) { return 0; }
-		e /= (e + 1); // transforming e for user friendlyness
+		e /= (e + 1); // transforming e
 		n = (1 + e) * Math.log(2 * t) / Math.log(e);
 		return 0.5 * Math.cos(n) * Math.pow(e, n);
 	}
 
 	if (t === 1) { return 1; }
-	e /= (e + 1); // transforming e for user friendlyness
+	e /= (e + 1); // transforming e
 	n = (1 + e) * Math.log(2 - 2 * t) / Math.log(e);
 	return 0.5 + 0.5 * (1.0 - Math.cos(n) * Math.pow(e, n));
 };
@@ -919,14 +919,14 @@ exports.elasticInOut = function(t, e) {
 // Bounce, e = elasticity in ]0, +Inf[
 exports.bounceIn = function(t, e) {
 	if (t === 0) { return 0; }
-	e /= (e + 1); // transforming e for user friendlyness
+	e /= (e + 1); // transforming e
 	var n = (1 + e) * Math.log(t) / Math.log(e);
 	return Math.abs(Math.cos(n) * Math.pow(e, n));
 };
 
 exports.bounceOut = function(t, e) {
 	if (t === 1) { return 1; }
-	e /= (e + 1); // transforming e for user friendlyness
+	e /= (e + 1); // transforming e
 	var n = (1 + e) * Math.log(1 - t) / Math.log(e);
 	return 1.0 - Math.abs(Math.cos(n) * Math.pow(e, n));
 };
@@ -935,13 +935,13 @@ exports.bounceInOut = function(t, e) {
 	var n;
 	if (t < 0.5) {
 		if (t === 0) { return 0; }
-		e /= (e + 1); // transforming e for user friendlyness
+		e /= (e + 1); // transforming e
 		n = (1 + e) * Math.log(2 * t) / Math.log(e);
 		return Math.abs(0.5 * Math.cos(n) * Math.pow(e, n));
 	}
 
 	if (t === 1) { return 1; }
-	e /= (e + 1); // transforming e for user friendlyness
+	e /= (e + 1); // transforming e
 	n = (1 + e) * Math.log(2 - 2 * t) / Math.log(e);
 	return 0.5 + 0.5 * (1.0 - Math.abs(Math.cos(n) * Math.pow(e, n)));
 };
@@ -983,7 +983,7 @@ TINA.NestedTween     = require('tina/src/NestedTween.js');
 TINA.PixiTween       = require('tina/src/NestedTween.js');
 TINA.Timeline        = require('tina/src/Timeline.js');
 TINA.Sequence        = require('tina/src/Sequence.js');
-TINA.Recorder        = require('tina/src/Recorder.js');
+// TINA.Recorder        = require('./Recorder');
 TINA.Delay           = require('tina/src/Delay.js');
 TINA.easing          = require('tina/src/easing.js');
 TINA.interpolation   = require('tina/src/interpolation.js');
@@ -1020,7 +1020,7 @@ require.register("tina/src/interpolation.js", function (exports, module) {
  * Define how to interpolate between object a and b.
  * 
  * Note: if you want a particular interpolation method to be added
- * create an issue or contribute at https://github.com/Wizcorp/tina
+ * create an issue or contribute at https://github.com/Wizcorp/tina.js
  */
 
 // TODO: Test them all!
@@ -1521,14 +1521,12 @@ function NestedTween(object, properties) {
 		var propertyString = properties[p];
 		var objectChain = propertyString.substring(0, propertyString.lastIndexOf('.'));
 
-		console.log('object chain is', objectChain, propertiesPerObject[objectChain]);
 		if (propertiesPerObject[objectChain] === undefined) {
 			// Fetching object and property
 			var propertyChain = propertyString.split('.');
 			var propertyIndex = propertyChain.length - 1;
 			var propertyObject = object;
 
-			console.log('property chain is', propertyChain);
 			// Following the chain to get the object
 			for (var c = 0; c < propertyIndex; c += 1) {
 				propertyObject = propertyObject[propertyChain[c]];
@@ -1550,7 +1548,6 @@ function NestedTween(object, properties) {
 	for (var objectChain in objects) {
 		var tweenObject     = objects[objectChain];
 		var tweenProperties = propertiesPerObject[objectChain];
-		console.log('Creating a tween with:', tweenObject, tweenProperties);
 		var tween = new AbstractTween(tweenObject, tweenProperties);
 		this._tweens.push(tween);
 		this._tweensPerObject[objectChain] = tween;
@@ -1647,6 +1644,8 @@ NestedTween.prototype.wait = function (duration) {
 	for (var t = 0; t < this._tweens.length; t += 1) {
 		this._tweens[t].wait(duration);
 	}
+
+	this._duration += duration;
 	return this;
 };
 
@@ -2713,7 +2712,7 @@ require.register("tina/src/TINA.js", function (exports, module) {
  * timelines, sequences and other playable components.
  *
  * Note: if you want a particular component to be added
- * create an issue or contribute at https://github.com/Wizcorp/tina
+ * create an issue or contribute at https://github.com/Wizcorp/tina.js
  */
 
 // Method to trigger automatic update of TINA
