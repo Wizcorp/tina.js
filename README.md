@@ -8,16 +8,17 @@
 Javascript Animation Library to easily create customisable tweens, timelines, sequences and other playable components.
 
 * **Easy to use** (API strongly inspired by Tweenjs)
-* **Easy to debug**
-* **High performance**
+* **Easy to debug** (Proper warnings)
+* **High performance** (Competitive with Tweenjs)
+* **High flexibility** (tween parameters can easily be modified after creation and even when they are running)
+* **High customizability** (possibility to use custom easing and interpolation functions and playable components)
+* **Running options** (delay, iterations, pingpong, persist and speed)
 * **Open source** and MIT License (use it as you please)
 * A consequent library of **easing and interpolation methods**
 * A variety of components such as **Timeline** and **Sequence** (**Recorder** coming soon)
-* **High flexibility** (tween parameters can easily be modified after creation and even when they are running)
-* **Running options**: delay, iterations, pingpong, persist and speed.
-* **High customizability** (possibility to use custom easing and interpolation functions and playable components)
 * **Good synchronisation** between tweens
 * **Relative tweening** enables the possibility to alter objects while they are tweening
+* **Nested object tweening** enables the possibility to alter nested objects using a single tween
 * Bonus: Creation and removal of tweens within the callback of another tween will not result in any unwanted side effect
 
 ## How to use
@@ -165,7 +166,7 @@ To create a **sequence**:
 	var mySequence = new TINA.Sequence()
 		.add(myTweenA)
 		.add(myTweenB)
-		.addDelay(1)
+		.addDelay(1000)
 		.add(myTweenC)
 		.start();
 ```
