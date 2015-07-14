@@ -160,6 +160,8 @@ NestedTween.prototype.wait = function (duration) {
 	for (var t = 0; t < this._tweens.length; t += 1) {
 		this._tweens[t].wait(duration);
 	}
+
+	this._duration += duration;
 	return this;
 };
 
