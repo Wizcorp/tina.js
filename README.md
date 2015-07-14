@@ -7,9 +7,9 @@
 
 Javascript Animation Library to easily create customisable tweens, timelines, sequences and other playable components.
 
-* **Easy to use**, friendly API (strongly inspired by Tweenjs)
-* **High performance**
+* **Easy to use** (API strongly inspired by Tweenjs)
 * **Easy to debug**
+* **High performance**
 * **Open source** and MIT License (use it as you please)
 * A consequent library of **easing and interpolation methods**
 * A variety of components such as **Timeline** and **Sequence** (**Recorder** coming soon)
@@ -125,6 +125,25 @@ To add **callbacks** on specific events:
 		})
 		.delay(1000);
 ```
+
+### NestedTween
+Nested tweens give the ability to tween nested objects using a single tween.
+A nested tween allows to interpolation between the given nested objects.
+To tween a **nested tween**:
+``` javascript
+	var nestedObject = {
+		position: { x: 0, y: 0 },
+		alpha: 0
+	}
+
+	var myNestedTween = new TINA.NestedTween(nestedObject, ['position.x', 'position.y', 'alpha'])
+	.to({
+		position: { x: 10, y: 20 },
+		alpha: 1
+	}, 500)
+	.start();
+```
+Note: the NestedTween API remains identical to Tween and all the functionalities of Tween are available to a NestedTween object.
 
 ### Timeline
 Timelines are used to play tweens in parallel.

@@ -22,6 +22,7 @@ function PlayableHandler() {
 	this._activePlayables   = new DoublyList();
 
 	// List of inactive playables handled by this player
+	// TODO: use a priority list of inactive playables (ordered by starting time)
 	this._inactivePlayables = new DoublyList();
 
 	// List of playables that are not handled by this player anymore and are waiting to be removed

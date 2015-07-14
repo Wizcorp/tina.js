@@ -135,6 +135,210 @@ require.define = function (name, exports) {
     exports: exports
   };
 };
+require.register("tina/src/AbstractTween.js", function (exports, module) {
+var Transition         = require('tina/src/Transition.js');
+var TransitionRelative = require('tina/src/TransitionRelative.js');
+
+var easingFunctions        = require('tina/src/easing.js');
+var interpolationFunctions = require('tina/src/interpolation.js');
+
+
+// Temporisation, used for waiting
+function Temporisation(start, duration, toObject) {
+	this.start    = start;
+	this.end      = start + duration;
+	this.duration = duration;
+
+	this.to = toObject;
+
+	this.update = function () {};
+}
+
+/**
+ *
+ * @classdesc
+ * Manages transition of properties of an object
+ *
+ * @param {object} object     - Object to tween
+ * @param {array}  properties - Properties of the object to tween
+ *
+ */
+
+function AbstractTween(object, properties) {
+	// Tweened object
+	this._object = object;
+
+	if ((properties === null || properties === undefined) && (object instanceof Array)) {
+		// Given object is an array
+		// Its properties to tween are the indices of the array
+		properties = [];
+		for (var p = 0; p < object.length; p += 1) {
+			properties[p] = p;
+		}
+	}
+
+	// Properties to tween
+	this._properties = properties;
+
+	// Starting property values
+	// By default is a copy of given object property values
+	this._from = null;
+
+	// Property interpolations
+	this._interpolations = null;
+
+	// Current transition index
+	this._index = 0;
+
+	// List of transitions of the tween
+	this._transitions = [];
+
+	// Whether the tween is relative
+	this._relative = false;
+
+	// Current time
+	this._time = 0;
+
+	// Total duration
+	this._duration = 0;
+}
+module.exports = AbstractTween;
+
+AbstractTween.prototype.relative = function (relative) {
+	this._relative = relative;
+	return this;
+};
+
+AbstractTween.prototype.reset = function () {
+	this._index       = 0;
+	this._transitions = [];
+
+	return this;
+};
+
+AbstractTween.prototype.interpolations = function (interpolations) {
+	// The API allows to pass interpolation names that will be replaced
+	// by the corresponding interpolation functions
+	for (var p = 0; p < this._properties.length; p += 1) {
+		var property = this._properties[p];
+		var interpolation = interpolations[property];
+		if (interpolation === undefined) {
+			interpolations[property] = interpolationFunctions.linear;
+			continue;
+		}
+
+		if (typeof(interpolation) === 'string') {
+			// Replacing interpolation name by interpolation function
+			if (interpolationFunctions[interpolation] === undefined) {
+				console.warn('[AbstractTween.interpolations] Given interpolation does not exist');
+				interpolations[property] = interpolationFunctions.linear;
+			} else {
+				interpolations[property] = interpolationFunctions[interpolation];
+			}
+		}
+	}
+
+	this._interpolations = interpolations;
+	return this;
+};
+
+AbstractTween.prototype.from = function (fromObject) {
+	this._from = fromObject;
+
+	if (this._transitions.length > 0) {
+		this._transitions[0].from = fromObject;
+	}
+
+	return this;
+};
+
+AbstractTween.prototype._setFrom = function () {
+	// Copying properties of tweened object
+	this._from = {};
+	for (var p = 0; p < this._properties.length; p += 1) {
+		var property = this._properties[p];
+		this._from[property] = (this._relative === true) ? 0 : this._object[property];
+	}
+
+	return this._from;
+};
+
+AbstractTween.prototype._getLastTransitionEnding = function () {
+	if (this._transitions.length > 0) {
+		return this._transitions[this._transitions.length - 1].to;
+	} else {
+		return (this._from === null) ? this._setFrom() : this._from;
+	}
+};
+
+AbstractTween.prototype.to = function (toObject, duration, easing, easingParam, interpolationParams) {
+	// The API allows to pass interpolation names that will be replaced
+	// by the corresponding interpolation functions
+	if (typeof(easing) === 'string') {
+		// Replacing interpolation name by interpolation function
+		if (easingFunctions[easing] === undefined) {
+			console.warn('[AbstractTween.to] Given easing does not exist');
+			easing = undefined;
+		} else {
+			easing = easingFunctions[easing];
+		}
+	}
+
+	// Getting previous transition ending as the beginning for the new transition
+	var fromObject = this._getLastTransitionEnding();
+
+	var TransitionConstructor = (this._relative === true) ? TransitionRelative : Transition;
+	var transition = new TransitionConstructor(
+		this._properties,
+		fromObject,
+		toObject,
+		this._duration, // starting time
+		duration,
+		easing,
+		easingParam,
+		this._interpolations,
+		interpolationParams
+	);
+
+	this._transitions.push(transition);
+	this._duration += duration;
+	return this;
+};
+
+AbstractTween.prototype.wait = function (duration) {
+	var toObject = this._getLastTransitionEnding();
+	this._transitions.push(new Temporisation(this._duration, duration, toObject));
+	this._duration += duration;
+	return this;
+};
+
+AbstractTween.prototype._update = function () {
+	// Finding transition corresponding to current time
+	var transition = this._transitions[this._index];
+
+	while (transition.end <= this._time) {
+		if (this._index === (this._transitions.length - 1)) {
+			transition.update(this._object, 1);
+			return;
+		}
+
+		transition = this._transitions[++this._index];
+	}
+
+	while (this._time <= transition.start) {
+		if (this._index === 0) {
+			transition.update(this._object, 0);
+			return;
+		}
+
+		transition = this._transitions[--this._index];
+	}
+
+	// Updating the object with respect to the current transition and time
+	transition.update(this._object, (this._time - transition.start) / transition.duration);
+};
+});
+
 require.register("tina/src/BoundedPlayable.js", function (exports, module) {
 var Playable = require('tina/src/Playable.js');
 
@@ -764,325 +968,25 @@ exports.backInOut = function(t, e) {
 });
 
 require.register("tina", function (exports, module) {
+var TINA = require('tina/src/TINA.js');
 
-/**
- *
- * @module TINA
- *
- * @author Brice Chevalier
- *
- * @desc 
- *
- * Tweening and INterpolations for Animation
- * 
- * Animation library to easily create and customisable tweens,
- * timelines, sequences and other playable components.
- *
- * Note: if you want a particular component to be added
- * create an issue or contribute at https://github.com/Wizcorp/tina
- */
-
-// Method to trigger automatic update of TINA
-var requestAnimFrame = (function(){
-	return window.requestAnimationFrame    || 
-		window.webkitRequestAnimationFrame || 
-		window.mozRequestAnimationFrame    || 
-		window.oRequestAnimationFrame      || 
-		window.msRequestAnimationFrame     || 
-		function(callback){
-			window.setTimeout(callback, 1000 / 60);
-		};
-})();
-
-// Performance.now gives better precision than Date.now
-var clock = window.performance || Date;
-
-var TINA = {
-	Tweener:         require('tina/src/Tweener.js'),
-	Timer:           require('tina/src/Timer.js'),
-	Ticker:          require('tina/src/Ticker.js'),
-	Playable:        require('tina/src/Playable.js'),
-	BoundedPlayable: require('tina/src/BoundedPlayable.js'),
-	PlayableHandler: require('tina/src/PlayableHandler.js'),
-	BoundedPlayer:   require('tina/src/BoundedPlayer.js'),
-	Player:          require('tina/src/Player.js'),
-	Tween:           require('tina/src/Tween.js'),
-	Timeline:        require('tina/src/Timeline.js'),
-	Sequence:        require('tina/src/Sequence.js'),
-	Recorder:        require('tina/src/Recorder.js'),
-	Delay:           require('tina/src/Delay.js'),
-	easing:          require('tina/src/easing.js'),
-	interpolation:   require('tina/src/interpolation.js'),
-
-	_tweeners: [],
-	_defaultTweener: null,
-	_running: false,
-
-	_startTime: 0,
-	_time: 0,
-
-	// callbacks
-	_onStart:  null,
-	_onPause:  null,
-	_onResume: null,
-	_onUpdate: null,
-	_onStop:   null,
-
-	_pauseOnLostFocus: false,
-
-	onStart: function (onStart) {
-		this._onStart = onStart;
-		return this;
-	},
-
-	onUpdate: function (onUpdate) {
-		this._onUpdate = onUpdate;
-		return this;
-	},
-
-	onStop: function (onStop) {
-		this._onStop = onStop;
-		return this;
-	},
-
-	onPause: function (onPause) {
-		this._onPause = onPause;
-		return this;
-	},
-
-	isRunning: function () {
-		return this._running;
-	},
-
-	update: function () {
-		var now = clock.now() - this._startTime;
-		var dt = now - this._time;
-		if (dt < 0) {
-			// Clock error, ignoring this update
-			// Date.now is based on a clock that is resynchronized
-			// every 15-20 mins and could cause the timer to go backward in time.
-			// (legend or reality? not sure, but I think I noticed it once)
-			// To get some explanation from Paul Irish:
-			// http://updates.html5rocks.com/2012/08/When-milliseconds-are-not-enough-performance-now
-			return;
-		}
-
-		this._time = now;
-
-		// Making a copy of the tweener array
-		// to avoid funky stuff happening
-		// due to addition or removal of tweeners
-		// while iterating them
-		var runningTweeners = this._tweeners.slice(0);
-		for (var t = 0; t < runningTweeners.length; t += 1) {
-			runningTweeners[t]._moveTo(this._time, dt);
-		}
-
-		if (this._onUpdate !== null) {
-			this._onUpdate(this._time, dt);
-		}
-	},
-
-	reset: function () {
-		this._startTime = clock.now();
-		this._time = 0;
-	},
-
-	start: function () {
-		if (this._running === true) {
-			console.warn('[TINA.start] TINA is already running');
-			return this;
-		}
-
-		function updateTINA() {
-			if (TINA._running === true) {
-				TINA.update();
-				requestAnimFrame(updateTINA);
-			}
-		}
-
-		if (this._onStart !== null) {
-			this._onStart();
-		}
-
-		// Setting the clock
-		this._startTime = clock.now();
-		this._time = 0;
-
-		for (var t = 0; t < this._tweeners.length; t += 1) {
-			this._tweeners[t]._start();
-		}
-
-		this._running = true;
-
-		// Starting the animation loop
-		requestAnimFrame(updateTINA);
-		return this;
-	},
-
-	pause: function () {
-		if (this._running === false) {
-			console.warn('[TINA.pause] TINA is not running');
-			return this;
-		}
-
-		this._running = false;
-		for (var t = 0; t < this._tweeners.length; t += 1) {
-			this._tweeners[t]._pause();
-		}
-
-		if (this._onPause !== null) {
-			this._onPause();
-		}
-		return this;
-	},
-
-	resume: function () {
-		if (this._running === true) {
-			console.warn('[TINA.resume] TINA is already running');
-			return this;
-		}
-
-		this._running = true;
-		if (this._onResume !== null) {
-			this._onResume();
-		}
-
-		for (var t = 0; t < this._tweeners.length; t += 1) {
-			this._tweeners[t]._resume();
-		}
-
-		// Resetting the clock
-		// Getting time difference between last update and now
-		var now = clock.now();
-		var dt = now - this._time;
-
-		// Moving starting time by this difference
-		// As if the time had virtually not moved
-		this._startTime += dt;
-
-		return this;
-	},
-
-	stop: function () {
-		this._running = false;
-console.log('Stopping TINA', this._tweeners.length);
-		var runningTweeners = this._tweeners.slice(0);
-		for (var t = 0; t < runningTweeners.length; t += 1) {
-			runningTweeners[t]._stop();
-		}
-
-		// Stopping the tweeners have the effect of automatically removing them from TINA
-		// In this case we want to keep them attached to TINA
-console.log('TINA stopped', this._tweeners.length, runningTweeners.length);
-		this._tweeners = runningTweeners;
-
-		if (this._onStop !== null) {
-			this._onStop();
-		}
-		return this;
-	},
-
-	pauseOnLostFocus: function (pauseOnLostFocus) {
-		this._pauseOnLostFocus = pauseOnLostFocus;
-		return this;
-	},
-
-	setDefaultTweener: function (tweener) {
-		this._defaultTweener = tweener;
-		this._tweeners.push(this._defaultTweener);
-	},
-
-	getDefaultTweener: function () {
-		return this._defaultTweener;
-	},
-
-	_add: function (tweener) {
-		// A tweener is starting
-		if (this._running === false) {
-			// TINA is not running, starting now
-			this.start();
-		}
-
-		this._tweeners.push(tweener);
-	},
-
-	add: function (tweener) {
-		this._tweeners.push(tweener);
-		return this;
-	},
-
-	_inactivate: function (tweener) {
-		var tweenerIdx = this._tweeners.indexOf(tweener);
-		if (tweenerIdx !== -1) {
-			this._tweeners.splice(tweenerIdx, 1);
-		}
-	},
-
-	remove: function (tweener) {
-		this._inactivate(tweener);
-		return this;
-	},
-
-	_getDefaultTweener: function () {
-		if (this._defaultTweener === null) {
-			// If a default tweener is required but non exist
-			// Then it is started in addition to being created
-			var DefaultTweener = this.Timer;
-			this._defaultTweener = new DefaultTweener().start();
-		}
-
-		return this._defaultTweener;
-	}
-};
-
-
-// To handle lost of focus of the page
-// Constants to manage lost of focus of the page
-var hidden, visbilityChange; 
-if (typeof document.hidden !== 'undefined') {
-	// Recent browser support 
-	hidden = 'hidden';
-	visbilityChange = 'visibilitychange';
-} else if (typeof document.mozHidden !== 'undefined') {
-	hidden = 'mozHidden';
-	visbilityChange = 'mozvisibilitychange';
-} else if (typeof document.msHidden !== 'undefined') {
-	hidden = 'msHidden';
-	visbilityChange = 'msvisibilitychange';
-} else if (typeof document.webkitHidden !== 'undefined') {
-	hidden = 'webkitHidden';
-	visbilityChange = 'webkitvisibilitychange';
-}
-
-if (typeof document[hidden] === 'undefined') {
-	this._warn('[Tweener] Cannot pause on lost focus because the browser does not support the Page Visibility API');
-} else {
-	// Handle page visibility change
-	var wasRunning = false;
-	document.addEventListener(visbilityChange, function () {
-		if (document[hidden]) {
-			// document is hiding
-			wasRunning = TINA.isRunning();
-			if (wasRunning && TINA._pauseOnLostFocus) {
-				TINA.pause();
-			}
-		}
-
-		if (!document[hidden]) {
-			// document is back (we missed you buddy)
-			if (wasRunning && TINA._pauseOnLostFocus) {
-				// Running TINA only if it was running when the document focus was lost
-				TINA.resume();
-			}
-		}
-	}, false);
-}
-
-(function (root) {
-	// Global variable
-	root.TINA = TINA;
-})(this);
+TINA.Tweener         = require('tina/src/Tweener.js');
+TINA.Timer           = require('tina/src/Timer.js');
+TINA.Ticker          = require('tina/src/Ticker.js');
+TINA.Playable        = require('tina/src/Playable.js');
+TINA.BoundedPlayable = require('tina/src/BoundedPlayable.js');
+TINA.PlayableHandler = require('tina/src/PlayableHandler.js');
+TINA.BoundedPlayer   = require('tina/src/BoundedPlayer.js');
+TINA.Player          = require('tina/src/Player.js');
+TINA.Tween           = require('tina/src/Tween.js');
+TINA.NestedTween     = require('tina/src/NestedTween.js');
+TINA.PixiTween       = require('tina/src/NestedTween.js');
+TINA.Timeline        = require('tina/src/Timeline.js');
+TINA.Sequence        = require('tina/src/Sequence.js');
+TINA.Recorder        = require('tina/src/Recorder.js');
+TINA.Delay           = require('tina/src/Delay.js');
+TINA.easing          = require('tina/src/easing.js');
+TINA.interpolation   = require('tina/src/interpolation.js');
 
 module.exports = TINA;
 
@@ -1131,6 +1035,7 @@ exports.linear = function(t, a, b) {
 
 // d = discretization
 exports.discrete = function(t, a, b, d) {
+	if (d === undefined) { d = 1; }
 	return Math.floor((a * (1 - t) + b * t) / d) * d;
 };
 
@@ -1340,12 +1245,12 @@ exports.bezierKd = function(t, a, b, c) {
 // CatmullRom, b = array of control points in ]-Inf, +Inf[
 exports.catmullRom = function(t, a, b, c) {
 	if (t === 1) {
-		return b[b.length - 1];
+		return c;
 	}
 
 	// Finding index corresponding to current time
-	var k = b[0].length;
-	var n = b.length - 1;
+	var k = a.length;
+	var n = b.length + 1;
 	t *= n;
 	var i = Math.floor(t);
 	t -= i;
@@ -1357,10 +1262,15 @@ exports.catmullRom = function(t, a, b, c) {
 	var y = -1.5 * t3 + 2.0 * t2 + 0.5 * t;
 	var z =  0.5 * t3 - 0.5 * t2;
 
-	var p0 = b[Math.max(0, i - 1)];
-	var p1 = b[i];
-	var p2 = b[Math.min(n, i + 1)];
-	var p3 = b[Math.min(n, i + 2)];
+	var i0 = i - 2;
+	var i1 = i - 1;
+	var i2 = i;
+	var i3 = i + 1;
+
+	var p0 = (i0 < 0) ? a : b[i0];
+	var p1 = (i1 < 0) ? a : b[i1];
+	var p2 = (i3 < n - 2) ? b[i2] : c;
+	var p3 = (i3 < n - 2) ? b[i3] : c;
 
 	var res = [];
 	for (var j = 0; j < k; j += 1) {
@@ -1569,6 +1479,184 @@ exports.simplex2d = (function() {
 		return a * (1 - t) + b * t;
 	}
 })();
+});
+
+require.register("tina/src/NestedTween.js", function (exports, module) {
+var BoundedPlayable = require('tina/src/BoundedPlayable.js');
+var AbstractTween   = require('tina/src/AbstractTween.js');
+
+/**
+ *
+ * @classdesc
+ * Manages transition of properties of an object
+ *
+ * @param {object} object     - Object to tween
+ * @param {array}  properties - Properties of the object to tween
+ *
+ */
+
+function NestedTween(object, properties) {
+	if ((this instanceof NestedTween) === false) {
+		return new NestedTween(object, properties);
+	}
+
+	BoundedPlayable.call(this);
+
+	// Map if tween per object for fast access
+	this._tweensPerObject = {};
+
+	// Array of tween for fast iteration when udpating
+	this._tweens = [];
+
+	// Property chains per object
+	this._propertyChains = {};
+
+	// Array of object chains
+	this._objectChains = [];
+
+	var propertiesPerObject = {};
+	var objects = {};
+
+	for (var p = 0; p < properties.length; p += 1) {
+		var propertyString = properties[p];
+		var objectChain = propertyString.substring(0, propertyString.lastIndexOf('.'));
+
+		console.log('object chain is', objectChain, propertiesPerObject[objectChain]);
+		if (propertiesPerObject[objectChain] === undefined) {
+			// Fetching object and property
+			var propertyChain = propertyString.split('.');
+			var propertyIndex = propertyChain.length - 1;
+			var propertyObject = object;
+
+			console.log('property chain is', propertyChain);
+			// Following the chain to get the object
+			for (var c = 0; c < propertyIndex; c += 1) {
+				propertyObject = propertyObject[propertyChain[c]];
+			}
+
+			propertiesPerObject[objectChain] = [propertyChain[propertyIndex]];
+			objects[objectChain] = propertyObject;
+			this._objectChains.push(objectChain);
+			this._propertyChains[objectChain] = propertyChain;
+			continue;
+		}
+
+		// Object was already fetched
+		var property = propertyString.substring(propertyString.lastIndexOf('.') + 1);
+		propertiesPerObject[objectChain].push(property);
+	}
+
+	// Creating the tweens
+	for (var objectChain in objects) {
+		var tweenObject     = objects[objectChain];
+		var tweenProperties = propertiesPerObject[objectChain];
+		console.log('Creating a tween with:', tweenObject, tweenProperties);
+		var tween = new AbstractTween(tweenObject, tweenProperties);
+		this._tweens.push(tween);
+		this._tweensPerObject[objectChain] = tween;
+	}
+}
+NestedTween.prototype = Object.create(BoundedPlayable.prototype);
+NestedTween.prototype.constructor = NestedTween;
+module.exports = NestedTween;
+
+NestedTween.prototype.relative = function (relative) {
+	// Dispatching relative
+	for (var t = 0; t < this._tweens.length; t += 1) {
+		this._tweens[t].relative(relative);
+	}
+	return this;
+};
+
+NestedTween.prototype.reset = function () {
+	// Dispatching reset
+	for (var t = 0; t < this._tweens.length; t += 1) {
+		this._tweens[t].reset;
+	}
+
+	this._duration = 0;
+	return this;
+};
+
+NestedTween.prototype.interpolations = function (interpolations) {
+	// Dispatching interpolations
+	for (var o = 0; o < this._objectChains.length; o += 1) {
+		var objectChain = this._objectChains[o];
+		var propertyChain = this._propertyChains[objectChain];
+		var propertyIndex = propertyChain.length - 1;
+
+		var objectInterpolations = interpolations;
+		for (var c = 0; c < propertyIndex && objectInterpolations !== undefined; c += 1) {
+			objectInterpolations = objectInterpolations[propertyChain[c]];
+		}
+
+		if (objectInterpolations !== undefined) {
+			this._tweensPerObject[objectChain].interpolations(objectInterpolations);
+		}
+	}
+
+	return this;
+};
+
+NestedTween.prototype.from = function (fromObject) {
+	// Dispatching from
+	for (var o = 0; o < this._objectChains.length; o += 1) {
+		var objectChain = this._objectChains[o];
+		var propertyChain = this._propertyChains[objectChain];
+		var propertyIndex = propertyChain.length - 1;
+
+		var object = fromObject;
+		for (var c = 0; c < propertyIndex && object !== undefined; c += 1) {
+			object = object[propertyChain[c]];
+		}
+
+		if (object !== undefined) {
+			this._tweensPerObject[objectChain].from(object);
+		}
+	}
+
+	return this;
+};
+
+NestedTween.prototype.to = function (toObject, duration, easing, easingParam, interpolationParams) {
+	// Dispatching to
+	for (var o = 0; o < this._objectChains.length; o += 1) {
+		var objectChain = this._objectChains[o];
+		var propertyChain = this._propertyChains[objectChain];
+		var propertyIndex = propertyChain.length - 1;
+
+		var object = toObject;
+		for (var c = 0; c < propertyIndex; c += 1) {
+			object = object[propertyChain[c]];
+		}
+
+		var objectInterpolationParams = interpolationParams;
+		for (var c = 0; c < propertyIndex && objectInterpolationParams !== undefined; c += 1) {
+			objectInterpolationParams = objectInterpolationParams[propertyChain[c]];
+		}
+
+		this._tweensPerObject[objectChain].to(object, duration, easing, easingParam, objectInterpolationParams);
+	}
+
+	this._duration += duration;
+	return this;
+};
+
+NestedTween.prototype.wait = function (duration) {
+	// Dispatching wait
+	for (var t = 0; t < this._tweens.length; t += 1) {
+		this._tweens[t].wait(duration);
+	}
+	return this;
+};
+
+NestedTween.prototype._update = function () {
+	for (var t = 0; t < this._tweens.length; t += 1) {
+		var tween = this._tweens[t];
+		tween._time = this._time;
+		tween._update();
+	}
+};
 });
 
 require.register("tina/src/Playable.js", function (exports, module) {
@@ -1848,6 +1936,7 @@ function PlayableHandler() {
 	this._activePlayables   = new DoublyList();
 
 	// List of inactive playables handled by this player
+	// TODO: use a priority list of inactive playables (ordered by starting time)
 	this._inactivePlayables = new DoublyList();
 
 	// List of playables that are not handled by this player anymore and are waiting to be removed
@@ -2608,6 +2697,315 @@ Timer.prototype.convertToTimeUnits = function(seconds) {
 };
 });
 
+require.register("tina/src/TINA.js", function (exports, module) {
+
+/**
+ *
+ * @module TINA
+ *
+ * @author Brice Chevalier
+ *
+ * @desc 
+ *
+ * Tweening and INterpolations for Animation
+ * 
+ * Animation library to easily create and customisable tweens,
+ * timelines, sequences and other playable components.
+ *
+ * Note: if you want a particular component to be added
+ * create an issue or contribute at https://github.com/Wizcorp/tina
+ */
+
+// Method to trigger automatic update of TINA
+var requestAnimFrame = (function(){
+	return window.requestAnimationFrame    || 
+		window.webkitRequestAnimationFrame || 
+		window.mozRequestAnimationFrame    || 
+		window.oRequestAnimationFrame      || 
+		window.msRequestAnimationFrame     || 
+		function(callback){
+			window.setTimeout(callback, 1000 / 60);
+		};
+})();
+
+// Performance.now gives better precision than Date.now
+var clock = window.performance || Date;
+
+var TINA = {
+	_tweeners: [],
+	_defaultTweener: null,
+	_running: false,
+
+	_startTime: 0,
+	_time: 0,
+
+	// callbacks
+	_onStart:  null,
+	_onPause:  null,
+	_onResume: null,
+	_onUpdate: null,
+	_onStop:   null,
+
+	_pauseOnLostFocus: false,
+
+	onStart: function (onStart) {
+		this._onStart = onStart;
+		return this;
+	},
+
+	onUpdate: function (onUpdate) {
+		this._onUpdate = onUpdate;
+		return this;
+	},
+
+	onStop: function (onStop) {
+		this._onStop = onStop;
+		return this;
+	},
+
+	onPause: function (onPause) {
+		this._onPause = onPause;
+		return this;
+	},
+
+	isRunning: function () {
+		return this._running;
+	},
+
+	update: function () {
+		var now = clock.now() - this._startTime;
+		var dt = now - this._time;
+		if (dt < 0) {
+			// Clock error, ignoring this update
+			// Date.now is based on a clock that is resynchronized
+			// every 15-20 mins and could cause the timer to go backward in time.
+			// (legend or reality? not sure, but I think I noticed it once)
+			// To get some explanation from Paul Irish:
+			// http://updates.html5rocks.com/2012/08/When-milliseconds-are-not-enough-performance-now
+			return;
+		}
+
+		this._time = now;
+
+		// Making a copy of the tweener array
+		// to avoid funky stuff happening
+		// due to addition or removal of tweeners
+		// while iterating them
+		var runningTweeners = this._tweeners.slice(0);
+		for (var t = 0; t < runningTweeners.length; t += 1) {
+			runningTweeners[t]._moveTo(this._time, dt);
+		}
+
+		if (this._onUpdate !== null) {
+			this._onUpdate(this._time, dt);
+		}
+	},
+
+	reset: function () {
+		this._startTime = clock.now();
+		this._time = 0;
+	},
+
+	start: function () {
+		if (this._running === true) {
+			console.warn('[TINA.start] TINA is already running');
+			return this;
+		}
+
+		function updateTINA() {
+			if (TINA._running === true) {
+				TINA.update();
+				requestAnimFrame(updateTINA);
+			}
+		}
+
+		if (this._onStart !== null) {
+			this._onStart();
+		}
+
+		// Setting the clock
+		this._startTime = clock.now();
+		this._time = 0;
+
+		for (var t = 0; t < this._tweeners.length; t += 1) {
+			this._tweeners[t]._start();
+		}
+
+		this._running = true;
+
+		// Starting the animation loop
+		requestAnimFrame(updateTINA);
+		return this;
+	},
+
+	pause: function () {
+		if (this._running === false) {
+			console.warn('[TINA.pause] TINA is not running');
+			return this;
+		}
+
+		this._running = false;
+		for (var t = 0; t < this._tweeners.length; t += 1) {
+			this._tweeners[t]._pause();
+		}
+
+		if (this._onPause !== null) {
+			this._onPause();
+		}
+		return this;
+	},
+
+	resume: function () {
+		if (this._running === true) {
+			console.warn('[TINA.resume] TINA is already running');
+			return this;
+		}
+
+		this._running = true;
+		if (this._onResume !== null) {
+			this._onResume();
+		}
+
+		for (var t = 0; t < this._tweeners.length; t += 1) {
+			this._tweeners[t]._resume();
+		}
+
+		// Resetting the clock
+		// Getting time difference between last update and now
+		var now = clock.now();
+		var dt = now - this._time;
+
+		// Moving starting time by this difference
+		// As if the time had virtually not moved
+		this._startTime += dt;
+
+		return this;
+	},
+
+	stop: function () {
+		this._running = false;
+		var runningTweeners = this._tweeners.slice(0);
+		for (var t = 0; t < runningTweeners.length; t += 1) {
+			runningTweeners[t]._stop();
+		}
+
+		// Stopping the tweeners have the effect of automatically removing them from TINA
+		// In this case we want to keep them attached to TINA
+		this._tweeners = runningTweeners;
+
+		if (this._onStop !== null) {
+			this._onStop();
+		}
+		return this;
+	},
+
+	pauseOnLostFocus: function (pauseOnLostFocus) {
+		this._pauseOnLostFocus = pauseOnLostFocus;
+		return this;
+	},
+
+	setDefaultTweener: function (tweener) {
+		this._defaultTweener = tweener;
+		this._tweeners.push(this._defaultTweener);
+	},
+
+	getDefaultTweener: function () {
+		return this._defaultTweener;
+	},
+
+	_add: function (tweener) {
+		// A tweener is starting
+		if (this._running === false) {
+			// TINA is not running, starting now
+			this.start();
+		}
+
+		this._tweeners.push(tweener);
+	},
+
+	add: function (tweener) {
+		this._tweeners.push(tweener);
+		return this;
+	},
+
+	_inactivate: function (tweener) {
+		var tweenerIdx = this._tweeners.indexOf(tweener);
+		if (tweenerIdx !== -1) {
+			this._tweeners.splice(tweenerIdx, 1);
+		}
+	},
+
+	remove: function (tweener) {
+		this._inactivate(tweener);
+		return this;
+	},
+
+	_getDefaultTweener: function () {
+		if (this._defaultTweener === null) {
+			// If a default tweener is required but non exist
+			// Then it is started in addition to being created
+			var DefaultTweener = this.Timer;
+			this._defaultTweener = new DefaultTweener().start();
+		}
+
+		return this._defaultTweener;
+	}
+};
+
+// To handle lost of focus of the page
+// Constants to manage lost of focus of the page
+var hidden, visbilityChange; 
+if (typeof document.hidden !== 'undefined') {
+	// Recent browser support 
+	hidden = 'hidden';
+	visbilityChange = 'visibilitychange';
+} else if (typeof document.mozHidden !== 'undefined') {
+	hidden = 'mozHidden';
+	visbilityChange = 'mozvisibilitychange';
+} else if (typeof document.msHidden !== 'undefined') {
+	hidden = 'msHidden';
+	visbilityChange = 'msvisibilitychange';
+} else if (typeof document.webkitHidden !== 'undefined') {
+	hidden = 'webkitHidden';
+	visbilityChange = 'webkitvisibilitychange';
+}
+
+if (typeof document[hidden] === 'undefined') {
+	this._warn('[Tweener] Cannot pause on lost focus because the browser does not support the Page Visibility API');
+} else {
+	// Handle page visibility change
+	var wasRunning = false;
+	document.addEventListener(visbilityChange, function () {
+		if (document[hidden]) {
+			// document is hiding
+			wasRunning = TINA.isRunning();
+			if (wasRunning && TINA._pauseOnLostFocus) {
+				TINA.pause();
+			}
+		}
+
+		if (!document[hidden]) {
+			// document is back (we missed you buddy)
+			if (wasRunning && TINA._pauseOnLostFocus) {
+				// Running TINA only if it was running when the document focus was lost
+				TINA.resume();
+			}
+		}
+	}, false);
+}
+
+(function (root) {
+	// Global variable
+	root.TINA = TINA;
+	if (root !== window && window) {
+		window.TINA = TINA;
+	}
+})(this);
+
+module.exports = TINA;
+
+});
+
 require.register("tina/src/Transition.js", function (exports, module) {
 // The file is a good representation of the constant fight between maintainability and performance
 // For performance reasons several update methods are created
@@ -2933,25 +3331,10 @@ module.exports = Transition;
 });
 
 require.register("tina/src/Tween.js", function (exports, module) {
-var BoundedPlayable    = require('tina/src/BoundedPlayable.js');
-var Transition         = require('tina/src/Transition.js');
-var TransitionRelative = require('tina/src/TransitionRelative.js');
+var BoundedPlayable = require('tina/src/BoundedPlayable.js');
+var AbstractTween   = require('tina/src/AbstractTween.js');
 
-var easingFunctions        = require('tina/src/easing.js');
-var interpolationFunctions = require('tina/src/interpolation.js');
-
-
-// Temporisation, used for waiting
-function Temporisation(start, duration, toObject) {
-	this.start    = start;
-	this.end      = start + duration;
-	this.duration = duration;
-
-	this.to = toObject;
-
-	this.update = function () {};
-}
-
+var inherit = require('tina/src/inherit.js');
 /**
  *
  * @classdesc
@@ -2968,178 +3351,17 @@ function Tween(object, properties) {
 	}
 
 	BoundedPlayable.call(this);
-
-	// Tweened object
-	this._object = object;
-
-	if ((properties === null || properties === undefined) && (object instanceof Array)) {
-		// Given object is an array
-		// Its properties to tween are the indices of the array
-		properties = [];
-		for (var p = 0; p < object.length; p += 1) {
-			properties[p] = p;
-		}
-	}
-
-	// Properties to tween
-	this._properties = properties;
-
-	// Starting property values
-	// By default is a copy of given object property values
-	this._from = null;
-
-	// Property interpolations
-	this._interpolations = null;
-
-	// Current transition index
-	this._current = 0;
-
-	// List of transitions of the tween
-	this._transitions = [];
-
-	// Whether the tween is relative
+	AbstractTween.call(this, object, properties);
 }
 Tween.prototype = Object.create(BoundedPlayable.prototype);
 Tween.prototype.constructor = Tween;
+inherit(Tween, AbstractTween);
 module.exports = Tween;
-
-Tween.prototype.relative = function (relative) {
-	this._relative = relative;
-	return this;
-};
-
-Tween.prototype.reset = function () {
-	this._current     = 0;
-	this._transitions = [];
-
-	return this;
-};
-
-Tween.prototype.interpolations = function (interpolations) {
-	// The API allows to pass interpolation names that will be replaced
-	// by the corresponding interpolation functions
-	for (var p = 0; p < this._properties.length; p += 1) {
-		var property = this._properties[p];
-		var interpolation = interpolations[property];
-		if (interpolation === undefined) {
-			interpolations[property] = interpolationFunctions.linear;
-			continue;
-		}
-
-		if (typeof(interpolation) === 'string') {
-			// Replacing interpolation name by interpolation function
-			if (interpolationFunctions[interpolation] === undefined) {
-				console.warn('[Tween.interpolations] Given interpolation does not exist');
-				interpolations[property] = interpolationFunctions.linear;
-			} else {
-				interpolations[property] = interpolationFunctions[interpolation];
-			}
-		}
-	}
-
-	this._interpolations = interpolations;
-	return this;
-};
-
-Tween.prototype.from = function (fromObject) {
-	this._from = fromObject;
-
-	if (this._transitions.length > 0) {
-		this._transitions[0].from = fromObject;
-	}
-
-	return this;
-};
-
-Tween.prototype._setFrom = function () {
-	// Copying properties of tweened object
-	this._from = {};
-	for (var p = 0; p < this._properties.length; p += 1) {
-		var property = this._properties[p];
-		this._from[property] = (this._relative) ? 0 : this._object[property];
-	}
-
-	return this._from;
-};
-
-Tween.prototype._getLastTransitionEnding = function () {
-	if (this._transitions.length > 0) {
-		return this._transitions[this._transitions.length - 1].to;
-	} else {
-		return (this._from === null) ? this._setFrom() : this._from;
-	}
-};
-
-Tween.prototype.to = function (toObject, duration, easing, easingParam, interpolationParams) {
-	// The API allows to pass interpolation names that will be replaced
-	// by the corresponding interpolation functions
-	if (typeof(easing) === 'string') {
-		// Replacing interpolation name by interpolation function
-		if (easingFunctions[easing] === undefined) {
-			console.warn('[Tween.to] Given easing does not exist');
-			easing = undefined;
-		} else {
-			easing = easingFunctions[easing];
-		}
-	}
-
-	// Getting previous transition ending as the beginning for the new transition
-	var fromObject = this._getLastTransitionEnding();
-
-	var TransitionConstructor = (this._relative === true) ? TransitionRelative : Transition;
-	var transition = new TransitionConstructor(
-		this._properties,
-		fromObject,
-		toObject,
-		this._duration, // starting time
-		duration,
-		easing,
-		easingParam,
-		this._interpolations,
-		interpolationParams
-	);
-
-	this._transitions.push(transition);
-	this._duration += duration;
-	return this;
-};
-
-Tween.prototype.wait = function (duration) {
-	var toObject = this._getLastTransitionEnding();
-	this._transitions.push(new Temporisation(this._duration, duration, toObject));
-	this._duration += duration;
-	return this;
-};
-
-Tween.prototype._update = function () {
-	// Finding transition corresponding to current time
-	var transition = this._transitions[this._current];
-
-	while (transition.end <= this._time) {
-		if (this._current === (this._transitions.length - 1)) {
-			transition.update(this._object, 1);
-			return;
-		}
-
-		transition = this._transitions[++this._current];
-	}
-
-	while (this._time <= transition.start) {
-		if (this._current === 0) {
-			transition.update(this._object, 0);
-			return;
-		}
-
-		transition = this._transitions[--this._current];
-	}
-
-	// Updating the object with respect to the current transition and time
-	transition.update(this._object, (this._time - transition.start) / transition.duration);
-};
 });
 
 require.register("tina/src/Tweener.js", function (exports, module) {
 var Player = require('tina/src/Player.js');
+var TINA   = require('tina/src/TINA.js');
 
 /**
  * @classdesc

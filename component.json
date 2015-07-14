@@ -1,9 +1,10 @@
 {
 	"name": "tina",
-	"version": "0.2.1",
+	"version": "0.2.2",
 	"description": "Tweening and INterpolations for Animation",
   	"main": "src/index.js",
 	"scripts": [
+		"src/AbstractTween.js",
 		"src/BoundedPlayable.js",
 		"src/BoundedPlayer.js",
 		"src/Delay.js",
@@ -12,6 +13,7 @@
 		"src/index.js",
 		"src/inherit.js",
 		"src/interpolation.js",
+		"src/NestedTween.js",
 		"src/Playable.js",
 		"src/PlayableHandler.js",
 		"src/Player.js",
@@ -20,6 +22,7 @@
 		"src/Ticker.js",
 		"src/Timeline.js",
 		"src/Timer.js",
+		"src/TINA.js",
 		"src/Transition.js",
 		"src/TransitionRelative.js",
 		"src/Tween.js",
