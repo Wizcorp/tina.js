@@ -13,7 +13,7 @@
  * timelines, sequences and other playable components.
  *
  * Note: if you want a particular component to be added
- * create an issue or contribute at https://github.com/Wizcorp/tina
+ * create an issue or contribute at https://github.com/Wizcorp/tina.js
  */
 
 // Method to trigger automatic update of TINA

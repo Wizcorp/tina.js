@@ -1,6 +1,6 @@
 {
   "name": "tina",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Tweening and INterpolations for Animation",
   "main": "src/index.js",
   "scripts": {
@@ -12,6 +12,7 @@
   },
   "keywords": [
     "tween",
+    "tweener",
     "tweening",
     "animation",
     "easing",
