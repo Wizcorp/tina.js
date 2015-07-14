@@ -1,4 +1,5 @@
 var Player = require('./Player');
+var TINA   = require('./TINA');
 
 /**
  * @classdesc

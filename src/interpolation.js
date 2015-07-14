@@ -30,6 +30,7 @@ exports.linear = function(t, a, b) {
 
 // d = discretization
 exports.discrete = function(t, a, b, d) {
+	if (d === undefined) { d = 1; }
 	return Math.floor((a * (1 - t) + b * t) / d) * d;
 };
 
@@ -239,12 +240,12 @@ exports.bezierKd = function(t, a, b, c) {
 // CatmullRom, b = array of control points in ]-Inf, +Inf[
 exports.catmullRom = function(t, a, b, c) {
 	if (t === 1) {
-		return b[b.length - 1];
+		return c;
 	}
 
 	// Finding index corresponding to current time
-	var k = b[0].length;
-	var n = b.length - 1;
+	var k = a.length;
+	var n = b.length + 1;
 	t *= n;
 	var i = Math.floor(t);
 	t -= i;
@@ -256,10 +257,15 @@ exports.catmullRom = function(t, a, b, c) {
 	var y = -1.5 * t3 + 2.0 * t2 + 0.5 * t;
 	var z =  0.5 * t3 - 0.5 * t2;
 
-	var p0 = b[Math.max(0, i - 1)];
-	var p1 = b[i];
-	var p2 = b[Math.min(n, i + 1)];
-	var p3 = b[Math.min(n, i + 2)];
+	var i0 = i - 2;
+	var i1 = i - 1;
+	var i2 = i;
+	var i3 = i + 1;
+
+	var p0 = (i0 < 0) ? a : b[i0];
+	var p1 = (i1 < 0) ? a : b[i1];
+	var p2 = (i3 < n - 2) ? b[i2] : c;
+	var p3 = (i3 < n - 2) ? b[i3] : c;
 
 	var res = [];
 	for (var j = 0; j < k; j += 1) {
