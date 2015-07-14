@@ -15,7 +15,7 @@
  * Define how to interpolate between object a and b.
  * 
  * Note: if you want a particular interpolation method to be added
- * create an issue or contribute at https://github.com/Wizcorp/tina
+ * create an issue or contribute at https://github.com/Wizcorp/tina.js
  */
 
 // TODO: Test them all!

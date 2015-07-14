@@ -15,7 +15,7 @@
  * All the ease functions are continuous for times t in [0, 1]
  *
  * Note: if you want a particular easing method to be added
- * create an issue or contribute at https://github.com/Wizcorp/tina
+ * create an issue or contribute at https://github.com/Wizcorp/tina.js
  */
 
 // Math constants (for readability)

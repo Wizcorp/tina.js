@@ -5,7 +5,7 @@
 
 ## Warning: Still in beta version!
 
-Javascript Animation Library to easily create customisable tweens, timelines, sequences and other playable components.
+A comprehensive, high performance, easy to use, open source animation library in javascript.
 
 * **Easy to use** (API strongly inspired by Tweenjs)
 * **Easy to debug** (Proper warnings)
@@ -19,7 +19,9 @@ Javascript Animation Library to easily create customisable tweens, timelines, se
 * **Good synchronisation** between tweens
 * **Relative tweening** enables the possibility to alter objects while they are tweening
 * **Nested object tweening** enables the possibility to alter nested objects using a single tween
-* Bonus: Creation and removal of tweens within the callback of another tween will not result in any unwanted side effect
+* Bonus: Creation and removal of tweens within the callback of another tween will not result in any unwanted side effect (infamous bug of other tweening libraries)
+
+Note: Do not hesitate to contribute by reporting issues or by submitting your own components and interpolations.
 
 ## How to use
 
@@ -31,7 +33,7 @@ Include tina's build in your html using either the [minified library](https://ra
 
 ## API
 
-Existing playable components are: Tween, Timeline, Sequence, Timer, Ticker, Recorder, Delay.
+Existing playable components are: Tween, NestedTween, Timeline, Sequence, Delay, Timer, Ticker (Recorder coming soon).
 The following is a non-exhaustive list of possibilities offered by the API.
 
 ### Tween
