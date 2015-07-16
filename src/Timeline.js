@@ -45,6 +45,8 @@ Timeline.prototype._computeDuration = function () {
 	this._duration = duration;
 };
 
+Timeline.prototype._onRemovePlayables = Timeline.prototype._computeDuration;
+
 Timeline.prototype._start = function (player, timeOffset) {
 	BoundedPlayer.prototype._start.call(this, player, timeOffset);
 
@@ -68,9 +70,9 @@ Timeline.prototype._updatePlayableList = function () {
 		if (startTime <= this._time && this._time <= endTime) {
 			// O(1)
 			this._inactivePlayables.remove(playable._handle);
-			playable._handle = this._activePlayables.add(playable);
+			playable._handle = this._activePlayables.addBack(playable);
 
-			playable._start(this, -startTime);
+			playable._start(-startTime);
 		}
 	}
 };

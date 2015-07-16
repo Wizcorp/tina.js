@@ -10,6 +10,7 @@ TINA.BoundedPlayer   = require('./BoundedPlayer');
 TINA.Player          = require('./Player');
 TINA.Tween           = require('./Tween');
 TINA.NestedTween     = require('./NestedTween');
+// TINA.CSSTween        = require('./CSSTween');
 TINA.PixiTween       = require('./NestedTween');
 TINA.Timeline        = require('./Timeline');
 TINA.Sequence        = require('./Sequence');

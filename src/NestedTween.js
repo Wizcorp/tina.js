@@ -28,16 +28,16 @@ function NestedTween(object, properties) {
 	this._propertyChains = {};
 
 	// Array of object chains
-	this._objectChains = [];
+	this._propertyChainStrings = [];
 
 	var propertiesPerObject = {};
 	var objects = {};
 
 	for (var p = 0; p < properties.length; p += 1) {
 		var propertyString = properties[p];
-		var objectChain = propertyString.substring(0, propertyString.lastIndexOf('.'));
+		var propertyChainString = propertyString.substring(0, propertyString.lastIndexOf('.'));
 
-		if (propertiesPerObject[objectChain] === undefined) {
+		if (propertiesPerObject[propertyChainString] === undefined) {
 			// Fetching object and property
 			var propertyChain = propertyString.split('.');
 			var propertyIndex = propertyChain.length - 1;
@@ -48,25 +48,37 @@ function NestedTween(object, properties) {
 				propertyObject = propertyObject[propertyChain[c]];
 			}
 
-			propertiesPerObject[objectChain] = [propertyChain[propertyIndex]];
-			objects[objectChain] = propertyObject;
-			this._objectChains.push(objectChain);
-			this._propertyChains[objectChain] = propertyChain;
-			continue;
-		}
+			var property = propertyChain[propertyIndex];
+			if (propertyObject[property] instanceof Array) {
+				propertiesPerObject[propertyString] = null;
+				objects[propertyString] = propertyObject[property];
+				this._propertyChainStrings.push(propertyString);
+				this._propertyChains[propertyChain] = propertyChain;
+			} else {
+				propertiesPerObject[propertyChainString] = [property];
+				objects[propertyChainString] = propertyObject;
+				this._propertyChainStrings.push(propertyChainString);
 
-		// Object was already fetched
-		var property = propertyString.substring(propertyString.lastIndexOf('.') + 1);
-		propertiesPerObject[objectChain].push(property);
+				// Removing last element of the property chain
+				propertyChain.pop();
+
+				this._propertyChains[propertyChainString] = propertyChain;
+			}
+
+		} else {
+			// Object was already fetched
+			var property = propertyString.substring(propertyString.lastIndexOf('.') + 1);
+			propertiesPerObject[propertyChainString].push(property);
+		}
 	}
 
 	// Creating the tweens
-	for (var objectChain in objects) {
-		var tweenObject     = objects[objectChain];
-		var tweenProperties = propertiesPerObject[objectChain];
+	for (var propertyChainString in objects) {
+		var tweenObject     = objects[propertyChainString];
+		var tweenProperties = propertiesPerObject[propertyChainString];
 		var tween = new AbstractTween(tweenObject, tweenProperties);
 		this._tweens.push(tween);
-		this._tweensPerObject[objectChain] = tween;
+		this._tweensPerObject[propertyChainString] = tween;
 	}
 }
 NestedTween.prototype = Object.create(BoundedPlayable.prototype);
@@ -93,18 +105,18 @@ NestedTween.prototype.reset = function () {
 
 NestedTween.prototype.interpolations = function (interpolations) {
 	// Dispatching interpolations
-	for (var o = 0; o < this._objectChains.length; o += 1) {
-		var objectChain = this._objectChains[o];
-		var propertyChain = this._propertyChains[objectChain];
-		var propertyIndex = propertyChain.length - 1;
+	for (var o = 0; o < this._propertyChainStrings.length; o += 1) {
+		var propertyChainString = this._propertyChainStrings[o];
+		var propertyChain = this._propertyChains[propertyChainString];
+		var chainLength   = propertyChain.length;
 
 		var objectInterpolations = interpolations;
-		for (var c = 0; c < propertyIndex && objectInterpolations !== undefined; c += 1) {
+		for (var c = 0; c < chainLength && objectInterpolations !== undefined; c += 1) {
 			objectInterpolations = objectInterpolations[propertyChain[c]];
 		}
 
 		if (objectInterpolations !== undefined) {
-			this._tweensPerObject[objectChain].interpolations(objectInterpolations);
+			this._tweensPerObject[propertyChainString].interpolations(objectInterpolations);
 		}
 	}
 
@@ -113,18 +125,18 @@ NestedTween.prototype.interpolations = function (interpolations) {
 
 NestedTween.prototype.from = function (fromObject) {
 	// Dispatching from
-	for (var o = 0; o < this._objectChains.length; o += 1) {
-		var objectChain = this._objectChains[o];
-		var propertyChain = this._propertyChains[objectChain];
-		var propertyIndex = propertyChain.length - 1;
+	for (var o = 0; o < this._propertyChainStrings.length; o += 1) {
+		var propertyChainString = this._propertyChainStrings[o];
+		var propertyChain = this._propertyChains[propertyChainString];
+		var chainLength = propertyChain.length;
 
 		var object = fromObject;
-		for (var c = 0; c < propertyIndex && object !== undefined; c += 1) {
+		for (var c = 0; c < chainLength && object !== undefined; c += 1) {
 			object = object[propertyChain[c]];
 		}
 
 		if (object !== undefined) {
-			this._tweensPerObject[objectChain].from(object);
+			this._tweensPerObject[propertyChainString].from(object);
 		}
 	}
 
@@ -133,22 +145,22 @@ NestedTween.prototype.from = function (fromObject) {
 
 NestedTween.prototype.to = function (toObject, duration, easing, easingParam, interpolationParams) {
 	// Dispatching to
-	for (var o = 0; o < this._objectChains.length; o += 1) {
-		var objectChain = this._objectChains[o];
-		var propertyChain = this._propertyChains[objectChain];
-		var propertyIndex = propertyChain.length - 1;
+	for (var o = 0; o < this._propertyChainStrings.length; o += 1) {
+		var propertyChainString = this._propertyChainStrings[o];
+		var propertyChain = this._propertyChains[propertyChainString];
+		var chainLength = propertyChain.length;
 
 		var object = toObject;
-		for (var c = 0; c < propertyIndex; c += 1) {
+		for (var c = 0; c < chainLength; c += 1) {
 			object = object[propertyChain[c]];
 		}
 
 		var objectInterpolationParams = interpolationParams;
-		for (var c = 0; c < propertyIndex && objectInterpolationParams !== undefined; c += 1) {
+		for (var c = 0; c < chainLength && objectInterpolationParams !== undefined; c += 1) {
 			objectInterpolationParams = objectInterpolationParams[propertyChain[c]];
 		}
 
-		this._tweensPerObject[objectChain].to(object, duration, easing, easingParam, objectInterpolationParams);
+		this._tweensPerObject[propertyChainString].to(object, duration, easing, easingParam, objectInterpolationParams);
 	}
 
 	this._duration += duration;

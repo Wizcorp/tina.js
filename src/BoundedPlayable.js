@@ -83,60 +83,62 @@ BoundedPlayable.prototype._moveTo = function (time, dt) {
 
 	// Computing overflow and clamping time
 	var overflow;
-	if (this._iterations === 1) {
-		// Converting into time relative to when the playable was started
-		this._time = (time - this._startTime) * this._speed;
-		if (dt > 0) {
-			if (this._time >= this._duration) {
-				overflow = this._time - this._duration;
-				dt -= overflow;
-				this._time = this._duration;
+	if (this._speed !== 0) {
+		if (this._iterations === 1) {
+			// Converting into time relative to when the playable was started
+			this._time = (time - this._startTime) * this._speed;
+			if (dt > 0) {
+				if (this._time >= this._duration) {
+					overflow = this._time - this._duration;
+					dt -= overflow;
+					this._time = this._duration;
+				}
+			} else if (dt < 0) {
+				if (this._time <= 0) {
+					overflow = this._time;
+					dt -= overflow;
+					this._time = 0;
+				}
 			}
-		} else if (dt < 0) {
-			if (this._time <= 0) {
-				overflow = this._time;
-				dt -= overflow;
-				this._time = 0;
-			}
-		}
-	} else {
-		time = (time - this._startTime) * this._speed;
+		} else {
+			time = (time - this._startTime) * this._speed;
 
-		// Iteration at current update
-		var iteration = time / this._duration;
+			// Iteration at current update
+			var iteration = time / this._duration;
 
-		if (dt > 0) {
-			if (iteration < this._iterations) {
-				this._time = time % this._duration;
-			} else {
-				overflow = (iteration - this._iterations) * this._duration;
-				dt -= overflow;
-				this._time = this._duration * (1 - (Math.ceil(this._iterations) - this._iterations));
+			if (dt > 0) {
+				if (iteration < this._iterations) {
+					this._time = time % this._duration;
+				} else {
+					overflow = (iteration - this._iterations) * this._duration;
+					dt -= overflow;
+					this._time = this._duration * (1 - (Math.ceil(this._iterations) - this._iterations));
+				}
+			} else if (dt < 0) {
+				if (0 < iteration) {
+					this._time = time % this._duration;
+				} else {
+					overflow = iteration * this._duration;
+					dt -= overflow;
+					this._time = 0;
+				}
 			}
-		} else if (dt < 0) {
-			if (0 < iteration) {
-				this._time = time % this._duration;
-			} else {
-				overflow = iteration * this._duration;
-				dt -= overflow;
-				this._time = 0;
-			}
-		}
 
-		if ((this._pingpong === true)) {
-			if (Math.ceil(this._iterations) === this._iterations) {
-				if (overflow === undefined) {
+			if ((this._pingpong === true)) {
+				if (Math.ceil(this._iterations) === this._iterations) {
+					if (overflow === undefined) {
+						if ((Math.ceil(iteration) & 1) === 0) {
+							this._time = this._duration - this._time;
+						}
+					} else {
+						if ((Math.ceil(iteration) & 1) === 1) {
+							this._time = this._duration - this._time;
+						}
+					}
+				} else {
 					if ((Math.ceil(iteration) & 1) === 0) {
 						this._time = this._duration - this._time;
 					}
-				} else {
-					if ((Math.ceil(iteration) & 1) === 1) {
-						this._time = this._duration - this._time;
-					}
-				}
-			} else {
-				if ((Math.ceil(iteration) & 1) === 0) {
-					this._time = this._duration - this._time;
 				}
 			}
 		}

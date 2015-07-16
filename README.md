@@ -5,9 +5,9 @@
 
 ## Warning: Still in beta version!
 
-A comprehensive, high performance, easy to use, open source animation library in javascript.
+A comprehensive, high performance, easy to use, open source animation library in JavaScript.
 
-* **Easy to use** (API strongly inspired by Tweenjs)
+* **Easy to use** (API strongly inspired by Tween.js)
 * **Easy to debug** (Proper warnings)
 * **High performance** (Competitive with Tweenjs, benchmark coming soon)
 * **High flexibility** (tween transitions can easily be modified after creation)
@@ -15,7 +15,7 @@ A comprehensive, high performance, easy to use, open source animation library in
 * **Running options** (delay, iterations, pingpong, persist and speed)
 * **Open source** and MIT License (use it as you please)
 * A consequent library of **easing and interpolation methods**
-* A variety of components such as **Timeline** and **Sequence** (**Recorder** coming soon)
+* A variety of components such as **Timeline** and **Sequence** (**Recorder** and CSSTween coming soon)
 * **Good synchronisation** between tweens
 * **Relative tweening** enables the possibility to alter objects while they are tweening
 * **Nested object tweening** enables the possibility to alter nested objects using a single tween

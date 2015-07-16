@@ -1,6 +1,6 @@
 {
 	"name": "tina",
-	"version": "0.2.6",
+	"version": "0.2.7",
 	"description": "Tweening and INterpolations for Animation",
   	"main": "src/index.js",
 	"scripts": [
