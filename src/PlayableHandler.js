@@ -40,6 +40,7 @@ PlayableHandler.prototype._add = function (playable) {
 	if (playable._handle === null) {
 		// Playable can be added
 		playable._handle = this._inactivePlayables.add(playable);
+		playable._player = this;
 		return true;
 	}
 
@@ -74,6 +75,7 @@ PlayableHandler.prototype._remove = function (playable) {
 	if (playable._handle.container === this._activePlayables) {
 		// Playable was active, adding to remove list
 		playable._handle = this._playablesToRemove.add(playable._handle);
+		playable._stop();
 		return true;
 	}
 
@@ -94,7 +96,7 @@ PlayableHandler.prototype._remove = function (playable) {
 
 PlayableHandler.prototype.remove = function (playable) {
 	this._remove(playable);
-	playable._stop();
+	this._onRemovePlayables();
 	return this;
 };
 
@@ -103,13 +105,17 @@ PlayableHandler.prototype.removeAll = function () {
 	var handle = this._activePlayables.first; 
 	while (handle !== null) {
 		var next = handle.next;
-		this.remove(handle.object);
+		this._remove(handle.object);
 		handle = next;
 	}
 
 	this._handlePlayablesToRemove();
+	this._onRemovePlayables();
 	return this;
 };
+
+// Overridable method
+PlayableHandler.prototype._onRemovePlayables = function () {};
 
 PlayableHandler.prototype.possess = function (playable) {
 	if (playable._handle === null) {
@@ -136,6 +142,7 @@ PlayableHandler.prototype._handlePlayablesToRemove = function () {
 		// Removing from list of active playables
 		var playable = handle.object;
 		playable._handle = this._activePlayables.remove(handle);
+		playable._player = null;
 	}
 };
 

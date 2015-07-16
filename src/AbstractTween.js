@@ -6,15 +6,21 @@ var interpolationFunctions = require('./interpolation');
 
 
 // Temporisation, used for waiting
-function Temporisation(start, duration, toObject) {
+function Temporisation(start, duration, toObject, properties) {
 	this.start    = start;
 	this.end      = start + duration;
 	this.duration = duration;
 
+	this.properties = properties;
 	this.to = toObject;
-
-	this.update = function () {};
 }
+
+Temporisation.prototype.update = function (object) {
+	for (var p = 0; p < this.properties.length; p += 1) {
+		var property = this.properties[p];
+		object[property] = this.to[property];
+	}
+};
 
 /**
  *
@@ -169,7 +175,7 @@ AbstractTween.prototype.to = function (toObject, duration, easing, easingParam, 
 
 AbstractTween.prototype.wait = function (duration) {
 	var toObject = this._getLastTransitionEnding();
-	this._transitions.push(new Temporisation(this._duration, duration, toObject));
+	this._transitions.push(new Temporisation(this._duration, duration, toObject, this._properties));
 	this._duration += duration;
 	return this;
 };

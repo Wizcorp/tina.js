@@ -1,11 +1,20 @@
 /** @class */
 function Playable() {
-	this._startTime  = 0;
-	this._time       = 0;
-	this._speed      = 1;
-
-	this._handle = null;
+	// Player component handling this playable
 	this._player = null;
+
+	// Handle of the playable within its player
+	this._handle = null;
+
+	// Starting time relative to its player time
+	this._startTime  = 0;
+
+	// Current time relative to the start time
+	// i.e this._time === 0 implies this._player._time ===  this._startTime
+	this._time       = 0;
+
+	// Playing speed of the playable
+	this._speed      = 1;
 
 	// Callbacks
 	this._onStart    = null;
@@ -19,22 +28,24 @@ module.exports = Playable;
 Object.defineProperty(Playable.prototype, 'speed', {
 	get: function () { return this._speed; },
 	set: function (speed) {
+		// TODO: enable speed of a playable to be changed while attached to a bounded player
 		if ((this._player !== null) && (this._player._duration !== undefined)) {
-			console.warn('[Playable.speed] Changing the speed of a playable that is attached to ', this._player, ' is not recommended');
+			console.warn('[Playable.speed] It is not recommended to change the speed of a playable that is attached to the given player:', this._player);
 		}
 
-		var dt = this._time - this._startTime;
 		if (speed === 0) {
-			// Setting timeStart as if new speed was 1
-			this._startTime = this._time - dt * this._speed;
+			if (this._speed !== 0) {
+				// Setting timeStart as if new speed was 1
+				this._startTime += this._time / this._speed - this._time;
+			}
 		} else {
 			if (this._speed === 0) {
 				// If current speed is 0,
 				// it corresponds to a virtual speed of 1
 				// when it comes to determing where the starting time is
-				this._startTime = this._time - dt / speed;
+				this._startTime += this._time - this._time / speed;
 			} else {
-				this._startTime = this._time - dt * this._speed / speed;
+				this._startTime += this._time / this._speed - this._time / speed;
 			}
 		}
 
@@ -46,7 +57,7 @@ Object.defineProperty(Playable.prototype, 'time', {
 	get: function () { return this._time; },
 	set: function (time) {
 		if ((this._player !== null) && (this._player._duration !== undefined)) {
-			console.warn('[Playable.time] Changing the time of a playable that is attached to ', this._player, ' is not recommended');
+			console.warn('[Playable.time] It is not recommended to change the time of a playable that is attached to the given player:', this._player);
 		}
 
 		this.goTo(time);
@@ -125,12 +136,11 @@ Playable.prototype.start = function (timeOffset) {
 		timeOffset = 0;
 	}
 
-	this._start(player, timeOffset - player._time);
+	this._start(timeOffset - player._time);
 	return this;
 };
 
-Playable.prototype._start = function (player, timeOffset) {
-	this._player = player;
+Playable.prototype._start = function (timeOffset) {
 	this._startTime = -timeOffset;
 
 	if (this._onStart !== null) {
@@ -173,75 +183,11 @@ Playable.prototype.pause = function () {
 Playable.prototype._moveTo = function (time, dt) {
 	dt *= this._speed;
 
-	// Computing overflow and clamping time
-	var overflow;
-	if (this._iterations === 1) {
-		// Converting into time relative to when the playable was started
-		this._time = (time - this._startTime) * this._speed;
-		if (dt > 0) {
-			if (this._time >= this._duration) {
-				overflow = this._time - this._duration;
-				dt -= overflow;
-				this._time = this._duration;
-			}
-		} else if (dt < 0) {
-			if (this._time <= 0) {
-				overflow = this._time;
-				dt -= overflow;
-				this._time = 0;
-			}
-		}
-	} else {
-		time = (time - this._startTime) * this._speed;
-
-		// Iteration at current update
-		var iteration = time / this._duration;
-
-		if (dt > 0) {
-			if (iteration < this._iterations) {
-				this._time = time % this._duration;
-			} else {
-				overflow = (iteration - this._iterations) * this._duration;
-				dt -= overflow;
-				this._time = this._duration * (1 - (Math.ceil(this._iterations) - this._iterations));
-			}
-		} else if (dt < 0) {
-			if (0 < iteration) {
-				this._time = time % this._duration;
-			} else {
-				overflow = iteration * this._duration;
-				dt -= overflow;
-				this._time = 0;
-			}
-		}
-
-		if ((this._pingpong === true)) {
-			if (Math.ceil(this._iterations) === this._iterations) {
-				if (overflow === undefined) {
-					if ((Math.ceil(iteration) & 1) === 0) {
-						this._time = this._duration - this._time;
-					}
-				} else {
-					if ((Math.ceil(iteration) & 1) === 1) {
-						this._time = this._duration - this._time;
-					}
-				}
-			} else {
-				if ((Math.ceil(iteration) & 1) === 0) {
-					this._time = this._duration - this._time;
-				}
-			}
-		}
-	}
-
+	this._time = (time - this._startTime) * this._speed;
 	this._update(dt);
 
 	if (this._onUpdate !== null) {
 		this._onUpdate(this._time, dt);
-	}
-
-	if (overflow !== undefined) {
-		this._complete(overflow);
 	}
 };
 

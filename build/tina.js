@@ -144,15 +144,21 @@ var interpolationFunctions = require('tina/src/interpolation.js');
 
 
 // Temporisation, used for waiting
-function Temporisation(start, duration, toObject) {
+function Temporisation(start, duration, toObject, properties) {
 	this.start    = start;
 	this.end      = start + duration;
 	this.duration = duration;
 
+	this.properties = properties;
 	this.to = toObject;
-
-	this.update = function () {};
 }
+
+Temporisation.prototype.update = function (object) {
+	for (var p = 0; p < this.properties.length; p += 1) {
+		var property = this.properties[p];
+		object[property] = this.to[property];
+	}
+};
 
 /**
  *
@@ -307,7 +313,7 @@ AbstractTween.prototype.to = function (toObject, duration, easing, easingParam, 
 
 AbstractTween.prototype.wait = function (duration) {
 	var toObject = this._getLastTransitionEnding();
-	this._transitions.push(new Temporisation(this._duration, duration, toObject));
+	this._transitions.push(new Temporisation(this._duration, duration, toObject, this._properties));
 	this._duration += duration;
 	return this;
 };
@@ -425,60 +431,62 @@ BoundedPlayable.prototype._moveTo = function (time, dt) {
 
 	// Computing overflow and clamping time
 	var overflow;
-	if (this._iterations === 1) {
-		// Converting into time relative to when the playable was started
-		this._time = (time - this._startTime) * this._speed;
-		if (dt > 0) {
-			if (this._time >= this._duration) {
-				overflow = this._time - this._duration;
-				dt -= overflow;
-				this._time = this._duration;
+	if (this._speed !== 0) {
+		if (this._iterations === 1) {
+			// Converting into time relative to when the playable was started
+			this._time = (time - this._startTime) * this._speed;
+			if (dt > 0) {
+				if (this._time >= this._duration) {
+					overflow = this._time - this._duration;
+					dt -= overflow;
+					this._time = this._duration;
+				}
+			} else if (dt < 0) {
+				if (this._time <= 0) {
+					overflow = this._time;
+					dt -= overflow;
+					this._time = 0;
+				}
 			}
-		} else if (dt < 0) {
-			if (this._time <= 0) {
-				overflow = this._time;
-				dt -= overflow;
-				this._time = 0;
-			}
-		}
-	} else {
-		time = (time - this._startTime) * this._speed;
+		} else {
+			time = (time - this._startTime) * this._speed;
 
-		// Iteration at current update
-		var iteration = time / this._duration;
+			// Iteration at current update
+			var iteration = time / this._duration;
 
-		if (dt > 0) {
-			if (iteration < this._iterations) {
-				this._time = time % this._duration;
-			} else {
-				overflow = (iteration - this._iterations) * this._duration;
-				dt -= overflow;
-				this._time = this._duration * (1 - (Math.ceil(this._iterations) - this._iterations));
+			if (dt > 0) {
+				if (iteration < this._iterations) {
+					this._time = time % this._duration;
+				} else {
+					overflow = (iteration - this._iterations) * this._duration;
+					dt -= overflow;
+					this._time = this._duration * (1 - (Math.ceil(this._iterations) - this._iterations));
+				}
+			} else if (dt < 0) {
+				if (0 < iteration) {
+					this._time = time % this._duration;
+				} else {
+					overflow = iteration * this._duration;
+					dt -= overflow;
+					this._time = 0;
+				}
 			}
-		} else if (dt < 0) {
-			if (0 < iteration) {
-				this._time = time % this._duration;
-			} else {
-				overflow = iteration * this._duration;
-				dt -= overflow;
-				this._time = 0;
-			}
-		}
 
-		if ((this._pingpong === true)) {
-			if (Math.ceil(this._iterations) === this._iterations) {
-				if (overflow === undefined) {
+			if ((this._pingpong === true)) {
+				if (Math.ceil(this._iterations) === this._iterations) {
+					if (overflow === undefined) {
+						if ((Math.ceil(iteration) & 1) === 0) {
+							this._time = this._duration - this._time;
+						}
+					} else {
+						if ((Math.ceil(iteration) & 1) === 1) {
+							this._time = this._duration - this._time;
+						}
+					}
+				} else {
 					if ((Math.ceil(iteration) & 1) === 0) {
 						this._time = this._duration - this._time;
 					}
-				} else {
-					if ((Math.ceil(iteration) & 1) === 1) {
-						this._time = this._duration - this._time;
-					}
-				}
-			} else {
-				if ((Math.ceil(iteration) & 1) === 0) {
-					this._time = this._duration - this._time;
 				}
 			}
 		}
@@ -1512,16 +1520,16 @@ function NestedTween(object, properties) {
 	this._propertyChains = {};
 
 	// Array of object chains
-	this._objectChains = [];
+	this._propertyChainStrings = [];
 
 	var propertiesPerObject = {};
 	var objects = {};
 
 	for (var p = 0; p < properties.length; p += 1) {
 		var propertyString = properties[p];
-		var objectChain = propertyString.substring(0, propertyString.lastIndexOf('.'));
+		var propertyChainString = propertyString.substring(0, propertyString.lastIndexOf('.'));
 
-		if (propertiesPerObject[objectChain] === undefined) {
+		if (propertiesPerObject[propertyChainString] === undefined) {
 			// Fetching object and property
 			var propertyChain = propertyString.split('.');
 			var propertyIndex = propertyChain.length - 1;
@@ -1532,25 +1540,37 @@ function NestedTween(object, properties) {
 				propertyObject = propertyObject[propertyChain[c]];
 			}
 
-			propertiesPerObject[objectChain] = [propertyChain[propertyIndex]];
-			objects[objectChain] = propertyObject;
-			this._objectChains.push(objectChain);
-			this._propertyChains[objectChain] = propertyChain;
-			continue;
-		}
+			var property = propertyChain[propertyIndex];
+			if (propertyObject[property] instanceof Array) {
+				propertiesPerObject[propertyString] = null;
+				objects[propertyString] = propertyObject[property];
+				this._propertyChainStrings.push(propertyString);
+				this._propertyChains[propertyChain] = propertyChain;
+			} else {
+				propertiesPerObject[propertyChainString] = [property];
+				objects[propertyChainString] = propertyObject;
+				this._propertyChainStrings.push(propertyChainString);
 
-		// Object was already fetched
-		var property = propertyString.substring(propertyString.lastIndexOf('.') + 1);
-		propertiesPerObject[objectChain].push(property);
+				// Removing last element of the property chain
+				propertyChain.pop();
+
+				this._propertyChains[propertyChainString] = propertyChain;
+			}
+
+		} else {
+			// Object was already fetched
+			var property = propertyString.substring(propertyString.lastIndexOf('.') + 1);
+			propertiesPerObject[propertyChainString].push(property);
+		}
 	}
 
 	// Creating the tweens
-	for (var objectChain in objects) {
-		var tweenObject     = objects[objectChain];
-		var tweenProperties = propertiesPerObject[objectChain];
+	for (var propertyChainString in objects) {
+		var tweenObject     = objects[propertyChainString];
+		var tweenProperties = propertiesPerObject[propertyChainString];
 		var tween = new AbstractTween(tweenObject, tweenProperties);
 		this._tweens.push(tween);
-		this._tweensPerObject[objectChain] = tween;
+		this._tweensPerObject[propertyChainString] = tween;
 	}
 }
 NestedTween.prototype = Object.create(BoundedPlayable.prototype);
@@ -1577,18 +1597,18 @@ NestedTween.prototype.reset = function () {
 
 NestedTween.prototype.interpolations = function (interpolations) {
 	// Dispatching interpolations
-	for (var o = 0; o < this._objectChains.length; o += 1) {
-		var objectChain = this._objectChains[o];
-		var propertyChain = this._propertyChains[objectChain];
-		var propertyIndex = propertyChain.length - 1;
+	for (var o = 0; o < this._propertyChainStrings.length; o += 1) {
+		var propertyChainString = this._propertyChainStrings[o];
+		var propertyChain = this._propertyChains[propertyChainString];
+		var chainLength = propertyChain.length;
 
 		var objectInterpolations = interpolations;
-		for (var c = 0; c < propertyIndex && objectInterpolations !== undefined; c += 1) {
+		for (var c = 0; c < chainLength && objectInterpolations !== undefined; c += 1) {
 			objectInterpolations = objectInterpolations[propertyChain[c]];
 		}
 
 		if (objectInterpolations !== undefined) {
-			this._tweensPerObject[objectChain].interpolations(objectInterpolations);
+			this._tweensPerObject[propertyChainString].interpolations(objectInterpolations);
 		}
 	}
 
@@ -1597,18 +1617,18 @@ NestedTween.prototype.interpolations = function (interpolations) {
 
 NestedTween.prototype.from = function (fromObject) {
 	// Dispatching from
-	for (var o = 0; o < this._objectChains.length; o += 1) {
-		var objectChain = this._objectChains[o];
-		var propertyChain = this._propertyChains[objectChain];
-		var propertyIndex = propertyChain.length - 1;
+	for (var o = 0; o < this._propertyChainStrings.length; o += 1) {
+		var propertyChainString = this._propertyChainStrings[o];
+		var propertyChain = this._propertyChains[propertyChainString];
+		var chainLength = propertyChain.length;
 
 		var object = fromObject;
-		for (var c = 0; c < propertyIndex && object !== undefined; c += 1) {
+		for (var c = 0; c < chainLength && object !== undefined; c += 1) {
 			object = object[propertyChain[c]];
 		}
 
 		if (object !== undefined) {
-			this._tweensPerObject[objectChain].from(object);
+			this._tweensPerObject[propertyChainString].from(object);
 		}
 	}
 
@@ -1617,22 +1637,22 @@ NestedTween.prototype.from = function (fromObject) {
 
 NestedTween.prototype.to = function (toObject, duration, easing, easingParam, interpolationParams) {
 	// Dispatching to
-	for (var o = 0; o < this._objectChains.length; o += 1) {
-		var objectChain = this._objectChains[o];
-		var propertyChain = this._propertyChains[objectChain];
-		var propertyIndex = propertyChain.length - 1;
+	for (var o = 0; o < this._propertyChainStrings.length; o += 1) {
+		var propertyChainString = this._propertyChainStrings[o];
+		var propertyChain = this._propertyChains[propertyChainString];
+		var chainLength = propertyChain.length;
 
 		var object = toObject;
-		for (var c = 0; c < propertyIndex; c += 1) {
+		for (var c = 0; c < chainLength; c += 1) {
 			object = object[propertyChain[c]];
 		}
 
 		var objectInterpolationParams = interpolationParams;
-		for (var c = 0; c < propertyIndex && objectInterpolationParams !== undefined; c += 1) {
+		for (var c = 0; c < chainLength && objectInterpolationParams !== undefined; c += 1) {
 			objectInterpolationParams = objectInterpolationParams[propertyChain[c]];
 		}
 
-		this._tweensPerObject[objectChain].to(object, duration, easing, easingParam, objectInterpolationParams);
+		this._tweensPerObject[propertyChainString].to(object, duration, easing, easingParam, objectInterpolationParams);
 	}
 
 	this._duration += duration;
@@ -1661,12 +1681,21 @@ NestedTween.prototype._update = function () {
 require.register("tina/src/Playable.js", function (exports, module) {
 /** @class */
 function Playable() {
-	this._startTime  = 0;
-	this._time       = 0;
-	this._speed      = 1;
-
-	this._handle = null;
+	// Player component handling this playable
 	this._player = null;
+
+	// Handle of the playable within its player
+	this._handle = null;
+
+	// Starting time relative to its player time
+	this._startTime  = 0;
+
+	// Current time relative to the start time
+	// i.e this._time === 0 implies this._player._time ===  this._startTime
+	this._time       = 0;
+
+	// Playing speed of the playable
+	this._speed      = 1;
 
 	// Callbacks
 	this._onStart    = null;
@@ -1680,22 +1709,24 @@ module.exports = Playable;
 Object.defineProperty(Playable.prototype, 'speed', {
 	get: function () { return this._speed; },
 	set: function (speed) {
+		// TODO: enable speed of a playable to be changed while attached to a bounded player
 		if ((this._player !== null) && (this._player._duration !== undefined)) {
-			console.warn('[Playable.speed] Changing the speed of a playable that is attached to ', this._player, ' is not recommended');
+			console.warn('[Playable.speed] It is not recommended to change the speed of a playable that is attached to the given player:', this._player);
 		}
 
-		var dt = this._time - this._startTime;
 		if (speed === 0) {
-			// Setting timeStart as if new speed was 1
-			this._startTime = this._time - dt * this._speed;
+			if (this._speed !== 0) {
+				// Setting timeStart as if new speed was 1
+				this._startTime += this._time / this._speed - this._time;
+			}
 		} else {
 			if (this._speed === 0) {
 				// If current speed is 0,
 				// it corresponds to a virtual speed of 1
 				// when it comes to determing where the starting time is
-				this._startTime = this._time - dt / speed;
+				this._startTime += this._time - this._time / speed;
 			} else {
-				this._startTime = this._time - dt * this._speed / speed;
+				this._startTime += this._time / this._speed - this._time / speed;
 			}
 		}
 
@@ -1707,7 +1738,7 @@ Object.defineProperty(Playable.prototype, 'time', {
 	get: function () { return this._time; },
 	set: function (time) {
 		if ((this._player !== null) && (this._player._duration !== undefined)) {
-			console.warn('[Playable.time] Changing the time of a playable that is attached to ', this._player, ' is not recommended');
+			console.warn('[Playable.time] It is not recommended to change the time of a playable that is attached to the given player:', this._player);
 		}
 
 		this.goTo(time);
@@ -1786,12 +1817,11 @@ Playable.prototype.start = function (timeOffset) {
 		timeOffset = 0;
 	}
 
-	this._start(player, timeOffset - player._time);
+	this._start(timeOffset - player._time);
 	return this;
 };
 
-Playable.prototype._start = function (player, timeOffset) {
-	this._player = player;
+Playable.prototype._start = function (timeOffset) {
 	this._startTime = -timeOffset;
 
 	if (this._onStart !== null) {
@@ -1834,75 +1864,11 @@ Playable.prototype.pause = function () {
 Playable.prototype._moveTo = function (time, dt) {
 	dt *= this._speed;
 
-	// Computing overflow and clamping time
-	var overflow;
-	if (this._iterations === 1) {
-		// Converting into time relative to when the playable was started
-		this._time = (time - this._startTime) * this._speed;
-		if (dt > 0) {
-			if (this._time >= this._duration) {
-				overflow = this._time - this._duration;
-				dt -= overflow;
-				this._time = this._duration;
-			}
-		} else if (dt < 0) {
-			if (this._time <= 0) {
-				overflow = this._time;
-				dt -= overflow;
-				this._time = 0;
-			}
-		}
-	} else {
-		time = (time - this._startTime) * this._speed;
-
-		// Iteration at current update
-		var iteration = time / this._duration;
-
-		if (dt > 0) {
-			if (iteration < this._iterations) {
-				this._time = time % this._duration;
-			} else {
-				overflow = (iteration - this._iterations) * this._duration;
-				dt -= overflow;
-				this._time = this._duration * (1 - (Math.ceil(this._iterations) - this._iterations));
-			}
-		} else if (dt < 0) {
-			if (0 < iteration) {
-				this._time = time % this._duration;
-			} else {
-				overflow = iteration * this._duration;
-				dt -= overflow;
-				this._time = 0;
-			}
-		}
-
-		if ((this._pingpong === true)) {
-			if (Math.ceil(this._iterations) === this._iterations) {
-				if (overflow === undefined) {
-					if ((Math.ceil(iteration) & 1) === 0) {
-						this._time = this._duration - this._time;
-					}
-				} else {
-					if ((Math.ceil(iteration) & 1) === 1) {
-						this._time = this._duration - this._time;
-					}
-				}
-			} else {
-				if ((Math.ceil(iteration) & 1) === 0) {
-					this._time = this._duration - this._time;
-				}
-			}
-		}
-	}
-
+	this._time = (time - this._startTime) * this._speed;
 	this._update(dt);
 
 	if (this._onUpdate !== null) {
 		this._onUpdate(this._time, dt);
-	}
-
-	if (overflow !== undefined) {
-		this._complete(overflow);
 	}
 };
 
@@ -1953,6 +1919,7 @@ PlayableHandler.prototype._add = function (playable) {
 	if (playable._handle === null) {
 		// Playable can be added
 		playable._handle = this._inactivePlayables.add(playable);
+		playable._player = this;
 		return true;
 	}
 
@@ -1987,6 +1954,7 @@ PlayableHandler.prototype._remove = function (playable) {
 	if (playable._handle.container === this._activePlayables) {
 		// Playable was active, adding to remove list
 		playable._handle = this._playablesToRemove.add(playable._handle);
+		playable._stop();
 		return true;
 	}
 
@@ -2007,7 +1975,7 @@ PlayableHandler.prototype._remove = function (playable) {
 
 PlayableHandler.prototype.remove = function (playable) {
 	this._remove(playable);
-	playable._stop();
+	this._onRemovePlayables();
 	return this;
 };
 
@@ -2016,13 +1984,17 @@ PlayableHandler.prototype.removeAll = function () {
 	var handle = this._activePlayables.first; 
 	while (handle !== null) {
 		var next = handle.next;
-		this.remove(handle.object);
+		this._remove(handle.object);
 		handle = next;
 	}
 
 	this._handlePlayablesToRemove();
+	this._onRemovePlayables();
 	return this;
 };
+
+// Overridable method
+PlayableHandler.prototype._onRemovePlayables = function () {};
 
 PlayableHandler.prototype.possess = function (playable) {
 	if (playable._handle === null) {
@@ -2049,6 +2021,7 @@ PlayableHandler.prototype._handlePlayablesToRemove = function () {
 		// Removing from list of active playables
 		var playable = handle.object;
 		playable._handle = this._activePlayables.remove(handle);
+		playable._player = null;
 	}
 };
 
@@ -2586,6 +2559,8 @@ Timeline.prototype._computeDuration = function () {
 	this._duration = duration;
 };
 
+Timeline.prototype._onRemovePlayables = Timeline.prototype._computeDuration;
+
 Timeline.prototype._start = function (player, timeOffset) {
 	BoundedPlayer.prototype._start.call(this, player, timeOffset);
 
@@ -2609,9 +2584,9 @@ Timeline.prototype._updatePlayableList = function () {
 		if (startTime <= this._time && this._time <= endTime) {
 			// O(1)
 			this._inactivePlayables.remove(playable._handle);
-			playable._handle = this._activePlayables.add(playable);
+			playable._handle = this._activePlayables.addBack(playable);
 
-			playable._start(this, -startTime);
+			playable._start(-startTime);
 		}
 	}
 };
