@@ -1,22 +1,22 @@
 var TINA = require('./TINA.js');
 
-TINA.Tweener         = require('./Tweener');
-TINA.Timer           = require('./Timer');
-TINA.Ticker          = require('./Ticker');
-TINA.Playable        = require('./Playable');
-TINA.BoundedPlayable = require('./BoundedPlayable');
-TINA.PlayableHandler = require('./PlayableHandler');
-TINA.BoundedPlayer   = require('./BoundedPlayer');
-TINA.Player          = require('./Player');
-TINA.Tween           = require('./Tween');
-TINA.NestedTween     = require('./NestedTween');
 // TINA.CSSTween        = require('./CSSTween');
-TINA.PixiTween       = require('./NestedTween');
-TINA.Timeline        = require('./Timeline');
-TINA.Sequence        = require('./Sequence');
-// TINA.Recorder        = require('./Recorder');
 TINA.Delay           = require('./Delay');
+TINA.BoundedPlayable = require('./BoundedPlayable');
+TINA.BoundedPlayer   = require('./BoundedPlayer');
 TINA.easing          = require('./easing');
 TINA.interpolation   = require('./interpolation');
+TINA.NestedTween     = require('./NestedTween');
+TINA.PixiTween       = require('./NestedTween');
+TINA.Playable        = require('./Playable');
+TINA.PlayableHandler = require('./PlayableHandler');
+TINA.Player          = require('./Player');
+// TINA.Recorder        = require('./Recorder');
+TINA.Sequence        = require('./Sequence');
+TINA.Ticker          = require('./Ticker');
+TINA.Timeline        = require('./Timeline');
+TINA.Timer           = require('./Timer');
+TINA.Tween           = require('./Tween');
+TINA.Tweener         = require('./Tweener');
 
 module.exports = TINA;

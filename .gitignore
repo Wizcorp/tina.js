@@ -1,7 +1,8 @@
-index.js
-index.html
+/index.js
+/index.html
 node_modules
-build/tween.min.js
 npm-debug.log
-test.html
-test.js
+/test.html
+/page
+/nodeTest.js
+/test.js

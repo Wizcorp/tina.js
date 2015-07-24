@@ -77,21 +77,25 @@ DoublyList.prototype.removeByReference = function (node) {
 		return node;
 	}
 
+	// Removing any existing reference to the node
 	if (node.next === null) {
 		this.last = node.prev;
 	} else {
 		node.next.prev = node.prev;
-		// node.next = null;
 	}
 
 	if (node.prev === null) {
 		this.first = node.next;
 	} else {
 		node.prev.next = node.next;
-		// node.prev = null;
 	}
 
+	// Removing any existing reference from the node
+	node.next = null;
+	node.prev = null;
 	node.container = null;
+
+	// One less node in the list
 	this.length -= 1;
 
 	return null;

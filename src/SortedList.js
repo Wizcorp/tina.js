@@ -1,11 +1,11 @@
 /**
- * PRIORITY LIST Class
+ * SORTED LIST Class
+ * Elements are sorted at insertion
  *
  * @author Brice Chevalier
  *
- * @comparisonFunction {Function} comparison function that takes two parameters a and b and returns a number
+ * @params [comparisonFunction] {function} comparison function that takes two parameters a and b and returns a comparison number
  *
- * @desc Priority list data structure, elements remain sorted
  *
  *    Method                 Time Complexity
  *    ___________________________________
@@ -31,15 +31,15 @@ function ListNode(obj, previous, next, container) {
 	this.container = container;
 }
 
-function OrderedList(comparisonFunction) {
+function SortedList(comparisonFunction) {
 	this.length  = 0;
 	this.first   = null;
 	this.last    = null;
 	this.cmpFunc = comparisonFunction;
 }
-module.exports = OrderedList;
+module.exports = SortedList;
 
-OrderedList.prototype.add = function (obj) {
+SortedList.prototype.add = function (obj) {
 	var newNode = new ListNode(obj, null, null, this);
 	this.length += 1;
 
@@ -94,7 +94,7 @@ OrderedList.prototype.add = function (obj) {
 	return newNode;
 };
 
-OrderedList.prototype.removeByRef = function (node) {
+SortedList.prototype.removeByRef = function (node) {
 	if (!node || node.container !== this) {
 		return node;
 	}
@@ -119,7 +119,7 @@ OrderedList.prototype.removeByRef = function (node) {
 	return null;
 };
 
-OrderedList.prototype.remove = function (object) {
+SortedList.prototype.remove = function (object) {
 	for (var node = this.first; node !== null; node = node.next) {
 		if (node.object === object) {
 			this.removeByReference(node);
@@ -130,7 +130,7 @@ OrderedList.prototype.remove = function (object) {
 	return false;
 };
 
-OrderedList.prototype.moveToTheBeginning = function (node) {
+SortedList.prototype.moveToTheBeginning = function (node) {
 	if (!node || node.container !== this) {
 		return false;
 	}
@@ -158,7 +158,7 @@ OrderedList.prototype.moveToTheBeginning = function (node) {
 	return true;
 };
 
-OrderedList.prototype.moveToTheEnd = function (node) {
+SortedList.prototype.moveToTheEnd = function (node) {
 	if (!node || node.container !== this) {
 		return false;
 	}
@@ -186,11 +186,11 @@ OrderedList.prototype.moveToTheEnd = function (node) {
 	return true;
 };
 
-OrderedList.prototype.possess = function (node) {
+SortedList.prototype.possess = function (node) {
 	return node && (node.container === this);
 };
 
-OrderedList.prototype.popFirst = function () {
+SortedList.prototype.popFirst = function () {
 	var node = this.first;
 	if (!node) return null;
 	this.length -= 1;
@@ -206,7 +206,7 @@ OrderedList.prototype.popFirst = function () {
 	return pop;
 };
 
-OrderedList.prototype.popLast = function () {
+SortedList.prototype.popLast = function () {
 	var node = this.last;
 	if (!node) return null;
 	this.length -= 1;
@@ -222,15 +222,15 @@ OrderedList.prototype.popLast = function () {
 	return pop;
 };
 
-OrderedList.prototype.getFirst = function () {
+SortedList.prototype.getFirst = function () {
 	return this.first && this.first.object;
 };
 
-OrderedList.prototype.getLast = function () {
+SortedList.prototype.getLast = function () {
 	return this.last && this.last.object;
 };
 
-OrderedList.prototype.clear = function () {
+SortedList.prototype.clear = function () {
 	for (var current = this.first; current; current = current.next) {
 		current.container = null;
 	}
@@ -240,25 +240,21 @@ OrderedList.prototype.clear = function () {
 	this.last   = null;
 };
 
-OrderedList.prototype.getCount = function () {
-	return this.length;
-};
-
-OrderedList.prototype.forEach = function (processingFunc, params) {
+SortedList.prototype.forEach = function (processingFunc, params) {
 	for (var current = this.first; current; current = current.next) {
 		processingFunc(current.object, params);
 	}
 };
 
-OrderedList.prototype.forEachReverse = function (processingFunc, params) {
+SortedList.prototype.forEachReverse = function (processingFunc, params) {
 	for (var current = this.last; current; current = current.previous) {
 		processingFunc(current.object, params);
 	}
 };
 
-OrderedList.prototype.reposition = function (node) {
+SortedList.prototype.reposition = function (node) {
 	if (node.container !== this) {
-		console.warn('[OrderedList.reposition] Trying to reposition a node that does not belong to the list');
+		console.warn('[SortedList.reposition] Trying to reposition a node that does not belong to the list');
 		return node;
 	}
 
@@ -305,7 +301,7 @@ OrderedList.prototype.reposition = function (node) {
 	return node;
 };
 
-OrderedList.prototype.toArray = function () {
+SortedList.prototype.toArray = function () {
 	var objects = [];
 	for (var node = this.first; node !== null; node = node.next) {
 		objects.push(node.object);
