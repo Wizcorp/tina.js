@@ -5,14 +5,14 @@
  *
  * @desc Doubly list data structure
  *
- *    Method                Time Complexity
- *    ___________________________________
+ * Method      Time Complexity
+ * ___________________________________
  *
- *    add         O(1)
- *    remove      O(1)
- *    clear       O(n)
+ * add         O(1)
+ * remove      O(1)
+ * clear       O(n)
  *
- *    Memory Complexity in O(n)
+ * Memory Complexity in O(n)
  */
 
 function ListNode(obj, prev, next, container) {
@@ -60,20 +60,20 @@ DoublyList.prototype.addBack = function (obj) {
 
 DoublyList.prototype.popFront = function (obj) {
 	var object = this.first.object;
-	this.remove(this.first);
+	this.removeByReference(this.first);
 	return object;
 };
 DoublyList.prototype.pop = DoublyList.prototype.popFront;
 
 DoublyList.prototype.popBack = function (obj) {
 	var object = this.last.object;
-	this.remove(this.last);
+	this.removeByReference(this.last);
 	return object;
 };
 
-DoublyList.prototype.remove = function (node) {
+DoublyList.prototype.removeByReference = function (node) {
 	if (node.container !== this) {
-		console.warn('[DoublyList.remove] Trying to remove a node that does not belong to the list');
+		console.warn('[DoublyList.removeByReference] Trying to remove a node that does not belong to the list');
 		return node;
 	}
 
@@ -81,18 +81,31 @@ DoublyList.prototype.remove = function (node) {
 		this.last = node.prev;
 	} else {
 		node.next.prev = node.prev;
+		// node.next = null;
 	}
 
 	if (node.prev === null) {
 		this.first = node.next;
 	} else {
 		node.prev.next = node.next;
+		// node.prev = null;
 	}
 
 	node.container = null;
 	this.length -= 1;
 
 	return null;
+};
+
+DoublyList.prototype.remove = function (object) {
+	for (var node = this.first; node !== null; node = node.next) {
+		if (node.object === object) {
+			this.removeByReference(node);
+			return true;
+		}
+	}
+
+	return false;
 };
 
 DoublyList.prototype.clear = function () {
@@ -104,4 +117,19 @@ DoublyList.prototype.clear = function () {
 	this.first  = null;
 	this.last   = null;
 	this.length = 0;
+};
+
+DoublyList.prototype.forEach = function (processingFunc, params) {
+	for (var node = this.first; node; node = node.next) {
+		processingFunc(node.object, params);
+	}
+};
+
+DoublyList.prototype.toArray = function () {
+	var objects = [];
+	for (var node = this.first; node !== null; node = node.next) {
+		objects.push(node.object);
+	}
+
+	return objects;
 };

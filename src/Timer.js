@@ -36,15 +36,15 @@ Object.defineProperty(Timer.prototype, 'tups', {
 		var dt = this._time - this._startTime;
 		if (tups === 0) {
 			// Setting start as if new tups was 1
-			this._startTime = this._time - dt * this._tups;
+			this._startTime += this._time / this._tups - this._time;
 		} else {
 			if (this._tups === 0) {
 				// If current tups is 0,
 				// it corresponds to a virtual tups of 1
 				// when it comes to determing where the start is
-				this._startTime = this._time - dt / tups;
+				this._startTime = this._time - this._time / tups;
 			} else {
-				this._startTime = this._time - dt * this._tups / tups;
+				this._startTime = this._time / this._tups - this._time / tups;
 			}
 		}
 

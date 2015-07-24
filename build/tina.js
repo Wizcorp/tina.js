@@ -1,146 +1,9 @@
-/**
- * Require the module at `name`.
- *
- * @param {String} name
- * @return {Object} exports
- * @api public
- */
+(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+var Transition         = require('./Transition');
+var TransitionRelative = require('./TransitionRelative');
 
-function require(name) {
-  var module = require.modules[name];
-  if (!module) throw new Error('failed to require "' + name + '"');
-
-  if (!('exports' in module) && typeof module.definition === 'function') {
-    module.client = module.component = true;
-    module.definition.call(this, module.exports = {}, module);
-    delete module.definition;
-  }
-
-  return module.exports;
-}
-
-/**
- * Meta info, accessible in the global scope unless you use AMD option.
- */
-
-require.loader = 'component';
-
-/**
- * Internal helper object, contains a sorting function for semantiv versioning
- */
-require.helper = {};
-require.helper.semVerSort = function(a, b) {
-  var aArray = a.version.split('.');
-  var bArray = b.version.split('.');
-  for (var i=0; i<aArray.length; ++i) {
-    var aInt = parseInt(aArray[i], 10);
-    var bInt = parseInt(bArray[i], 10);
-    if (aInt === bInt) {
-      var aLex = aArray[i].substr((""+aInt).length);
-      var bLex = bArray[i].substr((""+bInt).length);
-      if (aLex === '' && bLex !== '') return 1;
-      if (aLex !== '' && bLex === '') return -1;
-      if (aLex !== '' && bLex !== '') return aLex > bLex ? 1 : -1;
-      continue;
-    } else if (aInt > bInt) {
-      return 1;
-    } else {
-      return -1;
-    }
-  }
-  return 0;
-}
-
-/**
- * Find and require a module which name starts with the provided name.
- * If multiple modules exists, the highest semver is used. 
- * This function can only be used for remote dependencies.
-
- * @param {String} name - module name: `user~repo`
- * @param {Boolean} returnPath - returns the canonical require path if true, 
- *                               otherwise it returns the epxorted module
- */
-require.latest = function (name, returnPath) {
-  function showError(name) {
-    throw new Error('failed to find latest module of "' + name + '"');
-  }
-  // only remotes with semvers, ignore local files conataining a '/'
-  var versionRegexp = /(.*)~(.*)@v?(\d+\.\d+\.\d+[^\/]*)$/;
-  var remoteRegexp = /(.*)~(.*)/;
-  if (!remoteRegexp.test(name)) showError(name);
-  var moduleNames = Object.keys(require.modules);
-  var semVerCandidates = [];
-  var otherCandidates = []; // for instance: name of the git branch
-  for (var i=0; i<moduleNames.length; i++) {
-    var moduleName = moduleNames[i];
-    if (new RegExp(name + '@').test(moduleName)) {
-        var version = moduleName.substr(name.length+1);
-        var semVerMatch = versionRegexp.exec(moduleName);
-        if (semVerMatch != null) {
-          semVerCandidates.push({version: version, name: moduleName});
-        } else {
-          otherCandidates.push({version: version, name: moduleName});
-        } 
-    }
-  }
-  if (semVerCandidates.concat(otherCandidates).length === 0) {
-    showError(name);
-  }
-  if (semVerCandidates.length > 0) {
-    var module = semVerCandidates.sort(require.helper.semVerSort).pop().name;
-    if (returnPath === true) {
-      return module;
-    }
-    return require(module);
-  }
-  // if the build contains more than one branch of the same module
-  // you should not use this funciton
-  var module = otherCandidates.sort(function(a, b) {return a.name > b.name})[0].name;
-  if (returnPath === true) {
-    return module;
-  }
-  return require(module);
-}
-
-/**
- * Registered modules.
- */
-
-require.modules = {};
-
-/**
- * Register module at `name` with callback `definition`.
- *
- * @param {String} name
- * @param {Function} definition
- * @api private
- */
-
-require.register = function (name, definition) {
-  require.modules[name] = {
-    definition: definition
-  };
-};
-
-/**
- * Define a module's exports immediately with `exports`.
- *
- * @param {String} name
- * @param {Generic} exports
- * @api private
- */
-
-require.define = function (name, exports) {
-  require.modules[name] = {
-    exports: exports
-  };
-};
-require.register("tina/src/AbstractTween.js", function (exports, module) {
-var Transition         = require('tina/src/Transition.js');
-var TransitionRelative = require('tina/src/TransitionRelative.js');
-
-var easingFunctions        = require('tina/src/easing.js');
-var interpolationFunctions = require('tina/src/interpolation.js');
+var easingFunctions        = require('./easing');
+var interpolationFunctions = require('./interpolation');
 
 
 // Temporisation, used for waiting
@@ -278,10 +141,10 @@ AbstractTween.prototype._getLastTransitionEnding = function () {
 };
 
 AbstractTween.prototype.to = function (toObject, duration, easing, easingParam, interpolationParams) {
-	// The API allows to pass interpolation names that will be replaced
-	// by the corresponding interpolation functions
+	// The API allows to pass easing names that will be replaced
+	// by the corresponding easing functions
 	if (typeof(easing) === 'string') {
-		// Replacing interpolation name by interpolation function
+		// Replacing easing name by easing function
 		if (easingFunctions[easing] === undefined) {
 			console.warn('[AbstractTween.to] Given easing does not exist');
 			easing = undefined;
@@ -343,10 +206,8 @@ AbstractTween.prototype._update = function () {
 	// Updating the object with respect to the current transition and time
 	transition.update(this._object, (this._time - transition.start) / transition.duration);
 };
-});
-
-require.register("tina/src/BoundedPlayable.js", function (exports, module) {
-var Playable = require('tina/src/Playable.js');
+},{"./Transition":15,"./TransitionRelative":16,"./easing":19,"./interpolation":22}],2:[function(require,module,exports){
+var Playable = require('./Playable');
 
 /** @class */
 
@@ -361,7 +222,8 @@ function BoundedPlayable() {
 	this._pingpong   = false; // To make the playable go backward on even iterations
 
 	this._onComplete = null;
-};
+}
+
 BoundedPlayable.prototype = Object.create(Playable.prototype);
 BoundedPlayable.prototype.constructor = BoundedPlayable;
 module.exports = BoundedPlayable;
@@ -425,6 +287,21 @@ BoundedPlayable.prototype._complete = function (overflow) {
 	}
 };
 
+BoundedPlayable.prototype._start = function (timeOffset) {
+	this._startTime = -timeOffset;
+
+	if (this._onStart !== null) {
+		this._onStart();
+	}
+
+	// Making sure the playable is not over yet
+	if (timeOffset >= this.getDuration()) {
+		// Playable is over
+		// Moving it to given time offset
+		// This will have the effect of completing it
+		this._moveTo(this._startTime + timeOffset, timeOffset);
+	}
+};
 
 BoundedPlayable.prototype._moveTo = function (time, dt) {
 	dt *= this._speed;
@@ -433,7 +310,7 @@ BoundedPlayable.prototype._moveTo = function (time, dt) {
 	var overflow;
 	if (this._speed !== 0) {
 		if (this._iterations === 1) {
-			// Converting into time relative to when the playable was started
+			// Converting into local time (relative to speed and when the playable started)
 			this._time = (time - this._startTime) * this._speed;
 			if (dt > 0) {
 				if (this._time >= this._duration) {
@@ -505,13 +382,11 @@ BoundedPlayable.prototype._moveTo = function (time, dt) {
 
 // Overridable method
 BoundedPlayable.prototype._update  = function () {};
-});
+},{"./Playable":7}],3:[function(require,module,exports){
+var BoundedPlayable = require('./BoundedPlayable');
+var PlayableHandler = require('./PlayableHandler');
 
-require.register("tina/src/BoundedPlayer.js", function (exports, module) {
-var BoundedPlayable = require('tina/src/BoundedPlayable.js');
-var PlayableHandler = require('tina/src/PlayableHandler.js');
-
-var inherit = require('tina/src/inherit.js');
+var inherit = require('./inherit');
 
 /**
  * @classdesc
@@ -558,7 +433,7 @@ BoundedPlayer.prototype._moveTo = function (time, dt) {
 	// Computing overflow and clamping time
 	var overflow;
 	if (this._iterations === 1) {
-		// Converting into time relative to when the playable was started
+		// Converting into local time (relative to speed and when the playable started)
 		this._time = (time - this._startTime) * this._speed;
 		if (dt > 0) {
 			if (this._time >= this._duration) {
@@ -630,10 +505,8 @@ BoundedPlayer.prototype._moveTo = function (time, dt) {
 
 // Overridable method
 BoundedPlayer.prototype._updatePlayableList = function () {};
-});
-
-require.register("tina/src/Delay.js", function (exports, module) {
-var BoundedPlayable = require('tina/src/BoundedPlayable.js');
+},{"./BoundedPlayable":2,"./PlayableHandler":8,"./inherit":21}],4:[function(require,module,exports){
+var BoundedPlayable = require('./BoundedPlayable');
 
 /**
  * @classdesc
@@ -651,9 +524,7 @@ function Delay(duration) {
 Delay.prototype = Object.create(BoundedPlayable.prototype);
 Delay.prototype.constructor = Delay;
 module.exports = Delay;
-});
-
-require.register("tina/src/DoublyList.js", function (exports, module) {
+},{"./BoundedPlayable":2}],5:[function(require,module,exports){
 /**
  * DOUBLY LIST Class
  *
@@ -661,14 +532,14 @@ require.register("tina/src/DoublyList.js", function (exports, module) {
  *
  * @desc Doubly list data structure
  *
- *    Method                Time Complexity
- *    ___________________________________
+ * Method      Time Complexity
+ * ___________________________________
  *
- *    add         O(1)
- *    remove      O(1)
- *    clear       O(n)
+ * add         O(1)
+ * remove      O(1)
+ * clear       O(n)
  *
- *    Memory Complexity in O(n)
+ * Memory Complexity in O(n)
  */
 
 function ListNode(obj, prev, next, container) {
@@ -716,20 +587,20 @@ DoublyList.prototype.addBack = function (obj) {
 
 DoublyList.prototype.popFront = function (obj) {
 	var object = this.first.object;
-	this.remove(this.first);
+	this.removeByReference(this.first);
 	return object;
 };
 DoublyList.prototype.pop = DoublyList.prototype.popFront;
 
 DoublyList.prototype.popBack = function (obj) {
 	var object = this.last.object;
-	this.remove(this.last);
+	this.removeByReference(this.last);
 	return object;
 };
 
-DoublyList.prototype.remove = function (node) {
+DoublyList.prototype.removeByReference = function (node) {
 	if (node.container !== this) {
-		console.warn('[DoublyList.remove] Trying to remove a node that does not belong to the list');
+		console.warn('[DoublyList.removeByReference] Trying to remove a node that does not belong to the list');
 		return node;
 	}
 
@@ -737,18 +608,31 @@ DoublyList.prototype.remove = function (node) {
 		this.last = node.prev;
 	} else {
 		node.next.prev = node.prev;
+		// node.next = null;
 	}
 
 	if (node.prev === null) {
 		this.first = node.next;
 	} else {
 		node.prev.next = node.next;
+		// node.prev = null;
 	}
 
 	node.container = null;
 	this.length -= 1;
 
 	return null;
+};
+
+DoublyList.prototype.remove = function (object) {
+	for (var node = this.first; node !== null; node = node.next) {
+		if (node.object === object) {
+			this.removeByReference(node);
+			return true;
+		}
+	}
+
+	return false;
 };
 
 DoublyList.prototype.clear = function () {
@@ -761,737 +645,24 @@ DoublyList.prototype.clear = function () {
 	this.last   = null;
 	this.length = 0;
 };
-});
 
-require.register("tina/src/easing.js", function (exports, module) {
-/**
- *
- * @file A set of ease functions
- *
- * @author Brice Chevalier
- *
- * @param {Number} t Progress of the transition in [0, 1]
- * @param (Number) p Additional parameter, when required.
- *
- * @return {Number} Interpolated time
- *
- * @desc Ease functions
- *
- * Initial and final values of the ease functions are either 0 or 1.
- * All the ease functions are continuous for times t in [0, 1]
- *
- * Note: if you want a particular easing method to be added
- * create an issue or contribute at https://github.com/Wizcorp/tina.js
- */
-
-// Math constants (for readability)
-var PI          = Math.PI;
-var PI_OVER_TWO = Math.PI / 2;
-var TWO_PI      = Math.PI * 2;
-var EXP         = 2.718281828;
-
-// No easing
-exports.none = function() {
-	return 1;
-};
-
-// Linear
-exports.linear = function(t) {
-	return t;
-};
-
-// Flash style transition
-// ease in [-1, 1] for usage similar to flash
-// but works with ease in ]-Inf, +Inf[
-exports.flash = function(t, ease) {
-	return t + t * ease - t * t * ease;
-};
-
-// Parabolic
-exports.parabolic = function(t) {
-	var r = (2 * t - 1);
-	return 1 - r * r;
-};
-
-// Trigonometric, n = number of iterations in ]-Inf, +Inf[
-exports.trigo = function(t, n) {
-	return 0.5 * (1 - Math.cos(TWO_PI * t * n));
-};
-
-// Elastic, e = elasticity in ]0, +Inf[
-exports.elastic = function(t, e) {
-	if (t === 1) return 1;
-	e /= (e + 1); // transforming e
-	var n = (1 + e) * Math.log(1 - t) / Math.log(e);
-	return Math.cos(n - PI_OVER_TWO) * Math.pow(e, n);
-};
-
-// Polynomial, p = power in ]0, + Inf[
-exports.polyIn = function(t, p) { 
-	return Math.pow(t, p);
-};
-
-exports.polyOut = function(t, p) {
-	return 1 - Math.pow((1 - t) / 1, p);
-};
-
-exports.polyInOut = function(t, p) {
-	if (t < 0.5) {
-		return Math.pow(2 * t, p) / 2;
-	} else {
-		return (1 + (1 - Math.pow(2 * (1 - t), p))) / 2;
+DoublyList.prototype.forEach = function (processingFunc, params) {
+	for (var node = this.first; node; node = node.next) {
+		processingFunc(node.object, params);
 	}
 };
 
-// Sine
-exports.sineIn = function(t) {
-	return 1 - Math.cos(PI_OVER_TWO * t);
-};
-
-exports.sineOut = function(t) {
-	return Math.sin(PI_OVER_TWO * t);
-};
-
-exports.sineInOut = function(t) {
-	if (t < 0.5) {
-		return (1 - Math.cos(PI * t)) / 2;
-	} else {
-		return (1 + Math.sin(PI * (t - 0.5))) / 2;
-	}
-};
-
-// Exponential, e = exponent in ]0, + Inf[
-exports.expIn = function(t, e) {
-	return (1 - Math.pow(EXP, e * t)) / (1 - Math.pow(EXP, e));
-};
-
-exports.expOut = function(t, e) {
-	return (1 - Math.pow(EXP, - e * t)) / (1 - Math.pow(EXP, - e));
-};
-
-exports.expInOut = function(t, e) {
-	if (t < 0.5) {
-		return (1 - Math.pow(EXP, 2 * e * t)) / (1 - Math.pow(EXP, e)) / 2;
-	} else {
-		return 0.5 + (1 - Math.pow(EXP, e - 2 * e * t)) / (1 - Math.pow(EXP, - e)) / 2;
-	}
-};
-
-// Circular
-exports.circIn = function(t) {
-	return 1 - Math.sqrt(1 - Math.pow(t, 2));
-};
-
-exports.circOut = function(t) {
-	return Math.sqrt(1 - Math.pow(1 - t, 2));
-};
-
-exports.circInOut = function(t) {
-	if (t < 0.5) {
-		return (1 - Math.sqrt(1 - 4 * t * t)) / 2;
-	} else {
-		return (1 + Math.sqrt(-3 + 8 * t - 4 * t * t)) / 2;
-	}
-};
-
-// Elastic, e = elasticity in ]0, +Inf[
-exports.elasticIn = function(t, e) {
-	if (t === 0) { return 0; }
-	e /= (e + 1); // transforming e
-	var n = (1 + e) * Math.log(t) / Math.log(e);
-	return Math.cos(n) * Math.pow(e, n);
-};
-
-exports.elasticOut = function(t, e) {
-	if (t === 1) { return 1; }
-	e /= (e + 1); // transforming e
-	var n = (1 + e) * Math.log(1 - t) / Math.log(e);
-	return 1.0 - Math.cos(n) * Math.pow(e, n);
-};
-
-exports.elasticInOut = function(t, e) {
-	var n;
-	if (t < 0.5) {
-		if (t === 0) { return 0; }
-		e /= (e + 1); // transforming e
-		n = (1 + e) * Math.log(2 * t) / Math.log(e);
-		return 0.5 * Math.cos(n) * Math.pow(e, n);
+DoublyList.prototype.toArray = function () {
+	var objects = [];
+	for (var node = this.first; node !== null; node = node.next) {
+		objects.push(node.object);
 	}
 
-	if (t === 1) { return 1; }
-	e /= (e + 1); // transforming e
-	n = (1 + e) * Math.log(2 - 2 * t) / Math.log(e);
-	return 0.5 + 0.5 * (1.0 - Math.cos(n) * Math.pow(e, n));
+	return objects;
 };
-
-// Bounce, e = elasticity in ]0, +Inf[
-exports.bounceIn = function(t, e) {
-	if (t === 0) { return 0; }
-	e /= (e + 1); // transforming e
-	var n = (1 + e) * Math.log(t) / Math.log(e);
-	return Math.abs(Math.cos(n) * Math.pow(e, n));
-};
-
-exports.bounceOut = function(t, e) {
-	if (t === 1) { return 1; }
-	e /= (e + 1); // transforming e
-	var n = (1 + e) * Math.log(1 - t) / Math.log(e);
-	return 1.0 - Math.abs(Math.cos(n) * Math.pow(e, n));
-};
-
-exports.bounceInOut = function(t, e) {
-	var n;
-	if (t < 0.5) {
-		if (t === 0) { return 0; }
-		e /= (e + 1); // transforming e
-		n = (1 + e) * Math.log(2 * t) / Math.log(e);
-		return Math.abs(0.5 * Math.cos(n) * Math.pow(e, n));
-	}
-
-	if (t === 1) { return 1; }
-	e /= (e + 1); // transforming e
-	n = (1 + e) * Math.log(2 - 2 * t) / Math.log(e);
-	return 0.5 + 0.5 * (1.0 - Math.abs(Math.cos(n) * Math.pow(e, n)));
-};
-
-// Back, e = elasticity in [0, +Inf[
-exports.backIn = function(t, e) {
-	return t * t * ((e + 1) * t - e);
-};
-
-exports.backOut = function(t, e) {
-	t -= 1;
-	return t * t * ((e + 1) * t + e) + 1;
-};
-
-exports.backInOut = function(t, e) {
-	if (t < 0.5) {
-		t *= 2;
-		return 0.5 * (t * t * ((e + 1) * t - e));
-	}
-	t = 2 * t - 2;
-	return 0.5 * (t * t * ((e + 1) * t + e)) + 1;
-};
-
-});
-
-require.register("tina", function (exports, module) {
-var TINA = require('tina/src/TINA.js');
-
-TINA.Tweener         = require('tina/src/Tweener.js');
-TINA.Timer           = require('tina/src/Timer.js');
-TINA.Ticker          = require('tina/src/Ticker.js');
-TINA.Playable        = require('tina/src/Playable.js');
-TINA.BoundedPlayable = require('tina/src/BoundedPlayable.js');
-TINA.PlayableHandler = require('tina/src/PlayableHandler.js');
-TINA.BoundedPlayer   = require('tina/src/BoundedPlayer.js');
-TINA.Player          = require('tina/src/Player.js');
-TINA.Tween           = require('tina/src/Tween.js');
-TINA.NestedTween     = require('tina/src/NestedTween.js');
-TINA.PixiTween       = require('tina/src/NestedTween.js');
-TINA.Timeline        = require('tina/src/Timeline.js');
-TINA.Sequence        = require('tina/src/Sequence.js');
-// TINA.Recorder        = require('./Recorder');
-TINA.Delay           = require('tina/src/Delay.js');
-TINA.easing          = require('tina/src/easing.js');
-TINA.interpolation   = require('tina/src/interpolation.js');
-
-module.exports = TINA;
-
-});
-
-require.register("tina/src/inherit.js", function (exports, module) {
-module.exports = function (subobject, superobject) {
-	var prototypes = Object.keys(superobject.prototype);
-	for (var p = 0; p < prototypes.length; p += 1) {
-		var prototypeName = prototypes[p];
-		subobject.prototype[prototypeName] = superobject.prototype[prototypeName];
-	}
-};
-});
-
-require.register("tina/src/interpolation.js", function (exports, module) {
-/**
- *
- * @file A set of interpolation functions
- *
- * @author Brice Chevalier
- *
- * @param {Number} t Progress of the transition in [0, 1]
- * @param (Number) a Value to interpolate from
- * @param (Number) b Value to interpolate to
- * @param (Number) p Additional parameter
- *
- * @return {Number} Interpolated value
- *
- * @desc Interpolation functions
- * Define how to interpolate between object a and b.
- * 
- * Note: if you want a particular interpolation method to be added
- * create an issue or contribute at https://github.com/Wizcorp/tina.js
- */
-
-// TODO: Test them all!
-
-exports.none = function(t, a, b) {
-	return b;
-};
-
-exports.linear = function(t, a, b) {
-	return a * (1 - t) + b * t;
-};
-
-// d = discretization
-exports.discrete = function(t, a, b, d) {
-	if (d === undefined) { d = 1; }
-	return Math.floor((a * (1 - t) + b * t) / d) * d;
-};
-
-// a, b = vectors
-exports.vector = function(t, a, b) {
-	var c = [];
-	for (var i = 0; i < a.length; i += 1) {
-		c[i] = a[i] * (1 - t) + b[i] * t;
-	}
-	return c;
-};
-
-// a, b = states, c = array of intermediary states
-exports.state = function(t, a, b, c) {
-	var nbStates = b.length + 2;
-	var stateIdx = Math.floor(t * nbStates);
-	if (stateIdx < 1) { return a; }
-	if (stateIdx >= (nbStates - 1)) { return b; }
-	return c[stateIdx - 1];
-};
-
-// a, b = colors
-exports.colorRGB = function(t, a, b) {
-	return {
-		r: a.r * (1 - t) + b.r * t,
-		g: a.g * (1 - t) + b.g * t,
-		b: a.b * (1 - t) + b.b * t
-	};
-};
-
-exports.colorRGBA = function(t, a, b) {
-	return {
-		r: a.r * (1 - t) + b.r * t,
-		g: a.g * (1 - t) + b.g * t,
-		b: a.b * (1 - t) + b.b * t,
-		a: a.a * (1 - t) + b.a * t
-	};
-};
-
-exports.colorRGBToHexa = function(t, a, b) {
-	var cr = Math.round(a.r * (1 - t) + b.r * t);
-	var cg = Math.round(a.g * (1 - t) + b.g * t);
-	var cb = Math.round(a.b * (1 - t) + b.b * t);
-
-	return '#' + cr.toString(16) + cg.toString(16) + cb.toString(16);
-};
-
-exports.colorRGBToString = function(t, a, b) {
-	var cr = Math.round(a.r * (1 - t) + b.r * t);
-	var cg = Math.round(a.g * (1 - t) + b.g * t);
-	var cb = Math.round(a.b * (1 - t) + b.b * t);
-
-	return 'rgb(' + cr.toString(16) + ',' + cg.toString(16) + ',' + cb.toString(16) + ')';
-};
-
-exports.colorRGBAToString = function(t, a, b) {
-	var cr = Math.round(a.r * (1 - t) + b.r * t);
-	var cg = Math.round(a.g * (1 - t) + b.g * t);
-	var cb = Math.round(a.b * (1 - t) + b.b * t);
-	var ca = Math.round(a.a * (1 - t) + b.a * t);
-
-	return 'rgba(' + cr.toString(16) + ',' + cg.toString(16) + ',' + cb.toString(16) + ',' + ca + ')';
-};
-
-// Interpolation between 2 strings a and b (yes that's possible)
-// Returns a string of the same size as b
-exports.string = function(t, a, b) {
-	var nbCharsA = a.length;
-	var nbCharsB = b.length;
-	var newString = '';
-
-	for (var c = 0; c < nbCharsB; c += 1) {
-		// Simple heuristic:
-		// if charCodeB is closer to a capital letter
-		// then charCodeA corresponds to an "A"
-		// otherwise chardCodeA corresponds to an "a"
-		var charCodeB = b.charCodeAt(c);
-		var charCodeA = (c >= nbCharsA) ? ((charCodeB < 97) ? 65 : 97) : a.charCodeAt(c);
-
-		var charCode = Math.round(charCodeA * (1 - t) + charCodeB * t);
-		newString += String.fromCharCode(charCode);
-	}
-
-	return newString;
-};
-
-// Bezier, c = array of control points in ]-Inf, +Inf[
-exports.bezierQuadratic = function(t, a, b, c) {
-	var u = 1 - t;
-	return u * u * a + t * (2 * u * c[0] + t * b);
-};
-
-exports.bezierCubic = function(t, a, b, c) {
-	var u = 1 - t;
-	return u * u * u * a + t * (3 * u * u * c[0] + t * (3 * u * c[1] + t * b));
-};
-
-exports.bezierQuartic = function(t, a, b, c) {
-	var u = 1 - t;
-	var u2 = 2 * u;
-	return u2 * u2 * a + t * (4 * u * u2 * c[0] + t * (6 * u2 * c[1] + t * (4 * u * c[2] + t * b)));
-};
-
-exports.bezierQuintic = function(t, a, b, c) {
-	var u = 1 - t;
-	var u2 = 2 * u;
-	return u2 * u2 * u * a + t * (5 * u2 * u2 * c[0] + t * (10 * u * u2 * c[1] + t * (10 * u2 * c[2] + t * (5 * u * c[3] + t * b))));
-};
-
-exports.bezier = function(t, a, b, c) {
-	var n = c.length;
-	var u = 1 - t;
-	var x = b;
-
-	var term = n;
-	for (k = 1; k < n; k -= 1) {
-		x = x * t + term * Math.pow(u, k) * c[n - k];
-		term *= (n - k) / (k + 1);
-	}
-
-	return x * t + a * Math.pow(u, n);
-};
-
-// Bezier 2D, c = array of control points in ]-Inf, +Inf[ ^ 2
-exports.bezier2d = function(t, a, b, c) {
-	var n = c.length;
-	var u = 1 - t;
-	var x = b[0];
-	var y = b[1];
-
-	var p, q;
-	var term = n;
-	for (var k = 1; k < n; k -= 1) {
-		p = term * Math.pow(u, k);
-		q = c[n - k];
-		x = x * t + p * q[0];
-		y = y * t + p * q[1];
-		term *= (n - k) / (k + 1);
-	}
-
-	p = Math.pow(u, n);
-	return [
-		x * t + a[0] * p,
-		y * t + a[1] * p
-	]
-};
-
-// Bezier 3D, c = array of control points in ]-Inf, +Inf[ ^ 3
-exports.bezier3d = function(t, a, b, c) {
-	var n = c.length;
-	var u = 1 - t;
-	var x = b[0];
-	var y = b[1];
-	var z = b[2];
-
-	var p, q;
-	var term = n;
-	for (var k = 1; k < n; k -= 1) {
-		p = term * Math.pow(u, k);
-		q = c[n - k];
-		x = x * t + p * q[0];
-		y = y * t + p * q[1];
-		z = z * t + p * q[2];
-		term *= (n - k) / (k + 1);
-	}
-
-	p = Math.pow(u, n);
-	return [
-		x * t + a[0] * p,
-		y * t + a[1] * p,
-		z * t + a[2] * p
-	]
-};
-
-// Bezier k-dimensions, c = array of control points in ]-Inf, +Inf[ ^ k
-exports.bezierKd = function(t, a, b, c) {
-	var n = c.length;
-	var u = 1 - t;
-	var k = a.length;
-
-	var res = [];
-	for (var i = 0; i < k; i += 1) {
-		res[i] = b[i];
-	}
-
-	var p, q;
-	var term = n;
-	for (var l = 1; l < n; l -= 1) {
-		p = term * Math.pow(u, l);
-		q = c[n - l];
-
-		for (i = 0; i < k; i += 1) {
-			res[i] = res[i] * t + p * q[i];
-		}
-
-		term *= (n - l) / (l + 1);
-	}
-
-	p = Math.pow(u, n);
-	for (i = 0; i < k; i += 1) {
-		res[i] = res[i] * t + a[i] * p;
-	}
-
-	return res;
-};
-
-// CatmullRom, b = array of control points in ]-Inf, +Inf[
-exports.catmullRom = function(t, a, b, c) {
-	if (t === 1) {
-		return c;
-	}
-
-	// Finding index corresponding to current time
-	var k = a.length;
-	var n = b.length + 1;
-	t *= n;
-	var i = Math.floor(t);
-	t -= i;
-
-	var t2 = t * t;
-	var t3 = t * t2;
-	var w = -0.5 * t3 + 1.0 * t2 - 0.5 * t;
-	var x =  1.5 * t3 - 2.5 * t2 + 1.0;
-	var y = -1.5 * t3 + 2.0 * t2 + 0.5 * t;
-	var z =  0.5 * t3 - 0.5 * t2;
-
-	var i0 = i - 2;
-	var i1 = i - 1;
-	var i2 = i;
-	var i3 = i + 1;
-
-	var p0 = (i0 < 0) ? a : b[i0];
-	var p1 = (i1 < 0) ? a : b[i1];
-	var p2 = (i3 < n - 2) ? b[i2] : c;
-	var p3 = (i3 < n - 2) ? b[i3] : c;
-
-	var res = [];
-	for (var j = 0; j < k; j += 1) {
-		res[j] = p0[j] * w + p1[j] * x + p2[j] * y + p3[j] * z;
-	}
-
-	return res;
-};
-
-// Noises functions! (you are welcome)
-// Only 1d and 2d for now, if any request for 3d then I will add it to the list
-
-// Creating a closure for the noise function to make 'perm' and 'grad' only accessible to it
-exports.noise = (function() {
-	// permutation table
-	var perm = [
-		182, 235, 131, 26, 88, 132, 100, 117, 202, 176, 10, 19, 83, 243, 75, 52,
-		252, 194, 32, 30, 72, 15, 124, 53, 236, 183, 121, 103, 175, 39, 253, 120,
-		166, 33, 237, 141, 99, 180, 18, 143, 69, 136, 173, 21, 210, 189, 16, 142,
-		190, 130, 109, 186, 104, 80, 62, 51, 165, 25, 122, 119, 42, 219, 146, 61,
-		149, 177, 54, 158, 27, 170, 60, 201, 159, 193, 203, 58, 154, 222, 78, 138,
-		220, 41, 98, 14, 156, 31, 29, 246, 81, 181, 40, 161, 192, 227, 35, 241,
-		135, 150, 89, 68, 134, 114, 230, 123, 187, 179, 67, 217, 71, 218, 7, 148,
-		228, 251, 93, 8, 140, 125, 73, 37, 82, 28, 112, 24, 174, 118, 232, 137,
-		191, 133, 147, 245, 6, 172, 95, 113, 185, 205, 254, 116, 55, 198, 57, 152,
-		128, 233, 74, 225, 34, 223, 79, 111, 215, 85, 200, 9, 242, 12, 167, 44,
-		20, 110, 107, 126, 86, 231, 234, 76, 207, 102, 214, 238, 221, 145, 213, 64,
-		197, 38, 168, 157, 87, 92, 255, 212, 49, 196, 240, 90, 63, 0, 77, 94,
-		1, 108, 91, 17, 224, 188, 153, 250, 249, 199, 127, 59, 46, 184, 36, 43,
-		209, 206, 248, 4, 56, 47, 226, 13, 144, 22, 11, 247, 70, 244, 48, 97,
-		151, 195, 96, 101, 45, 66, 239, 178, 171, 160, 84, 65, 23, 3, 211, 162,
-		163, 50, 105, 129, 155, 169, 115, 5, 106, 2, 208, 204, 139, 229, 164, 216,
-		182
-	];
-
-	// gradients
-	var grad = [-1, 1];
-
-	return function (t, a, b, p) {
-		var amp = 2.0;   // amplitude
-		var per = p.per || 1; // persistance
-		var frq = p.frq || 2; // frequence
-		var oct = p.oct || 4; // octaves
-		var off = p.off || 0; // offset
-
-		var c = 0;
-		var x = p.x + off;
-
-		for (var o = 0; o < oct; o += 1) {
-
-			var i = (x | x) & 255;
-			var x1 = x - (x | x);
-			var x0 = 1.0 - x1;
-
-			c += amp * (x0 * x0 * x1 * (3 - 2 * x0) * grad[perm[i] & 1] - x1 * x1 * x0 * (3 - 2 * x1) * grad[perm[i + 1] & 1]);
-
-			x *= (x - off) * frq + off;
-			amp *= per;
-		}
-
-		// Scaling the result
-		var scale = ((per === 1) ? 1 / oct : 0.5 * (1 - per) / (1 - Math.pow(per, oct)));
-		t = t + c * scale;
-		return a * (1 - t) + b * t;
-	}
-})();
-
-exports.simplex2d = (function() {
-	// permutation table
-	var perm = [
-		182, 235, 131, 26, 88, 132, 100, 117, 202, 176, 10, 19, 83, 243, 75, 52,
-		252, 194, 32, 30, 72, 15, 124, 53, 236, 183, 121, 103, 175, 39, 253, 120,
-		166, 33, 237, 141, 99, 180, 18, 143, 69, 136, 173, 21, 210, 189, 16, 142,
-		190, 130, 109, 186, 104, 80, 62, 51, 165, 25, 122, 119, 42, 219, 146, 61,
-		149, 177, 54, 158, 27, 170, 60, 201, 159, 193, 203, 58, 154, 222, 78, 138,
-		220, 41, 98, 14, 156, 31, 29, 246, 81, 181, 40, 161, 192, 227, 35, 241,
-		135, 150, 89, 68, 134, 114, 230, 123, 187, 179, 67, 217, 71, 218, 7, 148,
-		228, 251, 93, 8, 140, 125, 73, 37, 82, 28, 112, 24, 174, 118, 232, 137,
-		191, 133, 147, 245, 6, 172, 95, 113, 185, 205, 254, 116, 55, 198, 57, 152,
-		128, 233, 74, 225, 34, 223, 79, 111, 215, 85, 200, 9, 242, 12, 167, 44,
-		20, 110, 107, 126, 86, 231, 234, 76, 207, 102, 214, 238, 221, 145, 213, 64,
-		197, 38, 168, 157, 87, 92, 255, 212, 49, 196, 240, 90, 63, 0, 77, 94,
-		1, 108, 91, 17, 224, 188, 153, 250, 249, 199, 127, 59, 46, 184, 36, 43,
-		209, 206, 248, 4, 56, 47, 226, 13, 144, 22, 11, 247, 70, 244, 48, 97,
-		151, 195, 96, 101, 45, 66, 239, 178, 171, 160, 84, 65, 23, 3, 211, 162,
-		163, 50, 105, 129, 155, 169, 115, 5, 106, 2, 208, 204, 139, 229, 164, 216,
-		182, 235, 131, 26, 88, 132, 100, 117, 202, 176, 10, 19, 83, 243, 75, 52,
-		252, 194, 32, 30, 72, 15, 124, 53, 236, 183, 121, 103, 175, 39, 253, 120,
-		166, 33, 237, 141, 99, 180, 18, 143, 69, 136, 173, 21, 210, 189, 16, 142,
-		190, 130, 109, 186, 104, 80, 62, 51, 165, 25, 122, 119, 42, 219, 146, 61,
-		149, 177, 54, 158, 27, 170, 60, 201, 159, 193, 203, 58, 154, 222, 78, 138,
-		220, 41, 98, 14, 156, 31, 29, 246, 81, 181, 40, 161, 192, 227, 35, 241,
-		135, 150, 89, 68, 134, 114, 230, 123, 187, 179, 67, 217, 71, 218, 7, 148,
-		228, 251, 93, 8, 140, 125, 73, 37, 82, 28, 112, 24, 174, 118, 232, 137,
-		191, 133, 147, 245, 6, 172, 95, 113, 185, 205, 254, 116, 55, 198, 57, 152,
-		128, 233, 74, 225, 34, 223, 79, 111, 215, 85, 200, 9, 242, 12, 167, 44,
-		20, 110, 107, 126, 86, 231, 234, 76, 207, 102, 214, 238, 221, 145, 213, 64,
-		197, 38, 168, 157, 87, 92, 255, 212, 49, 196, 240, 90, 63, 0, 77, 94,
-		1, 108, 91, 17, 224, 188, 153, 250, 249, 199, 127, 59, 46, 184, 36, 43,
-		209, 206, 248, 4, 56, 47, 226, 13, 144, 22, 11, 247, 70, 244, 48, 97,
-		151, 195, 96, 101, 45, 66, 239, 178, 171, 160, 84, 65, 23, 3, 211, 162,
-		163, 50, 105, 129, 155, 169, 115, 5, 106, 2, 208, 204, 139, 229, 164, 216
-	];
-
-	// gradients
-	var grad = [
-		[1,1], [-1,1], [1,-1], [-1,-1],
-		[1,0], [-1,0], [1,0], [-1,0],
-		[0,1], [0,-1], [0,1], [0,-1],
-		[1,1], [-1,1], [1,-1], [-1,-1]
-	];
-
-	function dot2D(g, x, y) {
-		return g[0] * x + g[1] * y;
-	}
-
-	return function (t, a, b, p) {
-		var amp = 2.0; // amplitude
-		var per = p.per || 1; // persistance
-		var frq = p.frq || 2; // frequence
-		var oct = p.oct || 4; // octaves
-		var off = p.off || { x: 0, y: 0 }; // offset
-
-		var c = c;
-		var x = p.x + off.x;
-		var y = p.y + off.y;
-
-		for (var o = 0; o < oct; o += 1) {
-			var n0, n1, n2; // Noise contributions from the three corners
-
-			// Skew the input space to determine which simplex cell we're in
-			var f2 = 0.5 * (Math.sqrt(3.0) - 1.0);
-			var s = (x + y) * f2; // Hairy factor for 2D
-			var i = Math.floor(x + s);
-			var j = Math.floor(y + s);
-			var g2 = (3.0 - Math.sqrt(3.0)) / 6.0;
-			var t = (i + j) * g2;
-
-			var x0 = i - t; // Unskew the cell origin back to (x, y) space
-			var y0 = j - t;
-			x0 = x - x0; // The x, y distances from the cell origin
-			y0 = y - y0;
-
-			// For the 2D case, the simplex shape is an equilateral triangle.
-			// Determine which simplex we are in.
-			var i1, j1; // Offsets for second (middle) corner of simplex in (i, j) coords
-			if (x0 > y0) {
-				i1 = 1; j1 = 0; // lower triangle, XY order: (0, 0) -> (1, 0) -> (1, 1)
-			} else {
-				i1 = 0; j1 = 1; // upper triangle, YX order: (0, 0) -> (0, 1) -> (1, 1)
-			}
-
-			// A step of (1, 0) in (i, j) means a step of (1 - c, -c) in (x, y), and
-			// a step of (0, 1) in (i, j) means a step of (-c, 1 - c) in (x, y), where
-			// c = (3 - sqrt(3)) / 6
-			var x1 = x0 - i1 + g2; // Offsets for middle corner in (x, y) unskewed coords
-			var y1 = y0 - j1 + g2;
-			var x2 = x0 - 1.0 + 2.0 * g2; // Offsets for last corner in (x, y) unskewed coords
-			var y2 = y0 - 1.0 + 2.0 * g2;
-
-			// Working out the hashed gradient indices of the three simplex corners
-			var ii = i & 255;
-			var jj = j & 255;
-
-			// Calculating the contribution from the three corners
-			var t0 = 0.5 - x0 * x0 - y0 * y0;
-			var t1 = 0.5 - x1 * x1 - y1 * y1;
-			var t2 = 0.5 - x2 * x2 - y2 * y2;
-
-			if (t0 < 0) {
-				n0 = 0.0;
-			} else {
-				var gi0 = perm[ii + perm[jj]] & 15;
-				t0 *= t0;
-				n0 = t0 * t0 * dot2D(grad[gi0], x0, y0);
-			}
-
-			if (t1 < 0) {
-				n1 = 0.0;
-			} else {
-				var gi1 = perm[ii + i1 + perm[jj + j1]] & 15;
-				t1 *= t1;
-				n1 = t1 * t1 * dot2D(grad[gi1], x1, y1);
-			}
-
-			if (t2 < 0) {
-				n2 = 0.0;
-			} else {
-				var gi2 = perm[ii + 1 + perm[jj + 1]] & 15;
-				t2 *= t2;
-				n2 = t2 * t2 * dot2D(grad[gi2], x2, y2);
-			}
-
-			// Adding contributions from each corner to get the final noise value.
-			// The result is scaled to return values in the interval [-amp, amp]
-			c += amp * 70.0 * (n0 + n1 + n2);
-
-			x *= (x - off.x) * frq + off.x;
-			y *= (y - off.y) * frq + off.y;
-			amp *= per;
-		}
-
-		// Scaling the result
-		var scale = ((per === 1) ? 1 / oct : 0.5 * (1 - per) / (1 - Math.pow(per, oct)));
-		t = t + c * scale;
-		return a * (1 - t) + b * t;
-	}
-})();
-});
-
-require.register("tina/src/NestedTween.js", function (exports, module) {
-var BoundedPlayable = require('tina/src/BoundedPlayable.js');
-var AbstractTween   = require('tina/src/AbstractTween.js');
+},{}],6:[function(require,module,exports){
+var BoundedPlayable = require('./BoundedPlayable');
+var AbstractTween   = require('./AbstractTween');
 
 /**
  *
@@ -1522,12 +693,13 @@ function NestedTween(object, properties) {
 	// Array of object chains
 	this._propertyChainStrings = [];
 
-	var propertiesPerObject = {};
 	var objects = {};
+	var propertiesPerObject = {};
+	var property, propertyChainString;
 
 	for (var p = 0; p < properties.length; p += 1) {
 		var propertyString = properties[p];
-		var propertyChainString = propertyString.substring(0, propertyString.lastIndexOf('.'));
+		propertyChainString = propertyString.substring(0, propertyString.lastIndexOf('.'));
 
 		if (propertiesPerObject[propertyChainString] === undefined) {
 			// Fetching object and property
@@ -1540,12 +712,12 @@ function NestedTween(object, properties) {
 				propertyObject = propertyObject[propertyChain[c]];
 			}
 
-			var property = propertyChain[propertyIndex];
+			property = propertyChain[propertyIndex];
 			if (propertyObject[property] instanceof Array) {
 				propertiesPerObject[propertyString] = null;
 				objects[propertyString] = propertyObject[property];
 				this._propertyChainStrings.push(propertyString);
-				this._propertyChains[propertyChain] = propertyChain;
+				this._propertyChains[propertyString] = propertyChain;
 			} else {
 				propertiesPerObject[propertyChainString] = [property];
 				objects[propertyChainString] = propertyObject;
@@ -1559,13 +731,13 @@ function NestedTween(object, properties) {
 
 		} else {
 			// Object was already fetched
-			var property = propertyString.substring(propertyString.lastIndexOf('.') + 1);
+			property = propertyString.substring(propertyString.lastIndexOf('.') + 1);
 			propertiesPerObject[propertyChainString].push(property);
 		}
 	}
 
 	// Creating the tweens
-	for (var propertyChainString in objects) {
+	for (propertyChainString in objects) {
 		var tweenObject     = objects[propertyChainString];
 		var tweenProperties = propertiesPerObject[propertyChainString];
 		var tween = new AbstractTween(tweenObject, tweenProperties);
@@ -1588,7 +760,7 @@ NestedTween.prototype.relative = function (relative) {
 NestedTween.prototype.reset = function () {
 	// Dispatching reset
 	for (var t = 0; t < this._tweens.length; t += 1) {
-		this._tweens[t].reset;
+		this._tweens[t].reset();
 	}
 
 	this._duration = 0;
@@ -1600,7 +772,7 @@ NestedTween.prototype.interpolations = function (interpolations) {
 	for (var o = 0; o < this._propertyChainStrings.length; o += 1) {
 		var propertyChainString = this._propertyChainStrings[o];
 		var propertyChain = this._propertyChains[propertyChainString];
-		var chainLength = propertyChain.length;
+		var chainLength   = propertyChain.length;
 
 		var objectInterpolations = interpolations;
 		for (var c = 0; c < chainLength && objectInterpolations !== undefined; c += 1) {
@@ -1648,7 +820,7 @@ NestedTween.prototype.to = function (toObject, duration, easing, easingParam, in
 		}
 
 		var objectInterpolationParams = interpolationParams;
-		for (var c = 0; c < chainLength && objectInterpolationParams !== undefined; c += 1) {
+		for (c = 0; c < chainLength && objectInterpolationParams !== undefined; c += 1) {
 			objectInterpolationParams = objectInterpolationParams[propertyChain[c]];
 		}
 
@@ -1676,9 +848,7 @@ NestedTween.prototype._update = function () {
 		tween._update();
 	}
 };
-});
-
-require.register("tina/src/Playable.js", function (exports, module) {
+},{"./AbstractTween":1,"./BoundedPlayable":2}],7:[function(require,module,exports){
 /** @class */
 function Playable() {
 	// Player component handling this playable
@@ -1687,10 +857,10 @@ function Playable() {
 	// Handle of the playable within its player
 	this._handle = null;
 
-	// Starting time relative to its player time
+	// Starting time, is global (relative to its player time)
 	this._startTime  = 0;
 
-	// Current time relative to the start time
+	// Current time, is local (relative to starting time)
 	// i.e this._time === 0 implies this._player._time ===  this._startTime
 	this._time       = 0;
 
@@ -1703,7 +873,8 @@ function Playable() {
 	this._onResume   = null;
 	this._onUpdate   = null;
 	this._onStop     = null;
-};
+}
+
 module.exports = Playable;
 
 Object.defineProperty(Playable.prototype, 'speed', {
@@ -1826,7 +997,7 @@ Playable.prototype._start = function (timeOffset) {
 
 	if (this._onStart !== null) {
 		this._onStart();
-	};
+	}
 };
 
 Playable.prototype.stop = function () {
@@ -1874,10 +1045,8 @@ Playable.prototype._moveTo = function (time, dt) {
 
 // Overridable method
 Playable.prototype._update  = function () {};
-});
-
-require.register("tina/src/PlayableHandler.js", function (exports, module) {
-var DoublyList = require('tina/src/DoublyList.js');
+},{}],8:[function(require,module,exports){
+var DoublyList = require('./DoublyList');
 
 function PlayableHandle(playable) {
 	this.playable = playable;
@@ -1926,7 +1095,7 @@ PlayableHandler.prototype._add = function (playable) {
 	// Playable is already handled, either by this player or by another one
 	if (playable._handle.container === this._playablesToRemove) {
 		// Playable was being removed, removing from playables to remove
-		playable._handle = this._playablesToRemove.remove(playable._handle);
+		playable._handle = this._playablesToRemove.removeByReference(playable._handle);
 		return true;
 	}
 
@@ -1960,7 +1129,7 @@ PlayableHandler.prototype._remove = function (playable) {
 
 	if (playable._handle.container === this._inactivePlayables) {
 		// Playable was being started, removing from starting playables
-		playable._handle = this._inactivePlayables.remove(playable._handle);
+		playable._handle = this._inactivePlayables.removeByReference(playable._handle);
 		return true;
 	}
 
@@ -2005,7 +1174,7 @@ PlayableHandler.prototype.possess = function (playable) {
 };
 
 PlayableHandler.prototype._inactivate = function (playable) {
-	this._activePlayables.remove(playable._handle);
+	this._activePlayables.removeByReference(playable._handle);
 
 	// Playable is moved to the list of inactive playables
 	playable._handle = this._inactivePlayables.add(playable);
@@ -2020,7 +1189,7 @@ PlayableHandler.prototype._handlePlayablesToRemove = function () {
 
 		// Removing from list of active playables
 		var playable = handle.object;
-		playable._handle = this._activePlayables.remove(handle);
+		playable._handle = this._activePlayables.removeByReference(handle);
 		playable._player = null;
 	}
 };
@@ -2034,6 +1203,7 @@ PlayableHandler.prototype.clear = function () {
 };
 
 PlayableHandler.prototype._warn = function (warning) {
+	// jshint debug: true
 	if (this._silent === false) {
 		console.warn(warning);
 	}
@@ -2053,14 +1223,12 @@ PlayableHandler.prototype.debug = function (debug) {
 	return this;
 };
 
-});
+},{"./DoublyList":5}],9:[function(require,module,exports){
+var Delay           = require('./Delay');
+var Playable        = require('./Playable');
+var PlayableHandler = require('./PlayableHandler');
 
-require.register("tina/src/Player.js", function (exports, module) {
-var Delay           = require('tina/src/Delay.js');
-var Playable        = require('tina/src/Playable.js');
-var PlayableHandler = require('tina/src/PlayableHandler.js');
-
-var inherit = require('tina/src/inherit.js');
+var inherit = require('./inherit');
 
 /**
  * @classdesc
@@ -2135,272 +1303,8 @@ Player.prototype._moveTo = function (time, dt) {
 // Overridable method
 Player.prototype._updatePlayableList = function () {};
 
-});
-
-require.register("tina/src/Recorder.js", function (exports, module) {
-var BoundedPlayable = require('tina/src/BoundedPlayable.js');
-
-function ObjectRecorder(object, properties, onIn, onOut) {
-	this.object      = object;
-	this.properties  = properties;
-	this.timestamps  = [];
-	this.records     = [];
-	this.playingHead = 1;
-
-	// Whether or not the playing head is within the recording duration
-	this.isIn = false;
-
-	this.onIn  = onIn  || null;
-	this.onOut = onOut || null;
-}
-
-ObjectRecorder.prototype.record = function (time) {
-	for (var p = 0; p < this.properties.length; p += 1) {
-		this.records.push(this.object[this.properties[p]]);
-	}
-
-	this.timestamps.push(time);
-};
-
-ObjectRecorder.prototype.play = function (time, smooth) {
-	var nbProperties = this.properties.length;
-	var lastRecord   = this.timestamps.length - 1;
-	var playingHead  = this.playingHead;
-
-	var isIn = (this.timestamps[0] <= time) && (time <= this.timestamps[lastRecord]);
-	if (isIn === true) {
-		if (this.playing === false) {
-			this.playing = true;
-			if (this.onIn !== null) {
-				this.onIn();
-			}
-		}
-	} else {
-		if (this.playing === true) {
-			this.playing = false;
-			if (this.onOut !== null) {
-				this.onOut();
-			}
-		}
-		return;
-	}
-
-	while ((playingHead < lastRecord) && (time <= this.timestamps[playingHead])) {
-		playingHead += 1;
-	}
-
-	while ((playingHead > 1) && (time > this.timestamps[playingHead])) {
-		playingHead -= 1;
-	}
-
-	if (smooth) {
-		var t0 = this.timestamps[playingHead - 1];
-		var t1 = this.timestamps[playingHead];
-		var dt = t1 - t0;
-
-		var delta0 = (t - t0) / dt;
-		var delta1 = (t1 - t) / dt;
-
-		var recordIdx1 = nbProperties * playingHead;
-		var recordIdx0 = nbProperties * playingHead - nbProperties;
-
-		for (var p = 0; p < nbProperties; p += 1) {
-			this.object[this.properties[p]] = this.records[recordIdx0 + p] * delta0 + this.records[recordIdx1 + p] * delta1;
-		}
-	} else {
-		var recordIdx = nbProperties * playingHead;
-		for (var p = 0; p < nbProperties; p += 1) {
-			this.object[this.properties[p]] = this.records[recordIdx + p];
-		}
-	}
-};
-
-/**
- *
- * @classdesc
- * Manages transition of properties of an object
- *
- * @param {object} object     - Object to tween
- * @param {array}  properties - Properties of the object to tween
- *
- */
-
-function Recorder() {
-	if ((this instanceof Recorder) === false) {
-		return new Recorder();
-	}
-
-	BoundedPlayable.call(this);
-
-	// Can end only in playing mode
-	// TODO: set starting time and duration when switching to playing mode
-	this._duration = Infinity;
-
-	// List of objects and properties recorded
-	this._recordedObjects = [];
-
-	// List of objects and properties recording
-	this._recordingObjects = {};
-
-	// List of object labels
-	this._recordingObjectLabels = [];
-
-	// Whether the recorder is in recording mode
-	this._recording = true;
-
-	// Whether the recorder is in playing mode
-	this._playing = false;
-
-	// Whether the recorder enables interpolating at play time
-	this._smooth = false;
-
-	this._onStartRecording = null;
-	this._onStopRecording  = null;
-
-	this._onStartPlaying = null;
-	this._onStopPlaying  = null;
-}
-Recorder.prototype = Object.create(BoundedPlayable.prototype);
-Recorder.prototype.constructor = Recorder;
-module.exports = Recorder;
-
-Recorder.prototype.onStartRecording = function (onStartRecording) {
-	this._onStartRecording = onStartRecording;
-	return this;
-};
-
-Recorder.prototype.onStopRecording = function (onStopRecording) {
-	this._onStopRecording = onStopRecording;
-	return this;
-};
-
-Recorder.prototype.onStartPlaying = function (onStartPlaying) {
-	this._onStartPlaying = onStartPlaying;
-	return this;
-};
-
-Recorder.prototype.onStopPlaying = function (onStopPlaying) {
-	this._onStopPlaying = onStopPlaying;
-	return this;
-};
-
-Recorder.prototype.reset = function () {
-	this._recordedObjects       = [];
-	this._recordingObjects      = {};
-	this._recordingObjectLabels = [];
-	return this;
-};
-
-Recorder.prototype.record = function (label, object, properties, onIn, onOut) {
-	var objectRecorder = new ObjectRecorder(object, properties, onIn, onOut);
-	this._recordingObjects[label] = objectRecorder;
-	this._recordedObjects.push(objectRecorder);
-	this._recordingObjectLabels.push(label);
-	return this;
-};
-
-Recorder.prototype.stopRecordingObject = function (label) {
-	delete this._recordingObjects[label];
-	var labelIdx = this._recordingObjectLabels.indexOf(label);
-	if (labelIdx === -1) {
-		console.warn('[Recorder.stopRecordingObject] Trying to stop recording an object that is not being recording:', label);
-		return this;
-	}
-
-	this._recordingObjectLabels.splice(labelIdx, 1);
-	return this;
-};
-
-Recorder.prototype.removeRecordedObject = function (label) {
-	var recorder = this._recordingObjects[label];
-	delete this._recordingObjects[label];
-	var labelIdx = this._recordingObjectLabels.indexOf(label);
-	if (labelIdx !== -1) {
-		this._recordingObjectLabels.splice(labelIdx, 1);
-	}
-
-	var recorderIdx = this._recordedObjects.indexOf(recorder);
-	if (recorderIdx === -1) {
-		console.warn('[Recorder.removeRecordedObject] Trying to remove an object that was not recorded:', label);
-		return this;
-	}
-
-	this._recordingObjectLabels.splice(recorderIdx, 1);
-	return this;
-};
-
-Recorder.prototype.recording = function (recording) {
-	if (this._recording !== recording) {
-		this._recording = recording;
-		if (this._recording === true) {
-			if (this._playing === true) {
-				if (this._onStopPlaying !== null) {
-					this._onStopPlaying();
-				}
-				this._playing = false;
-			}
-
-			if (this._onStartRecording !== null) {
-				this._onStartRecording();
-			}
-		} else {
-			if (this._onStopRecording !== null) {
-				this._onStopRecording();
-			}
-		}
-	}
-	return this;
-};
-
-Recorder.prototype.playing = function (playing) {
-	if (this._playing !== playing) {
-		this._playing = playing;
-		if (this._playing === true) {
-			if (this._recording === true) {
-				if (this._onStopRecording !== null) {
-					this._onStopRecording();
-				}
-				this._recording = false;
-			}
-
-			if (this._onStartPlaying !== null) {
-				this._onStartPlaying();
-			}
-		} else {
-			if (this._onStopPlaying !== null) {
-				this._onStopPlaying();
-			}
-		}
-	}
-	return this;
-};
-
-Recorder.prototype.smooth = function (smooth) {
-	this._smooth = smooth;
-	return this;
-};
-
-Recorder.prototype.update = function () {
-	if (this._recording) {
-		var nbRecordingObjects = this._recordingObjectLabels.length;
-		for (var r = 0; r < nbRecordingObjects; r += 1) {
-			var label = this._recordingObjectLabels[r];
-			this._recordingObjects[label].record(this._time);
-		}
-	}
-
-	if (this._playing) {
-		var nbObjectRecorded = this._recordedObjects.length;
-		for (var r = 0; r < nbObjectRecorded; r += 1) {
-			this._recordedObjects[r].play(this._time, this._smooth);
-		}
-	}
-};
-
-});
-
-require.register("tina/src/Sequence.js", function (exports, module) {
-var Timeline = require('tina/src/Timeline.js');
+},{"./Delay":4,"./Playable":7,"./PlayableHandler":8,"./inherit":21}],10:[function(require,module,exports){
+var Timeline = require('./Timeline');
 
 /**
  *
@@ -2436,242 +1340,7 @@ Sequence.prototype.addDelay = function (duration) {
 	this._duration += duration;
 	return this;
 };
-});
-
-require.register("tina/src/Ticker.js", function (exports, module) {
-var Tweener = require('tina/src/Tweener.js');
-
-/**
- *
- * @classdesc
- * Tweener that manages the update of time independantly of the actual passing of time.
- * Every update, the time interval is equal to the given tupt (time units per tick).
- *
- */
-function Ticker(tupt) {
-	if ((this instanceof Ticker) === false) {
-		return new Ticker(tupt);
-	}
-
-	Tweener.call(this);
-	SOmethingElse.call(this);
-
-	// Time units per tick (tupt)
-	// Every second, 'tupt' time units elapse
-	this._tupt = tupt || 1;
-
-	this._nbTicks = 0;
-}
-Ticker.prototype = Object.create(Tweener.prototype);
-Ticker.prototype.constructor = Ticker;
-module.exports = Ticker;
-
-Object.defineProperty(Ticker.prototype, 'tupt', {
-	get: function () { return this._tupt; },
-	set: function (tupt) {
-		if (tupt < 0) {
-			this._warn('[Timer.tupt] tupt cannot be negative, stop messing with time.');
-			tupt = 0;
-		}
-
-		var dt = this._nbTicks;
-		if (tupt === 0) {
-			// Setting start as if new tupt was 1
-			this._nbTicks = this._time - dt * this._tupt;
-		} else {
-			if (this._tupt === 0) {
-				// If current tupt is 0,
-				// it corresponds to a virtual tupt of 1
-				// when it comes to determing how many ticks have passed
-				this._nbTicks = this._time - dt / tupt;
-			} else {
-				this._nbTicks = this._time - dt * this._tupt / tupt;
-			}
-		}
-
-		this._tupt = tupt;
-	}
-});
-
-Ticker.prototype._getElapsedTime = function () {
-	return this._tupt * (this._nbTicks++);
-};
-
-Ticker.prototype._getSingleStepDuration = function () {
-	return this._tupt;
-};
-
-Ticker.prototype.convertToTicks = function(timeUnits) {
-	return timeUnits / this._tupt;
-};
-
-Ticker.prototype.convertToTimeUnits = function(nbTicks) {
-	return nbTicks * this._tupt;
-};
-
-});
-
-require.register("tina/src/Timeline.js", function (exports, module) {
-var BoundedPlayer = require('tina/src/BoundedPlayer.js');
-
-/**
- *
- * @classdesc
- * Manages tweening of one property or several properties of an object
- *
- * @param {object} element Object to tween
- * @param {string} property Property to tween
- * @param {number} a starting value of property
- * @param {number} b ending value of property
- *
- */
-
-function Timeline() {
-	if ((this instanceof Timeline) === false) {
-		return new Timeline();
-	}
-
-	BoundedPlayer.call(this);
-}
-Timeline.prototype = Object.create(BoundedPlayer.prototype);
-Timeline.prototype.constructor = Timeline;
-module.exports = Timeline;
-
-Timeline.prototype.add = function (startTime, playable) {
-	playable._startTime = startTime;
-	this._add(playable);
-	this._duration = Math.max(this._duration, startTime + playable.getDuration());
-	return this;
-};
-
-Timeline.prototype._computeDuration = function () {
-	var duration = 0;
-	for (var handle = this._inactivePlayables.first; handle !== null; handle = handle.next) {
-		var playable = handle.object;
-		duration = Math.max(duration, playable._startTime + playable.getDuration());
-	}
-
-	for (handle = this._activePlayables.first; handle !== null; handle = handle.next) {
-		playable = handle.object;
-		duration = Math.max(duration, playable._startTime + playable.getDuration());
-	}
-
-	this._duration = duration;
-};
-
-Timeline.prototype._onRemovePlayables = Timeline.prototype._computeDuration;
-
-Timeline.prototype._start = function (player, timeOffset) {
-	BoundedPlayer.prototype._start.call(this, player, timeOffset);
-
-	// Computing duration of the timeline
-	this._computeDuration();
-};
-
-Timeline.prototype._updatePlayableList = function () {
-	this._handlePlayablesToRemove();
-
-	// Inactive playables 
-	var handle = this._inactivePlayables.first; 
-	while (handle !== null) {
-		var playable = handle.object;
-
-		// Fetching handle of next playable
-		handle = handle.next;
-
-		var startTime = playable._startTime;
-		var endTime   = startTime + playable.getDuration();
-		if (startTime <= this._time && this._time <= endTime) {
-			// O(1)
-			this._inactivePlayables.remove(playable._handle);
-			playable._handle = this._activePlayables.addBack(playable);
-
-			playable._start(-startTime);
-		}
-	}
-};
-
-Timeline.prototype._update = function (dt) {
-	for (var handle = this._activePlayables.first; handle !== null; handle = handle.next) {
-		var playable = handle.object;
-		playable._moveTo(this._time, dt);
-	}
-};
-});
-
-require.register("tina/src/Timer.js", function (exports, module) {
-var Tweener = require('tina/src/Tweener.js');
-
-// Performance.now gives better precision than Date.now
-var clock = window.performance || Date;
-
-/**
- *
- * @classdesc
- * Tweener that manages the update of time relatively to the actual passing of time.
- * Every update, the time interval is equal to the elapsed time in seconds multiplied by the tups (time units per second).
- *
- */
-function Timer(tups) {
-	if ((this instanceof Timer) === false) {
-		return new Timer(tups);
-	}
-
-	Tweener.call(this);
-
-	// Time units per second (tups)
-	// Every second, 'tups' time units elapse
-	this._tups = tups || 1000;
-}
-Timer.prototype = Object.create(Tweener.prototype);
-Timer.prototype.constructor = Timer;
-module.exports = Timer;
-
-Object.defineProperty(Timer.prototype, 'tups', {
-	get: function () { return this._tups; },
-	set: function (tups) {
-		if (tups < 0) {
-			this._warn('[Timer.tups] tups cannot be negative, stop messing with time.');
-			tups = 0;
-		}
-
-		var dt = this._time - this._startTime;
-		if (tups === 0) {
-			// Setting start as if new tups was 1
-			this._startTime = this._time - dt * this._tups;
-		} else {
-			if (this._tups === 0) {
-				// If current tups is 0,
-				// it corresponds to a virtual tups of 1
-				// when it comes to determing where the start is
-				this._startTime = this._time - dt / tups;
-			} else {
-				this._startTime = this._time - dt * this._tups / tups;
-			}
-		}
-
-		this._tups = tups;
-	}
-});
-
-Timer.prototype._getElapsedTime = function (time) {
-	return this._tups * (time - this._startTime) / 1000;
-};
-
-Timer.prototype._getSingleStepDuration = function (dt) {
-	return this._tups * dt / 1000;
-};
-
-Timer.prototype.convertToSeconds = function(timeUnits) {
-	return timeUnits / this._tups;
-};
-
-Timer.prototype.convertToTimeUnits = function(seconds) {
-	return seconds * this._tups;
-};
-});
-
-require.register("tina/src/TINA.js", function (exports, module) {
+},{"./Timeline":13}],11:[function(require,module,exports){
 
 /**
  *
@@ -2978,9 +1647,219 @@ if (typeof document[hidden] === 'undefined') {
 
 module.exports = TINA;
 
+},{}],12:[function(require,module,exports){
+var Tweener = require('./Tweener');
+
+/**
+ *
+ * @classdesc
+ * Tweener that manages the update of time independantly of the actual passing of time.
+ * Every update, the time interval is equal to the given tupt (time units per tick).
+ *
+ */
+function Ticker(tupt) {
+	if ((this instanceof Ticker) === false) {
+		return new Ticker(tupt);
+	}
+
+	Tweener.call(this);
+
+	// Time units per tick (tupt)
+	// Every second, 'tupt' time units elapse
+	this._tupt = tupt || 1;
+
+	this._nbTicks = 0;
+}
+Ticker.prototype = Object.create(Tweener.prototype);
+Ticker.prototype.constructor = Ticker;
+module.exports = Ticker;
+
+Object.defineProperty(Ticker.prototype, 'tupt', {
+	get: function () { return this._tupt; },
+	set: function (tupt) {
+		if (tupt < 0) {
+			this._warn('[Timer.tupt] tupt cannot be negative, stop messing with time.');
+			tupt = 0;
+		}
+
+		this._tupt = tupt;
+	}
 });
 
-require.register("tina/src/Transition.js", function (exports, module) {
+Ticker.prototype._getElapsedTime = function () {
+	return this._tupt * (this._nbTicks++);
+};
+
+Ticker.prototype._getSingleStepDuration = function () {
+	return this._tupt;
+};
+
+Ticker.prototype.convertToTicks = function(timeUnits) {
+	return timeUnits / this._tupt;
+};
+
+Ticker.prototype.convertToTimeUnits = function(nbTicks) {
+	return nbTicks * this._tupt;
+};
+
+},{"./Tweener":18}],13:[function(require,module,exports){
+var BoundedPlayer = require('./BoundedPlayer');
+
+/**
+ *
+ * @classdesc
+ * Manages tweening of one property or several properties of an object
+ *
+ * @param {object} element Object to tween
+ * @param {string} property Property to tween
+ * @param {number} a starting value of property
+ * @param {number} b ending value of property
+ *
+ */
+
+function Timeline() {
+	if ((this instanceof Timeline) === false) {
+		return new Timeline();
+	}
+
+	BoundedPlayer.call(this);
+}
+Timeline.prototype = Object.create(BoundedPlayer.prototype);
+Timeline.prototype.constructor = Timeline;
+module.exports = Timeline;
+
+Timeline.prototype.add = function (startTime, playable) {
+	playable._startTime = startTime;
+	this._add(playable);
+	this._duration = Math.max(this._duration, startTime + playable.getDuration());
+	return this;
+};
+
+Timeline.prototype._computeDuration = function () {
+	var playable;
+	var duration = 0;
+	for (var handle = this._inactivePlayables.first; handle !== null; handle = handle.next) {
+		playable = handle.object;
+		duration = Math.max(duration, playable._startTime + playable.getDuration());
+	}
+
+	for (handle = this._activePlayables.first; handle !== null; handle = handle.next) {
+		playable = handle.object;
+		duration = Math.max(duration, playable._startTime + playable.getDuration());
+	}
+
+	this._duration = duration;
+};
+
+Timeline.prototype._onRemovePlayables = Timeline.prototype._computeDuration;
+
+Timeline.prototype._start = function (player, timeOffset) {
+	BoundedPlayer.prototype._start.call(this, player, timeOffset);
+
+	// Computing duration of the timeline
+	this._computeDuration();
+};
+
+Timeline.prototype._updatePlayableList = function () {
+	this._handlePlayablesToRemove();
+
+	// Inactive playables 
+	var handle = this._inactivePlayables.first; 
+	while (handle !== null) {
+		var playable = handle.object;
+
+		// Fetching handle of next playable
+		handle = handle.next;
+
+		var startTime = playable._startTime;
+		var endTime   = startTime + playable.getDuration();
+		if (startTime <= this._time && this._time <= endTime) {
+			// O(1)
+			this._inactivePlayables.removeByReference(playable._handle);
+			playable._handle = this._activePlayables.addBack(playable);
+
+			playable._start(-startTime);
+		}
+	}
+};
+
+Timeline.prototype._update = function (dt) {
+	for (var handle = this._activePlayables.first; handle !== null; handle = handle.next) {
+		var playable = handle.object;
+		playable._moveTo(this._time, dt);
+	}
+};
+},{"./BoundedPlayer":3}],14:[function(require,module,exports){
+var Tweener = require('./Tweener');
+
+// Performance.now gives better precision than Date.now
+var clock = window.performance || Date;
+
+/**
+ *
+ * @classdesc
+ * Tweener that manages the update of time relatively to the actual passing of time.
+ * Every update, the time interval is equal to the elapsed time in seconds multiplied by the tups (time units per second).
+ *
+ */
+function Timer(tups) {
+	if ((this instanceof Timer) === false) {
+		return new Timer(tups);
+	}
+
+	Tweener.call(this);
+
+	// Time units per second (tups)
+	// Every second, 'tups' time units elapse
+	this._tups = tups || 1000;
+}
+Timer.prototype = Object.create(Tweener.prototype);
+Timer.prototype.constructor = Timer;
+module.exports = Timer;
+
+Object.defineProperty(Timer.prototype, 'tups', {
+	get: function () { return this._tups; },
+	set: function (tups) {
+		if (tups < 0) {
+			this._warn('[Timer.tups] tups cannot be negative, stop messing with time.');
+			tups = 0;
+		}
+
+		var dt = this._time - this._startTime;
+		if (tups === 0) {
+			// Setting start as if new tups was 1
+			this._startTime += this._time / this._tups - this._time;
+		} else {
+			if (this._tups === 0) {
+				// If current tups is 0,
+				// it corresponds to a virtual tups of 1
+				// when it comes to determing where the start is
+				this._startTime = this._time - this._time / tups;
+			} else {
+				this._startTime = this._time / this._tups - this._time / tups;
+			}
+		}
+
+		this._tups = tups;
+	}
+});
+
+Timer.prototype._getElapsedTime = function (time) {
+	return this._tups * (time - this._startTime) / 1000;
+};
+
+Timer.prototype._getSingleStepDuration = function (dt) {
+	return this._tups * dt / 1000;
+};
+
+Timer.prototype.convertToSeconds = function(timeUnits) {
+	return timeUnits / this._tups;
+};
+
+Timer.prototype.convertToTimeUnits = function(seconds) {
+	return seconds * this._tups;
+};
+},{"./Tweener":18}],15:[function(require,module,exports){
 // The file is a good representation of the constant fight between maintainability and performance
 // For performance reasons several update methods are created
 // The appropriate method should be used for tweening. The selection depends on:
@@ -2992,7 +1871,7 @@ require.register("tina/src/Transition.js", function (exports, module) {
 function update(object, t) {
 	var p = this.prop;
 	object[p] = this.from[p] * (1 - t) + this.to[p] * t;
-};
+}
 
 // Several Properties
 function updateP(object, t) {
@@ -3001,13 +1880,13 @@ function updateP(object, t) {
 		var p = q[i];
 		object[p] = this.from[p] * (1 - t) + this.to[p] * t;
 	}
-};
+}
 
 // Interpolation
 function updateI(object, t) {
 	var p = this.prop;
 	object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);
-};
+}
 
 // Interpolation
 // Several Properties
@@ -3017,14 +1896,14 @@ function updatePI(object, t) {
 		var p = q[i];
 		object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);
 	}
-};
+}
 
 // Easing
 function updateE(object, t) {
 	t = this.easing(t, this.easingParam);
 	var p = this.prop;
 	object[p] = this.from[p] * (1 - t) + this.to[p] * t;
-};
+}
 
 // Easing
 // Several Properties
@@ -3035,14 +1914,14 @@ function updatePE(object, t) {
 		var p = q[i];
 		object[p] = this.from[p] * (1 - t) + this.to[p] * t;
 	}
-};
+}
 
 // Easing
 // Interpolation
 function updateIE(object, t) {
 	var p = this.prop;
 	object[p] = this.interps[p](this.easing(t, this.easingParam), this.from[p], this.to[p], this.interpParams[p]);
-};
+}
 
 // Easing
 // Interpolation
@@ -3054,7 +1933,7 @@ function updatePIE(object, t) {
 		var p = q[i];
 		object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);
 	}
-};
+}
 
 var updateMethods = [
 	[
@@ -3114,9 +1993,7 @@ function Transition(properties, from, to, start, duration, easing, easingParam, 
 }
 
 module.exports = Transition;
-});
-
-require.register("tina/src/TransitionRelative.js", function (exports, module) {
+},{}],16:[function(require,module,exports){
 
 // One property
 function update(object, t) {
@@ -3124,7 +2001,7 @@ function update(object, t) {
 	var now = this.from[p] * (1 - t) + this.to[p] * t;
 	object[p] = object[p] + (now - this.prev);
 	this.prev = now;
-};
+}
 
 // Several Properties
 function updateP(object, t) {
@@ -3135,7 +2012,7 @@ function updateP(object, t) {
 		object[p] = object[p] + (now - this.prev[p]);
 		this.prev[p] = now;
 	}
-};
+}
 
 // Interpolation
 function updateI(object, t) {
@@ -3143,7 +2020,7 @@ function updateI(object, t) {
 	var now = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);
 	object[p] = object[p] + (now - this.prev);
 	this.prev = now;
-};
+}
 
 // Interpolation
 // Several Properties
@@ -3155,7 +2032,7 @@ function updatePI(object, t) {
 		object[p] = object[p] + (now - this.prev[p]);
 		this.prev[p] = now;
 	}
-};
+}
 
 // Easing
 function updateE(object, t) {
@@ -3164,7 +2041,7 @@ function updateE(object, t) {
 	var now = this.from[p] * (1 - t) + this.to[p] * t;
 	object[p] = object[p] + (now - this.prev);
 	this.prev = now;
-};
+}
 
 // Easing
 // Several Properties
@@ -3177,7 +2054,7 @@ function updatePE(object, t) {
 		object[p] = object[p] + (now - this.prev[p]);
 		this.prev[p] = now;
 	}
-};
+}
 
 // Easing
 // Interpolation
@@ -3186,7 +2063,7 @@ function updateIE(object, t) {
 	var now = this.interps[p](this.easing(t, this.easingParams), this.from[p], this.to[p], this.interpParams[p]);
 	object[p] = object[p] + (now - this.prev);
 	this.prev = now;
-};
+}
 
 // Easing
 // Interpolation
@@ -3200,7 +2077,7 @@ function updatePIE(object, t) {
 		object[p] = object[p] + (now - this.prev[p]);
 		this.prev[p] = now;
 	}
-};
+}
 
 var updateMethods = [
 	[
@@ -3265,50 +2142,11 @@ function Transition(properties, from, to, start, duration, easing, easingParam, 
 }
 
 module.exports = Transition;
+},{}],17:[function(require,module,exports){
+var BoundedPlayable = require('./BoundedPlayable');
+var AbstractTween   = require('./AbstractTween');
 
-
-// exports.number = function (a, b) {
-// 	return a + b;
-// }
-
-// exports.vector = function (a, b) {
-// 	var n = a.length;
-// 	var addition = [];
-// 	for (var i = 0; i < n; a += 1) {
-// 		addition[i] = a[i] + b[i];
-// 	}
-
-// 	return addition;
-// }
-
-// exports.number = function (a, b) {
-// 	return a - b;
-// }
-
-// exports.vector = function (a, b) {
-// 	var n = a.length;
-// 	var difference = [];
-// 	for (var i = 0; i < n; a += 1) {
-// 		difference[i] = a[i] - b[i];
-// 	}
-
-// 	return difference;
-// }
-
-// function update(object, t) {
-// 	var prop = this.prop;
-// 	var now  = this.from[p] * (1 - t) + this.to[p] * t;
-
-// 	object[p] = this.addition[p](object[p], this.difference[p](now, this.prev));
-// 	this.prev = now;
-// };
-});
-
-require.register("tina/src/Tween.js", function (exports, module) {
-var BoundedPlayable = require('tina/src/BoundedPlayable.js');
-var AbstractTween   = require('tina/src/AbstractTween.js');
-
-var inherit = require('tina/src/inherit.js');
+var inherit = require('./inherit');
 /**
  *
  * @classdesc
@@ -3331,11 +2169,9 @@ Tween.prototype = Object.create(BoundedPlayable.prototype);
 Tween.prototype.constructor = Tween;
 inherit(Tween, AbstractTween);
 module.exports = Tween;
-});
-
-require.register("tina/src/Tweener.js", function (exports, module) {
-var Player = require('tina/src/Player.js');
-var TINA   = require('tina/src/TINA.js');
+},{"./AbstractTween":1,"./BoundedPlayable":2,"./inherit":21}],18:[function(require,module,exports){
+var Player = require('./Player');
+var TINA   = require('./TINA');
 
 /**
  * @classdesc
@@ -3398,6 +2234,738 @@ Tweener.prototype.useAsDefault = function () {
 	TINA.setDefaultTweener(this);
 	return this;
 };
-});
+},{"./Player":9,"./TINA":11}],19:[function(require,module,exports){
+/**
+ *
+ * @file A set of ease functions
+ *
+ * @author Brice Chevalier
+ *
+ * @param {Number} t Progress of the transition in [0, 1]
+ * @param (Number) p Additional parameter, when required.
+ *
+ * @return {Number} Interpolated time
+ *
+ * @desc Ease functions
+ *
+ * Initial and final values of the ease functions are either 0 or 1.
+ * All the ease functions are continuous for times t in [0, 1]
+ *
+ * Note: if you want a particular easing method to be added
+ * create an issue or contribute at https://github.com/Wizcorp/tina.js
+ */
 
-require("tina");
+// Math constants (for readability)
+var PI          = Math.PI;
+var PI_OVER_TWO = Math.PI / 2;
+var TWO_PI      = Math.PI * 2;
+var EXP         = 2.718281828;
+
+// No easing
+exports.none = function() {
+	return 1;
+};
+
+// Linear
+exports.linear = function(t) {
+	return t;
+};
+
+// Flash style transition
+// ease in [-1, 1] for usage similar to flash
+// but works with ease in ]-Inf, +Inf[
+exports.flash = function(t, ease) {
+	return t + t * ease - t * t * ease;
+};
+
+// Parabolic
+exports.parabolic = function(t) {
+	var r = (2 * t - 1);
+	return 1 - r * r;
+};
+
+// Trigonometric, n = number of iterations in ]-Inf, +Inf[
+exports.trigo = function(t, n) {
+	return 0.5 * (1 - Math.cos(TWO_PI * t * n));
+};
+
+// Elastic, e = elasticity in ]0, +Inf[
+exports.elastic = function(t, e) {
+	if (t === 1) return 1;
+	e /= (e + 1); // transforming e
+	var n = (1 + e) * Math.log(1 - t) / Math.log(e);
+	return Math.cos(n - PI_OVER_TWO) * Math.pow(e, n);
+};
+
+// Polynomial, p = power in ]0, + Inf[
+exports.polyIn = function(t, p) { 
+	return Math.pow(t, p);
+};
+
+exports.polyOut = function(t, p) {
+	return 1 - Math.pow((1 - t) / 1, p);
+};
+
+exports.polyInOut = function(t, p) {
+	if (t < 0.5) {
+		return Math.pow(2 * t, p) / 2;
+	} else {
+		return (1 + (1 - Math.pow(2 * (1 - t), p))) / 2;
+	}
+};
+
+// Sine
+exports.sineIn = function(t) {
+	return 1 - Math.cos(PI_OVER_TWO * t);
+};
+
+exports.sineOut = function(t) {
+	return Math.sin(PI_OVER_TWO * t);
+};
+
+exports.sineInOut = function(t) {
+	if (t < 0.5) {
+		return (1 - Math.cos(PI * t)) / 2;
+	} else {
+		return (1 + Math.sin(PI * (t - 0.5))) / 2;
+	}
+};
+
+// Exponential, e = exponent in ]0, + Inf[
+exports.expIn = function(t, e) {
+	return (1 - Math.pow(EXP, e * t)) / (1 - Math.pow(EXP, e));
+};
+
+exports.expOut = function(t, e) {
+	return (1 - Math.pow(EXP, - e * t)) / (1 - Math.pow(EXP, - e));
+};
+
+exports.expInOut = function(t, e) {
+	if (t < 0.5) {
+		return (1 - Math.pow(EXP, 2 * e * t)) / (1 - Math.pow(EXP, e)) / 2;
+	} else {
+		return 0.5 + (1 - Math.pow(EXP, e - 2 * e * t)) / (1 - Math.pow(EXP, - e)) / 2;
+	}
+};
+
+// Circular
+exports.circIn = function(t) {
+	return 1 - Math.sqrt(1 - Math.pow(t, 2));
+};
+
+exports.circOut = function(t) {
+	return Math.sqrt(1 - Math.pow(1 - t, 2));
+};
+
+exports.circInOut = function(t) {
+	if (t < 0.5) {
+		return (1 - Math.sqrt(1 - 4 * t * t)) / 2;
+	} else {
+		return (1 + Math.sqrt(-3 + 8 * t - 4 * t * t)) / 2;
+	}
+};
+
+// Elastic, e = elasticity in ]0, +Inf[
+exports.elasticIn = function(t, e) {
+	if (t === 0) { return 0; }
+	e /= (e + 1); // transforming e
+	var n = (1 + e) * Math.log(t) / Math.log(e);
+	return Math.cos(n) * Math.pow(e, n);
+};
+
+exports.elasticOut = function(t, e) {
+	if (t === 1) { return 1; }
+	e /= (e + 1); // transforming e
+	var n = (1 + e) * Math.log(1 - t) / Math.log(e);
+	return 1.0 - Math.cos(n) * Math.pow(e, n);
+};
+
+exports.elasticInOut = function(t, e) {
+	var n;
+	if (t < 0.5) {
+		if (t === 0) { return 0; }
+		e /= (e + 1); // transforming e
+		n = (1 + e) * Math.log(2 * t) / Math.log(e);
+		return 0.5 * Math.cos(n) * Math.pow(e, n);
+	}
+
+	if (t === 1) { return 1; }
+	e /= (e + 1); // transforming e
+	n = (1 + e) * Math.log(2 - 2 * t) / Math.log(e);
+	return 0.5 + 0.5 * (1.0 - Math.cos(n) * Math.pow(e, n));
+};
+
+// Bounce, e = elasticity in ]0, +Inf[
+exports.bounceIn = function(t, e) {
+	if (t === 0) { return 0; }
+	e /= (e + 1); // transforming e
+	var n = (1 + e) * Math.log(t) / Math.log(e);
+	return Math.abs(Math.cos(n) * Math.pow(e, n));
+};
+
+exports.bounceOut = function(t, e) {
+	if (t === 1) { return 1; }
+	e /= (e + 1); // transforming e
+	var n = (1 + e) * Math.log(1 - t) / Math.log(e);
+	return 1.0 - Math.abs(Math.cos(n) * Math.pow(e, n));
+};
+
+exports.bounceInOut = function(t, e) {
+	var n;
+	if (t < 0.5) {
+		if (t === 0) { return 0; }
+		e /= (e + 1); // transforming e
+		n = (1 + e) * Math.log(2 * t) / Math.log(e);
+		return Math.abs(0.5 * Math.cos(n) * Math.pow(e, n));
+	}
+
+	if (t === 1) { return 1; }
+	e /= (e + 1); // transforming e
+	n = (1 + e) * Math.log(2 - 2 * t) / Math.log(e);
+	return 0.5 + 0.5 * (1.0 - Math.abs(Math.cos(n) * Math.pow(e, n)));
+};
+
+// Back, e = elasticity in [0, +Inf[
+exports.backIn = function(t, e) {
+	return t * t * ((e + 1) * t - e);
+};
+
+exports.backOut = function(t, e) {
+	t -= 1;
+	return t * t * ((e + 1) * t + e) + 1;
+};
+
+exports.backInOut = function(t, e) {
+	if (t < 0.5) {
+		t *= 2;
+		return 0.5 * (t * t * ((e + 1) * t - e));
+	}
+	t = 2 * t - 2;
+	return 0.5 * (t * t * ((e + 1) * t + e)) + 1;
+};
+
+},{}],20:[function(require,module,exports){
+var TINA = require('./TINA.js');
+
+TINA.Tweener         = require('./Tweener');
+TINA.Timer           = require('./Timer');
+TINA.Ticker          = require('./Ticker');
+TINA.Playable        = require('./Playable');
+TINA.BoundedPlayable = require('./BoundedPlayable');
+TINA.PlayableHandler = require('./PlayableHandler');
+TINA.BoundedPlayer   = require('./BoundedPlayer');
+TINA.Player          = require('./Player');
+TINA.Tween           = require('./Tween');
+TINA.NestedTween     = require('./NestedTween');
+// TINA.CSSTween        = require('./CSSTween');
+TINA.PixiTween       = require('./NestedTween');
+TINA.Timeline        = require('./Timeline');
+TINA.Sequence        = require('./Sequence');
+// TINA.Recorder        = require('./Recorder');
+TINA.Delay           = require('./Delay');
+TINA.easing          = require('./easing');
+TINA.interpolation   = require('./interpolation');
+
+module.exports = TINA;
+
+},{"./BoundedPlayable":2,"./BoundedPlayer":3,"./Delay":4,"./NestedTween":6,"./Playable":7,"./PlayableHandler":8,"./Player":9,"./Sequence":10,"./TINA.js":11,"./Ticker":12,"./Timeline":13,"./Timer":14,"./Tween":17,"./Tweener":18,"./easing":19,"./interpolation":22}],21:[function(require,module,exports){
+module.exports = function (subobject, superobject) {
+	var prototypes = Object.keys(superobject.prototype);
+	for (var p = 0; p < prototypes.length; p += 1) {
+		var prototypeName = prototypes[p];
+		subobject.prototype[prototypeName] = superobject.prototype[prototypeName];
+	}
+};
+},{}],22:[function(require,module,exports){
+/**
+ *
+ * @file A set of interpolation functions
+ *
+ * @author Brice Chevalier
+ *
+ * @param {Number} t Progress of the transition in [0, 1]
+ * @param (Number) a Value to interpolate from
+ * @param (Number) b Value to interpolate to
+ * @param (Number) p Additional parameter
+ *
+ * @return {Number} Interpolated value
+ *
+ * @desc Interpolation functions
+ * Define how to interpolate between object a and b.
+ * 
+ * Note: if you want a particular interpolation method to be added
+ * create an issue or contribute at https://github.com/Wizcorp/tina.js
+ */
+
+// TODO: Test them all!
+
+exports.none = function(t, a, b) {
+	return b;
+};
+
+exports.linear = function(t, a, b) {
+	return a * (1 - t) + b * t;
+};
+
+// d = discretization
+exports.discrete = function(t, a, b, d) {
+	if (d === undefined) { d = 1; }
+	return Math.floor((a * (1 - t) + b * t) / d) * d;
+};
+
+exports.vectorXY = function(t, a, b) {
+	return {
+		x: a.x * (1 - t) + b.x * t,
+		y: a.y * (1 - t) + b.y * t
+	};
+};
+
+exports.vectorXYZ = function(t, a, b) {
+	return {
+		x: a.x * (1 - t) + b.x * t,
+		y: a.y * (1 - t) + b.y * t,
+		z: a.z * (1 - t) + b.z * t
+	};
+};
+
+// a, b = vectors
+exports.vector = function(t, a, b) {
+	var c = [];
+	for (var i = 0; i < a.length; i += 1) {
+		c[i] = a[i] * (1 - t) + b[i] * t;
+	}
+	return c;
+};
+
+// a, b = states, c = array of intermediary states
+exports.state = function(t, a, b, c) {
+	var nbStates = b.length + 2;
+	var stateIdx = Math.floor(t * nbStates);
+	if (stateIdx < 1) { return a; }
+	if (stateIdx >= (nbStates - 1)) { return b; }
+	return c[stateIdx - 1];
+};
+
+// a, b = colors
+exports.colorRGB = function(t, a, b) {
+	return {
+		r: a.r * (1 - t) + b.r * t,
+		g: a.g * (1 - t) + b.g * t,
+		b: a.b * (1 - t) + b.b * t
+	};
+};
+
+exports.colorRGBA = function(t, a, b) {
+	return {
+		r: a.r * (1 - t) + b.r * t,
+		g: a.g * (1 - t) + b.g * t,
+		b: a.b * (1 - t) + b.b * t,
+		a: a.a * (1 - t) + b.a * t
+	};
+};
+
+exports.colorRGBToHexa = function(t, a, b) {
+	var cr = Math.round(a.r * (1 - t) + b.r * t);
+	var cg = Math.round(a.g * (1 - t) + b.g * t);
+	var cb = Math.round(a.b * (1 - t) + b.b * t);
+
+	return '#' + cr.toString(16) + cg.toString(16) + cb.toString(16);
+};
+
+exports.colorRGBToString = function(t, a, b) {
+	var cr = Math.round(a.r * (1 - t) + b.r * t);
+	var cg = Math.round(a.g * (1 - t) + b.g * t);
+	var cb = Math.round(a.b * (1 - t) + b.b * t);
+
+	return 'rgb(' + cr.toString(16) + ',' + cg.toString(16) + ',' + cb.toString(16) + ')';
+};
+
+exports.colorRGBAToString = function(t, a, b) {
+	var cr = Math.round(a.r * (1 - t) + b.r * t);
+	var cg = Math.round(a.g * (1 - t) + b.g * t);
+	var cb = Math.round(a.b * (1 - t) + b.b * t);
+	var ca = Math.round(a.a * (1 - t) + b.a * t);
+
+	return 'rgba(' + cr.toString(16) + ',' + cg.toString(16) + ',' + cb.toString(16) + ',' + ca + ')';
+};
+
+// Interpolation between 2 strings a and b (yes that's possible)
+// Returns a string of the same size as b
+exports.string = function(t, a, b) {
+	var nbCharsA = a.length;
+	var nbCharsB = b.length;
+	var newString = '';
+
+	for (var c = 0; c < nbCharsB; c += 1) {
+		// Simple heuristic:
+		// if charCodeB is closer to a capital letter
+		// then charCodeA corresponds to an "A"
+		// otherwise chardCodeA corresponds to an "a"
+		var charCodeB = b.charCodeAt(c);
+		var charCodeA = (c >= nbCharsA) ? ((charCodeB < 97) ? 65 : 97) : a.charCodeAt(c);
+
+		var charCode = Math.round(charCodeA * (1 - t) + charCodeB * t);
+		newString += String.fromCharCode(charCode);
+	}
+
+	return newString;
+};
+
+// Bezier, c = array of control points in ]-Inf, +Inf[
+exports.bezierQuadratic = function(t, a, b, c) {
+	var u = 1 - t;
+	return u * u * a + t * (2 * u * c[0] + t * b);
+};
+
+exports.bezierCubic = function(t, a, b, c) {
+	var u = 1 - t;
+	return u * u * u * a + t * (3 * u * u * c[0] + t * (3 * u * c[1] + t * b));
+};
+
+exports.bezierQuartic = function(t, a, b, c) {
+	var u = 1 - t;
+	var u2 = 2 * u;
+	return u2 * u2 * a + t * (4 * u * u2 * c[0] + t * (6 * u2 * c[1] + t * (4 * u * c[2] + t * b)));
+};
+
+exports.bezierQuintic = function(t, a, b, c) {
+	var u = 1 - t;
+	var u2 = 2 * u;
+	return u2 * u2 * u * a + t * (5 * u2 * u2 * c[0] + t * (10 * u * u2 * c[1] + t * (10 * u2 * c[2] + t * (5 * u * c[3] + t * b))));
+};
+
+exports.bezier = function(t, a, b, c) {
+	var n = c.length;
+	var u = 1 - t;
+	var x = b;
+
+	var term = n;
+	for (k = 1; k < n; k -= 1) {
+		x = x * t + term * Math.pow(u, k) * c[n - k];
+		term *= (n - k) / (k + 1);
+	}
+
+	return x * t + a * Math.pow(u, n);
+};
+
+// Bezier 2D, c = array of control points in ]-Inf, +Inf[ ^ 2
+exports.bezier2d = function(t, a, b, c) {
+	var n = c.length;
+	var u = 1 - t;
+	var x = b[0];
+	var y = b[1];
+
+	var p, q;
+	var term = n;
+	for (var k = 1; k < n; k -= 1) {
+		p = term * Math.pow(u, k);
+		q = c[n - k];
+		x = x * t + p * q[0];
+		y = y * t + p * q[1];
+		term *= (n - k) / (k + 1);
+	}
+
+	p = Math.pow(u, n);
+	return [
+		x * t + a[0] * p,
+		y * t + a[1] * p
+	];
+};
+
+// Bezier 3D, c = array of control points in ]-Inf, +Inf[ ^ 3
+exports.bezier3d = function(t, a, b, c) {
+	var n = c.length;
+	var u = 1 - t;
+	var x = b[0];
+	var y = b[1];
+	var z = b[2];
+
+	var p, q;
+	var term = n;
+	for (var k = 1; k < n; k -= 1) {
+		p = term * Math.pow(u, k);
+		q = c[n - k];
+		x = x * t + p * q[0];
+		y = y * t + p * q[1];
+		z = z * t + p * q[2];
+		term *= (n - k) / (k + 1);
+	}
+
+	p = Math.pow(u, n);
+	return [
+		x * t + a[0] * p,
+		y * t + a[1] * p,
+		z * t + a[2] * p
+	];
+};
+
+// Bezier k-dimensions, c = array of control points in ]-Inf, +Inf[ ^ k
+exports.bezierKd = function(t, a, b, c) {
+	var n = c.length;
+	var u = 1 - t;
+	var k = a.length;
+
+	var res = [];
+	for (var i = 0; i < k; i += 1) {
+		res[i] = b[i];
+	}
+
+	var p, q;
+	var term = n;
+	for (var l = 1; l < n; l -= 1) {
+		p = term * Math.pow(u, l);
+		q = c[n - l];
+
+		for (i = 0; i < k; i += 1) {
+			res[i] = res[i] * t + p * q[i];
+		}
+
+		term *= (n - l) / (l + 1);
+	}
+
+	p = Math.pow(u, n);
+	for (i = 0; i < k; i += 1) {
+		res[i] = res[i] * t + a[i] * p;
+	}
+
+	return res;
+};
+
+// CatmullRom, b = array of control points in ]-Inf, +Inf[
+exports.catmullRom = function(t, a, b, c) {
+	if (t === 1) {
+		return c;
+	}
+
+	// Finding index corresponding to current time
+	var k = a.length;
+	var n = b.length + 1;
+	t *= n;
+	var i = Math.floor(t);
+	t -= i;
+
+	var t2 = t * t;
+	var t3 = t * t2;
+	var w = -0.5 * t3 + 1.0 * t2 - 0.5 * t;
+	var x =  1.5 * t3 - 2.5 * t2 + 1.0;
+	var y = -1.5 * t3 + 2.0 * t2 + 0.5 * t;
+	var z =  0.5 * t3 - 0.5 * t2;
+
+	var i0 = i - 2;
+	var i1 = i - 1;
+	var i2 = i;
+	var i3 = i + 1;
+
+	var p0 = (i0 < 0) ? a : b[i0];
+	var p1 = (i1 < 0) ? a : b[i1];
+	var p2 = (i3 < n - 2) ? b[i2] : c;
+	var p3 = (i3 < n - 2) ? b[i3] : c;
+
+	var res = [];
+	for (var j = 0; j < k; j += 1) {
+		res[j] = p0[j] * w + p1[j] * x + p2[j] * y + p3[j] * z;
+	}
+
+	return res;
+};
+
+// Noises functions! (you are welcome)
+// Only 1d and 2d for now, if any request for 3d then I will add it to the list
+
+// Creating a closure for the noise function to make 'perm' and 'grad' only accessible to it
+exports.noise = (function() {
+	// permutation table
+	var perm = [
+		182, 235, 131, 26, 88, 132, 100, 117, 202, 176, 10, 19, 83, 243, 75, 52,
+		252, 194, 32, 30, 72, 15, 124, 53, 236, 183, 121, 103, 175, 39, 253, 120,
+		166, 33, 237, 141, 99, 180, 18, 143, 69, 136, 173, 21, 210, 189, 16, 142,
+		190, 130, 109, 186, 104, 80, 62, 51, 165, 25, 122, 119, 42, 219, 146, 61,
+		149, 177, 54, 158, 27, 170, 60, 201, 159, 193, 203, 58, 154, 222, 78, 138,
+		220, 41, 98, 14, 156, 31, 29, 246, 81, 181, 40, 161, 192, 227, 35, 241,
+		135, 150, 89, 68, 134, 114, 230, 123, 187, 179, 67, 217, 71, 218, 7, 148,
+		228, 251, 93, 8, 140, 125, 73, 37, 82, 28, 112, 24, 174, 118, 232, 137,
+		191, 133, 147, 245, 6, 172, 95, 113, 185, 205, 254, 116, 55, 198, 57, 152,
+		128, 233, 74, 225, 34, 223, 79, 111, 215, 85, 200, 9, 242, 12, 167, 44,
+		20, 110, 107, 126, 86, 231, 234, 76, 207, 102, 214, 238, 221, 145, 213, 64,
+		197, 38, 168, 157, 87, 92, 255, 212, 49, 196, 240, 90, 63, 0, 77, 94,
+		1, 108, 91, 17, 224, 188, 153, 250, 249, 199, 127, 59, 46, 184, 36, 43,
+		209, 206, 248, 4, 56, 47, 226, 13, 144, 22, 11, 247, 70, 244, 48, 97,
+		151, 195, 96, 101, 45, 66, 239, 178, 171, 160, 84, 65, 23, 3, 211, 162,
+		163, 50, 105, 129, 155, 169, 115, 5, 106, 2, 208, 204, 139, 229, 164, 216,
+		182
+	];
+
+	// gradients
+	var grad = [-1, 1];
+
+	return function (t, a, b, p) {
+		var amp = 2.0;   // amplitude
+		var per = p.per || 1; // persistance
+		var frq = p.frq || 2; // frequence
+		var oct = p.oct || 4; // octaves
+		var off = p.off || 0; // offset
+
+		var c = 0;
+		var x = p.x + off;
+
+		for (var o = 0; o < oct; o += 1) {
+
+			var i = (x | x) & 255;
+			var x1 = x - (x | x);
+			var x0 = 1.0 - x1;
+
+			c += amp * (x0 * x0 * x1 * (3 - 2 * x0) * grad[perm[i] & 1] - x1 * x1 * x0 * (3 - 2 * x1) * grad[perm[i + 1] & 1]);
+
+			x *= (x - off) * frq + off;
+			amp *= per;
+		}
+
+		// Scaling the result
+		var scale = ((per === 1) ? 1 / oct : 0.5 * (1 - per) / (1 - Math.pow(per, oct)));
+		t = t + c * scale;
+		return a * (1 - t) + b * t;
+	};
+})();
+
+exports.simplex2d = (function() {
+	// permutation table
+	var perm = [
+		182, 235, 131, 26, 88, 132, 100, 117, 202, 176, 10, 19, 83, 243, 75, 52,
+		252, 194, 32, 30, 72, 15, 124, 53, 236, 183, 121, 103, 175, 39, 253, 120,
+		166, 33, 237, 141, 99, 180, 18, 143, 69, 136, 173, 21, 210, 189, 16, 142,
+		190, 130, 109, 186, 104, 80, 62, 51, 165, 25, 122, 119, 42, 219, 146, 61,
+		149, 177, 54, 158, 27, 170, 60, 201, 159, 193, 203, 58, 154, 222, 78, 138,
+		220, 41, 98, 14, 156, 31, 29, 246, 81, 181, 40, 161, 192, 227, 35, 241,
+		135, 150, 89, 68, 134, 114, 230, 123, 187, 179, 67, 217, 71, 218, 7, 148,
+		228, 251, 93, 8, 140, 125, 73, 37, 82, 28, 112, 24, 174, 118, 232, 137,
+		191, 133, 147, 245, 6, 172, 95, 113, 185, 205, 254, 116, 55, 198, 57, 152,
+		128, 233, 74, 225, 34, 223, 79, 111, 215, 85, 200, 9, 242, 12, 167, 44,
+		20, 110, 107, 126, 86, 231, 234, 76, 207, 102, 214, 238, 221, 145, 213, 64,
+		197, 38, 168, 157, 87, 92, 255, 212, 49, 196, 240, 90, 63, 0, 77, 94,
+		1, 108, 91, 17, 224, 188, 153, 250, 249, 199, 127, 59, 46, 184, 36, 43,
+		209, 206, 248, 4, 56, 47, 226, 13, 144, 22, 11, 247, 70, 244, 48, 97,
+		151, 195, 96, 101, 45, 66, 239, 178, 171, 160, 84, 65, 23, 3, 211, 162,
+		163, 50, 105, 129, 155, 169, 115, 5, 106, 2, 208, 204, 139, 229, 164, 216,
+		182, 235, 131, 26, 88, 132, 100, 117, 202, 176, 10, 19, 83, 243, 75, 52,
+		252, 194, 32, 30, 72, 15, 124, 53, 236, 183, 121, 103, 175, 39, 253, 120,
+		166, 33, 237, 141, 99, 180, 18, 143, 69, 136, 173, 21, 210, 189, 16, 142,
+		190, 130, 109, 186, 104, 80, 62, 51, 165, 25, 122, 119, 42, 219, 146, 61,
+		149, 177, 54, 158, 27, 170, 60, 201, 159, 193, 203, 58, 154, 222, 78, 138,
+		220, 41, 98, 14, 156, 31, 29, 246, 81, 181, 40, 161, 192, 227, 35, 241,
+		135, 150, 89, 68, 134, 114, 230, 123, 187, 179, 67, 217, 71, 218, 7, 148,
+		228, 251, 93, 8, 140, 125, 73, 37, 82, 28, 112, 24, 174, 118, 232, 137,
+		191, 133, 147, 245, 6, 172, 95, 113, 185, 205, 254, 116, 55, 198, 57, 152,
+		128, 233, 74, 225, 34, 223, 79, 111, 215, 85, 200, 9, 242, 12, 167, 44,
+		20, 110, 107, 126, 86, 231, 234, 76, 207, 102, 214, 238, 221, 145, 213, 64,
+		197, 38, 168, 157, 87, 92, 255, 212, 49, 196, 240, 90, 63, 0, 77, 94,
+		1, 108, 91, 17, 224, 188, 153, 250, 249, 199, 127, 59, 46, 184, 36, 43,
+		209, 206, 248, 4, 56, 47, 226, 13, 144, 22, 11, 247, 70, 244, 48, 97,
+		151, 195, 96, 101, 45, 66, 239, 178, 171, 160, 84, 65, 23, 3, 211, 162,
+		163, 50, 105, 129, 155, 169, 115, 5, 106, 2, 208, 204, 139, 229, 164, 216
+	];
+
+	// gradients
+	var grad = [
+		[1,1], [-1,1], [1,-1], [-1,-1],
+		[1,0], [-1,0], [1,0], [-1,0],
+		[0,1], [0,-1], [0,1], [0,-1],
+		[1,1], [-1,1], [1,-1], [-1,-1]
+	];
+
+	function dot2D(g, x, y) {
+		return g[0] * x + g[1] * y;
+	}
+
+	return function (t, a, b, p) {
+		var amp = 2.0; // amplitude
+		var per = p.per || 1; // persistance
+		var frq = p.frq || 2; // frequence
+		var oct = p.oct || 4; // octaves
+		var off = p.off || { x: 0, y: 0 }; // offset
+
+		var c = c;
+		var x = p.x + off.x;
+		var y = p.y + off.y;
+
+		for (var o = 0; o < oct; o += 1) {
+			var n0, n1, n2; // Noise contributions from the three corners
+
+			// Skew the input space to determine which simplex cell we're in
+			var f2 = 0.5 * (Math.sqrt(3.0) - 1.0);
+			var s = (x + y) * f2; // Hairy factor for 2D
+			var i = Math.floor(x + s);
+			var j = Math.floor(y + s);
+			var g2 = (3.0 - Math.sqrt(3.0)) / 6.0;
+			var r = (i + j) * g2;
+
+			var x0 = i - r; // Unskew the cell origin back to (x, y) space
+			var y0 = j - r;
+			x0 = x - x0; // The x, y distances from the cell origin
+			y0 = y - y0;
+
+			// For the 2D case, the simplex shape is an equilateral triangle.
+			// Determine which simplex we are in.
+			var i1, j1; // Offsets for second (middle) corner of simplex in (i, j) coords
+			if (x0 > y0) {
+				i1 = 1; j1 = 0; // lower triangle, XY order: (0, 0) -> (1, 0) -> (1, 1)
+			} else {
+				i1 = 0; j1 = 1; // upper triangle, YX order: (0, 0) -> (0, 1) -> (1, 1)
+			}
+
+			// A step of (1, 0) in (i, j) means a step of (1 - c, -c) in (x, y), and
+			// a step of (0, 1) in (i, j) means a step of (-c, 1 - c) in (x, y), where
+			// c = (3 - sqrt(3)) / 6
+			var x1 = x0 - i1 + g2; // Offsets for middle corner in (x, y) unskewed coords
+			var y1 = y0 - j1 + g2;
+			var x2 = x0 - 1.0 + 2.0 * g2; // Offsets for last corner in (x, y) unskewed coords
+			var y2 = y0 - 1.0 + 2.0 * g2;
+
+			// Working out the hashed gradient indices of the three simplex corners
+			var ii = i & 255;
+			var jj = j & 255;
+
+			// Calculating the contribution from the three corners
+			var t0 = 0.5 - x0 * x0 - y0 * y0;
+			var t1 = 0.5 - x1 * x1 - y1 * y1;
+			var t2 = 0.5 - x2 * x2 - y2 * y2;
+
+			if (t0 < 0) {
+				n0 = 0.0;
+			} else {
+				var gi0 = perm[ii + perm[jj]] & 15;
+				t0 *= t0;
+				n0 = t0 * t0 * dot2D(grad[gi0], x0, y0);
+			}
+
+			if (t1 < 0) {
+				n1 = 0.0;
+			} else {
+				var gi1 = perm[ii + i1 + perm[jj + j1]] & 15;
+				t1 *= t1;
+				n1 = t1 * t1 * dot2D(grad[gi1], x1, y1);
+			}
+
+			if (t2 < 0) {
+				n2 = 0.0;
+			} else {
+				var gi2 = perm[ii + 1 + perm[jj + 1]] & 15;
+				t2 *= t2;
+				n2 = t2 * t2 * dot2D(grad[gi2], x2, y2);
+			}
+
+			// Adding contributions from each corner to get the final noise value.
+			// The result is scaled to return values in the interval [-amp, amp]
+			c += amp * 70.0 * (n0 + n1 + n2);
+
+			x *= (x - off.x) * frq + off.x;
+			y *= (y - off.y) * frq + off.y;
+			amp *= per;
+		}
+
+		// Scaling the result
+		var scale = ((per === 1) ? 1 / oct : 0.5 * (1 - per) / (1 - Math.pow(per, oct)));
+		t = t + c * scale;
+		return a * (1 - t) + b * t;
+	};
+})();
+},{}]},{},[20]);

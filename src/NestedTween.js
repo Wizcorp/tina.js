@@ -30,12 +30,13 @@ function NestedTween(object, properties) {
 	// Array of object chains
 	this._propertyChainStrings = [];
 
-	var propertiesPerObject = {};
 	var objects = {};
+	var propertiesPerObject = {};
+	var property, propertyChainString;
 
 	for (var p = 0; p < properties.length; p += 1) {
 		var propertyString = properties[p];
-		var propertyChainString = propertyString.substring(0, propertyString.lastIndexOf('.'));
+		propertyChainString = propertyString.substring(0, propertyString.lastIndexOf('.'));
 
 		if (propertiesPerObject[propertyChainString] === undefined) {
 			// Fetching object and property
@@ -48,12 +49,12 @@ function NestedTween(object, properties) {
 				propertyObject = propertyObject[propertyChain[c]];
 			}
 
-			var property = propertyChain[propertyIndex];
+			property = propertyChain[propertyIndex];
 			if (propertyObject[property] instanceof Array) {
 				propertiesPerObject[propertyString] = null;
 				objects[propertyString] = propertyObject[property];
 				this._propertyChainStrings.push(propertyString);
-				this._propertyChains[propertyChain] = propertyChain;
+				this._propertyChains[propertyString] = propertyChain;
 			} else {
 				propertiesPerObject[propertyChainString] = [property];
 				objects[propertyChainString] = propertyObject;
@@ -67,13 +68,13 @@ function NestedTween(object, properties) {
 
 		} else {
 			// Object was already fetched
-			var property = propertyString.substring(propertyString.lastIndexOf('.') + 1);
+			property = propertyString.substring(propertyString.lastIndexOf('.') + 1);
 			propertiesPerObject[propertyChainString].push(property);
 		}
 	}
 
 	// Creating the tweens
-	for (var propertyChainString in objects) {
+	for (propertyChainString in objects) {
 		var tweenObject     = objects[propertyChainString];
 		var tweenProperties = propertiesPerObject[propertyChainString];
 		var tween = new AbstractTween(tweenObject, tweenProperties);
@@ -96,7 +97,7 @@ NestedTween.prototype.relative = function (relative) {
 NestedTween.prototype.reset = function () {
 	// Dispatching reset
 	for (var t = 0; t < this._tweens.length; t += 1) {
-		this._tweens[t].reset;
+		this._tweens[t].reset();
 	}
 
 	this._duration = 0;
@@ -156,7 +157,7 @@ NestedTween.prototype.to = function (toObject, duration, easing, easingParam, in
 		}
 
 		var objectInterpolationParams = interpolationParams;
-		for (var c = 0; c < chainLength && objectInterpolationParams !== undefined; c += 1) {
+		for (c = 0; c < chainLength && objectInterpolationParams !== undefined; c += 1) {
 			objectInterpolationParams = objectInterpolationParams[propertyChain[c]];
 		}
 

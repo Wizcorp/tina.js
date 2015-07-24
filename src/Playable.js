@@ -6,10 +6,10 @@ function Playable() {
 	// Handle of the playable within its player
 	this._handle = null;
 
-	// Starting time relative to its player time
+	// Starting time, is global (relative to its player time)
 	this._startTime  = 0;
 
-	// Current time relative to the start time
+	// Current time, is local (relative to starting time)
 	// i.e this._time === 0 implies this._player._time ===  this._startTime
 	this._time       = 0;
 
@@ -22,7 +22,8 @@ function Playable() {
 	this._onResume   = null;
 	this._onUpdate   = null;
 	this._onStop     = null;
-};
+}
+
 module.exports = Playable;
 
 Object.defineProperty(Playable.prototype, 'speed', {
@@ -145,7 +146,7 @@ Playable.prototype._start = function (timeOffset) {
 
 	if (this._onStart !== null) {
 		this._onStart();
-	};
+	}
 };
 
 Playable.prototype.stop = function () {

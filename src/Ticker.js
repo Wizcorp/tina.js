@@ -13,7 +13,6 @@ function Ticker(tupt) {
 	}
 
 	Tweener.call(this);
-	SOmethingElse.call(this);
 
 	// Time units per tick (tupt)
 	// Every second, 'tupt' time units elapse
@@ -31,21 +30,6 @@ Object.defineProperty(Ticker.prototype, 'tupt', {
 		if (tupt < 0) {
 			this._warn('[Timer.tupt] tupt cannot be negative, stop messing with time.');
 			tupt = 0;
-		}
-
-		var dt = this._nbTicks;
-		if (tupt === 0) {
-			// Setting start as if new tupt was 1
-			this._nbTicks = this._time - dt * this._tupt;
-		} else {
-			if (this._tupt === 0) {
-				// If current tupt is 0,
-				// it corresponds to a virtual tupt of 1
-				// when it comes to determing how many ticks have passed
-				this._nbTicks = this._time - dt / tupt;
-			} else {
-				this._nbTicks = this._time - dt * this._tupt / tupt;
-			}
 		}
 
 		this._tupt = tupt;

@@ -5,7 +5,7 @@ function update(object, t) {
 	var now = this.from[p] * (1 - t) + this.to[p] * t;
 	object[p] = object[p] + (now - this.prev);
 	this.prev = now;
-};
+}
 
 // Several Properties
 function updateP(object, t) {
@@ -16,7 +16,7 @@ function updateP(object, t) {
 		object[p] = object[p] + (now - this.prev[p]);
 		this.prev[p] = now;
 	}
-};
+}
 
 // Interpolation
 function updateI(object, t) {
@@ -24,7 +24,7 @@ function updateI(object, t) {
 	var now = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);
 	object[p] = object[p] + (now - this.prev);
 	this.prev = now;
-};
+}
 
 // Interpolation
 // Several Properties
@@ -36,7 +36,7 @@ function updatePI(object, t) {
 		object[p] = object[p] + (now - this.prev[p]);
 		this.prev[p] = now;
 	}
-};
+}
 
 // Easing
 function updateE(object, t) {
@@ -45,7 +45,7 @@ function updateE(object, t) {
 	var now = this.from[p] * (1 - t) + this.to[p] * t;
 	object[p] = object[p] + (now - this.prev);
 	this.prev = now;
-};
+}
 
 // Easing
 // Several Properties
@@ -58,7 +58,7 @@ function updatePE(object, t) {
 		object[p] = object[p] + (now - this.prev[p]);
 		this.prev[p] = now;
 	}
-};
+}
 
 // Easing
 // Interpolation
@@ -67,7 +67,7 @@ function updateIE(object, t) {
 	var now = this.interps[p](this.easing(t, this.easingParams), this.from[p], this.to[p], this.interpParams[p]);
 	object[p] = object[p] + (now - this.prev);
 	this.prev = now;
-};
+}
 
 // Easing
 // Interpolation
@@ -81,7 +81,7 @@ function updatePIE(object, t) {
 		object[p] = object[p] + (now - this.prev[p]);
 		this.prev[p] = now;
 	}
-};
+}
 
 var updateMethods = [
 	[
@@ -146,40 +146,3 @@ function Transition(properties, from, to, start, duration, easing, easingParam, 
 }
 
 module.exports = Transition;
-
-
-// exports.number = function (a, b) {
-// 	return a + b;
-// }
-
-// exports.vector = function (a, b) {
-// 	var n = a.length;
-// 	var addition = [];
-// 	for (var i = 0; i < n; a += 1) {
-// 		addition[i] = a[i] + b[i];
-// 	}
-
-// 	return addition;
-// }
-
-// exports.number = function (a, b) {
-// 	return a - b;
-// }
-
-// exports.vector = function (a, b) {
-// 	var n = a.length;
-// 	var difference = [];
-// 	for (var i = 0; i < n; a += 1) {
-// 		difference[i] = a[i] - b[i];
-// 	}
-
-// 	return difference;
-// }
-
-// function update(object, t) {
-// 	var prop = this.prop;
-// 	var now  = this.from[p] * (1 - t) + this.to[p] * t;
-
-// 	object[p] = this.addition[p](object[p], this.difference[p](now, this.prev));
-// 	this.prev = now;
-// };

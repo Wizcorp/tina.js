@@ -34,6 +34,21 @@ exports.discrete = function(t, a, b, d) {
 	return Math.floor((a * (1 - t) + b * t) / d) * d;
 };
 
+exports.vectorXY = function(t, a, b) {
+	return {
+		x: a.x * (1 - t) + b.x * t,
+		y: a.y * (1 - t) + b.y * t
+	};
+};
+
+exports.vectorXYZ = function(t, a, b) {
+	return {
+		x: a.x * (1 - t) + b.x * t,
+		y: a.y * (1 - t) + b.y * t,
+		z: a.z * (1 - t) + b.z * t
+	};
+};
+
 // a, b = vectors
 exports.vector = function(t, a, b) {
 	var c = [];
@@ -175,7 +190,7 @@ exports.bezier2d = function(t, a, b, c) {
 	return [
 		x * t + a[0] * p,
 		y * t + a[1] * p
-	]
+	];
 };
 
 // Bezier 3D, c = array of control points in ]-Inf, +Inf[ ^ 3
@@ -202,7 +217,7 @@ exports.bezier3d = function(t, a, b, c) {
 		x * t + a[0] * p,
 		y * t + a[1] * p,
 		z * t + a[2] * p
-	]
+	];
 };
 
 // Bezier k-dimensions, c = array of control points in ]-Inf, +Inf[ ^ k
@@ -330,7 +345,7 @@ exports.noise = (function() {
 		var scale = ((per === 1) ? 1 / oct : 0.5 * (1 - per) / (1 - Math.pow(per, oct)));
 		t = t + c * scale;
 		return a * (1 - t) + b * t;
-	}
+	};
 })();
 
 exports.simplex2d = (function() {
@@ -402,10 +417,10 @@ exports.simplex2d = (function() {
 			var i = Math.floor(x + s);
 			var j = Math.floor(y + s);
 			var g2 = (3.0 - Math.sqrt(3.0)) / 6.0;
-			var t = (i + j) * g2;
+			var r = (i + j) * g2;
 
-			var x0 = i - t; // Unskew the cell origin back to (x, y) space
-			var y0 = j - t;
+			var x0 = i - r; // Unskew the cell origin back to (x, y) space
+			var y0 = j - r;
 			x0 = x - x0; // The x, y distances from the cell origin
 			y0 = y - y0;
 
@@ -472,5 +487,5 @@ exports.simplex2d = (function() {
 		var scale = ((per === 1) ? 1 / oct : 0.5 * (1 - per) / (1 - Math.pow(per, oct)));
 		t = t + c * scale;
 		return a * (1 - t) + b * t;
-	}
+	};
 })();

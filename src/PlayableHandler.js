@@ -47,7 +47,7 @@ PlayableHandler.prototype._add = function (playable) {
 	// Playable is already handled, either by this player or by another one
 	if (playable._handle.container === this._playablesToRemove) {
 		// Playable was being removed, removing from playables to remove
-		playable._handle = this._playablesToRemove.remove(playable._handle);
+		playable._handle = this._playablesToRemove.removeByReference(playable._handle);
 		return true;
 	}
 
@@ -81,7 +81,7 @@ PlayableHandler.prototype._remove = function (playable) {
 
 	if (playable._handle.container === this._inactivePlayables) {
 		// Playable was being started, removing from starting playables
-		playable._handle = this._inactivePlayables.remove(playable._handle);
+		playable._handle = this._inactivePlayables.removeByReference(playable._handle);
 		return true;
 	}
 
@@ -126,7 +126,7 @@ PlayableHandler.prototype.possess = function (playable) {
 };
 
 PlayableHandler.prototype._inactivate = function (playable) {
-	this._activePlayables.remove(playable._handle);
+	this._activePlayables.removeByReference(playable._handle);
 
 	// Playable is moved to the list of inactive playables
 	playable._handle = this._inactivePlayables.add(playable);
@@ -141,7 +141,7 @@ PlayableHandler.prototype._handlePlayablesToRemove = function () {
 
 		// Removing from list of active playables
 		var playable = handle.object;
-		playable._handle = this._activePlayables.remove(handle);
+		playable._handle = this._activePlayables.removeByReference(handle);
 		playable._player = null;
 	}
 };
@@ -155,6 +155,7 @@ PlayableHandler.prototype.clear = function () {
 };
 
 PlayableHandler.prototype._warn = function (warning) {
+	// jshint debug: true
 	if (this._silent === false) {
 		console.warn(warning);
 	}
