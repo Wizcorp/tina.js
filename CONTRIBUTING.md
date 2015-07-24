@@ -19,3 +19,6 @@ Then build using:
 ```
 npm run build
 ```
+
+## Last rule
+Do not forget to smile while contributing
