@@ -48,7 +48,7 @@ BoundedPlayer.prototype._moveTo = function (time, dt) {
 	// Computing overflow and clamping time
 	var overflow;
 	if (this._iterations === 1) {
-		// Converting into time relative to when the playable was started
+		// Converting into local time (relative to speed and when the playable started)
 		this._time = (time - this._startTime) * this._speed;
 		if (dt > 0) {
 			if (this._time >= this._duration) {

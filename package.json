@@ -1,14 +1,20 @@
 {
   "name": "tina",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "description": "Tweening and INterpolations for Animation",
   "main": "src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "jshint src && browserify -t uglifyify src/index.js -o build/tina.min.js && browserify src/index.js -o build/tina.js",
+    "test": "jshint src"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/Wizcorp/tina.git"
+  },
+  "devDependencies": {
+    "jshint": "~2.8.0",
+    "uglifyify": "~3.0.1",
+    "browserify": "~11.0.0"
   },
   "keywords": [
     "tween",

@@ -31,9 +31,10 @@ Timeline.prototype.add = function (startTime, playable) {
 };
 
 Timeline.prototype._computeDuration = function () {
+	var playable;
 	var duration = 0;
 	for (var handle = this._inactivePlayables.first; handle !== null; handle = handle.next) {
-		var playable = handle.object;
+		playable = handle.object;
 		duration = Math.max(duration, playable._startTime + playable.getDuration());
 	}
 
@@ -69,7 +70,7 @@ Timeline.prototype._updatePlayableList = function () {
 		var endTime   = startTime + playable.getDuration();
 		if (startTime <= this._time && this._time <= endTime) {
 			// O(1)
-			this._inactivePlayables.remove(playable._handle);
+			this._inactivePlayables.removeByReference(playable._handle);
 			playable._handle = this._activePlayables.addBack(playable);
 
 			playable._start(-startTime);

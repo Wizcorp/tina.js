@@ -22,10 +22,15 @@ var requestAnimFrame = (function(){
 		window.webkitRequestAnimationFrame || 
 		window.mozRequestAnimationFrame    || 
 		window.oRequestAnimationFrame      || 
-		window.msRequestAnimationFrame     || 
-		function(callback){
-			window.setTimeout(callback, 1000 / 60);
-		};
+		window.msRequestAnimationFrame
+})();
+
+var cancelAnimFrame = (function(){
+	return window.cancelAnimationFrame    || 
+		window.webkitCancelAnimationFrame || 
+		window.mozCancelAnimationFrame    || 
+		window.oCancelAnimationFrame      || 
+		window.msCancelAnimationFrame
 })();
 
 // Performance.now gives better precision than Date.now
@@ -34,7 +39,7 @@ var clock = window.performance || Date;
 var TINA = {
 	_tweeners: [],
 	_defaultTweener: null,
-	_running: false,
+	_requestAnimFrameId: null,
 
 	_startTime: 0,
 	_time: 0,
@@ -69,7 +74,7 @@ var TINA = {
 	},
 
 	isRunning: function () {
-		return this._running;
+		return (this._requestAnimFrameId !== null);
 	},
 
 	update: function () {
@@ -107,16 +112,9 @@ var TINA = {
 	},
 
 	start: function () {
-		if (this._running === true) {
+		if (this._requestAnimFrameId !== null) {
 			console.warn('[TINA.start] TINA is already running');
 			return this;
-		}
-
-		function updateTINA() {
-			if (TINA._running === true) {
-				TINA.update();
-				requestAnimFrame(updateTINA);
-			}
 		}
 
 		if (this._onStart !== null) {
@@ -131,55 +129,21 @@ var TINA = {
 			this._tweeners[t]._start();
 		}
 
-		this._running = true;
+		this._startAutomaticUpdate();
+		return this;
+	},
+
+	// internal start method, called by start and resume
+	_startAutomaticUpdate: function () {
+		function updateTINA() {
+			if (TINA._requestAnimFrameId !== null) {
+				TINA.update();
+				requestAnimFrame(updateTINA);
+			}
+		}
 
 		// Starting the animation loop
-		requestAnimFrame(updateTINA);
-		return this;
-	},
-
-	pause: function () {
-		if (this._running === false) {
-			console.warn('[TINA.pause] TINA is not running');
-			return this;
-		}
-
-		this._running = false;
-		for (var t = 0; t < this._tweeners.length; t += 1) {
-			this._tweeners[t]._pause();
-		}
-
-		if (this._onPause !== null) {
-			this._onPause();
-		}
-		return this;
-	},
-
-	resume: function () {
-		if (this._running === true) {
-			console.warn('[TINA.resume] TINA is already running');
-			return this;
-		}
-
-		this._running = true;
-		if (this._onResume !== null) {
-			this._onResume();
-		}
-
-		for (var t = 0; t < this._tweeners.length; t += 1) {
-			this._tweeners[t]._resume();
-		}
-
-		// Resetting the clock
-		// Getting time difference between last update and now
-		var now = clock.now();
-		var dt = now - this._time;
-
-		// Moving starting time by this difference
-		// As if the time had virtually not moved
-		this._startTime += dt;
-
-		return this;
+		this._requestAnimFrameId = requestAnimFrame(updateTINA);
 	},
 
 	stop: function () {
@@ -196,6 +160,62 @@ var TINA = {
 		if (this._onStop !== null) {
 			this._onStop();
 		}
+
+		this._stopAutomaticUpdate();
+		return this;
+	},
+
+	// Internal stop method, called by stop and pause
+	_stopAutomaticUpdate: function () {
+		// Starting the animation loop
+		cancelAnimFrame(this._requestAnimFrameId);
+		this._requestAnimFrameId = null;
+	},
+
+	pause: function () {
+		if (this._requestAnimFrameId === null) {
+			console.warn('[TINA.pause] TINA is not running');
+			return this;
+		}
+
+		this._running = false;
+		for (var t = 0; t < this._tweeners.length; t += 1) {
+			this._tweeners[t]._pause();
+		}
+
+		if (this._onPause !== null) {
+			this._onPause();
+		}
+
+		this._stopAutomaticUpdate();
+		return this;
+	},
+
+	resume: function () {
+		if (this._running === true) {
+			console.warn('[TINA.resume] TINA is already running');
+			return this;
+		}
+
+		this._running = true;
+		if (this._onResume !== null) {
+			this._onResume();
+		}
+
+		// Resetting the clock
+		// Getting time difference between last update and now
+		var now = clock.now();
+		var dt = now - this._time;
+
+		// Moving starting time by this difference
+		// As if the time had virtually not moved
+		this._startTime += dt;
+
+		for (var t = 0; t < this._tweeners.length; t += 1) {
+			this._tweeners[t]._resume();
+		}
+
+		this._startAutomaticUpdate();
 		return this;
 	},
 

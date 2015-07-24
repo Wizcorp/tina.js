@@ -140,10 +140,10 @@ AbstractTween.prototype._getLastTransitionEnding = function () {
 };
 
 AbstractTween.prototype.to = function (toObject, duration, easing, easingParam, interpolationParams) {
-	// The API allows to pass interpolation names that will be replaced
-	// by the corresponding interpolation functions
+	// The API allows to pass easing names that will be replaced
+	// by the corresponding easing functions
 	if (typeof(easing) === 'string') {
-		// Replacing interpolation name by interpolation function
+		// Replacing easing name by easing function
 		if (easingFunctions[easing] === undefined) {
 			console.warn('[AbstractTween.to] Given easing does not exist');
 			easing = undefined;

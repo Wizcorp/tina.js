@@ -13,7 +13,8 @@ function BoundedPlayable() {
 	this._pingpong   = false; // To make the playable go backward on even iterations
 
 	this._onComplete = null;
-};
+}
+
 BoundedPlayable.prototype = Object.create(Playable.prototype);
 BoundedPlayable.prototype.constructor = BoundedPlayable;
 module.exports = BoundedPlayable;
@@ -77,6 +78,21 @@ BoundedPlayable.prototype._complete = function (overflow) {
 	}
 };
 
+BoundedPlayable.prototype._start = function (timeOffset) {
+	this._startTime = -timeOffset;
+
+	if (this._onStart !== null) {
+		this._onStart();
+	}
+
+	// Making sure the playable is not over yet
+	if (timeOffset >= this.getDuration()) {
+		// Playable is over
+		// Moving it to given time offset
+		// This will have the effect of completing it
+		this._moveTo(this._startTime + timeOffset, timeOffset);
+	}
+};
 
 BoundedPlayable.prototype._moveTo = function (time, dt) {
 	dt *= this._speed;
@@ -85,7 +101,7 @@ BoundedPlayable.prototype._moveTo = function (time, dt) {
 	var overflow;
 	if (this._speed !== 0) {
 		if (this._iterations === 1) {
-			// Converting into time relative to when the playable was started
+			// Converting into local time (relative to speed and when the playable started)
 			this._time = (time - this._startTime) * this._speed;
 			if (dt > 0) {
 				if (this._time >= this._duration) {

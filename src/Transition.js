@@ -9,7 +9,7 @@
 function update(object, t) {
 	var p = this.prop;
 	object[p] = this.from[p] * (1 - t) + this.to[p] * t;
-};
+}
 
 // Several Properties
 function updateP(object, t) {
@@ -18,13 +18,13 @@ function updateP(object, t) {
 		var p = q[i];
 		object[p] = this.from[p] * (1 - t) + this.to[p] * t;
 	}
-};
+}
 
 // Interpolation
 function updateI(object, t) {
 	var p = this.prop;
 	object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);
-};
+}
 
 // Interpolation
 // Several Properties
@@ -34,14 +34,14 @@ function updatePI(object, t) {
 		var p = q[i];
 		object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);
 	}
-};
+}
 
 // Easing
 function updateE(object, t) {
 	t = this.easing(t, this.easingParam);
 	var p = this.prop;
 	object[p] = this.from[p] * (1 - t) + this.to[p] * t;
-};
+}
 
 // Easing
 // Several Properties
@@ -52,14 +52,14 @@ function updatePE(object, t) {
 		var p = q[i];
 		object[p] = this.from[p] * (1 - t) + this.to[p] * t;
 	}
-};
+}
 
 // Easing
 // Interpolation
 function updateIE(object, t) {
 	var p = this.prop;
 	object[p] = this.interps[p](this.easing(t, this.easingParam), this.from[p], this.to[p], this.interpParams[p]);
-};
+}
 
 // Easing
 // Interpolation
@@ -71,7 +71,7 @@ function updatePIE(object, t) {
 		var p = q[i];
 		object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);
 	}
-};
+}
 
 var updateMethods = [
 	[
