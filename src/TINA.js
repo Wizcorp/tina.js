@@ -8,41 +8,46 @@
  * @desc 
  *
  * Tweening and INterpolations for Animation
- * 
- * Animation library to easily create and customisable tweens,
- * timelines, sequences and other playable components.
  *
  * Note: if you want a particular component to be added
  * create an issue or contribute at https://github.com/Wizcorp/tina.js
  */
 
+// window within a browser, global within node
+var root;
+if (typeof(window) !== 'undefined') {
+	root = window;
+} else if (typeof(global) !== 'undefined') {
+	root = global;
+} else {
+	console.warn('[TINA] Your environment might not support TINA.');
+	root = this;
+}
+
 // Method to trigger automatic update of TINA
 var requestAnimFrame = (function(){
-	return window.requestAnimationFrame    || 
-		window.webkitRequestAnimationFrame || 
-		window.mozRequestAnimationFrame    || 
-		window.oRequestAnimationFrame      || 
-		window.msRequestAnimationFrame
-})();
-
-var cancelAnimFrame = (function(){
-	return window.cancelAnimationFrame    || 
-		window.webkitCancelAnimationFrame || 
-		window.mozCancelAnimationFrame    || 
-		window.oCancelAnimationFrame      || 
-		window.msCancelAnimationFrame
+	return root.requestAnimationFrame    || 
+		root.webkitRequestAnimationFrame || 
+		root.mozRequestAnimationFrame    || 
+		root.oRequestAnimationFrame      || 
+		root.msRequestAnimationFrame     ||
+		function(callback){
+			root.setTimeout(callback, 1000 / 60);
+		};
 })();
 
 // Performance.now gives better precision than Date.now
-var clock = window.performance || Date;
+var clock = root.performance || Date;
 
 var TINA = {
 	_tweeners: [],
+
 	_defaultTweener: null,
-	_requestAnimFrameId: null,
 
 	_startTime: 0,
-	_time: 0,
+	_time:      0,
+
+	_running: false,
 
 	// callbacks
 	_onStart:  null,
@@ -51,7 +56,8 @@ var TINA = {
 	_onUpdate: null,
 	_onStop:   null,
 
-	_pauseOnLostFocus: false,
+	_pauseOnLostFocus:            false,
+	_pauseOnLostFocusInitialised: false,
 
 	onStart: function (onStart) {
 		this._onStart = onStart;
@@ -74,7 +80,7 @@ var TINA = {
 	},
 
 	isRunning: function () {
-		return (this._requestAnimFrameId !== null);
+		return (this._running === true);
 	},
 
 	update: function () {
@@ -112,9 +118,8 @@ var TINA = {
 	},
 
 	start: function () {
-		if (this._requestAnimFrameId !== null) {
-			console.warn('[TINA.start] TINA is already running');
-			return this;
+		if (this._startAutomaticUpdate() === false) {
+			return;
 		}
 
 		if (this._onStart !== null) {
@@ -129,25 +134,14 @@ var TINA = {
 			this._tweeners[t]._start();
 		}
 
-		this._startAutomaticUpdate();
 		return this;
 	},
 
-	// internal start method, called by start and resume
-	_startAutomaticUpdate: function () {
-		function updateTINA() {
-			if (TINA._requestAnimFrameId !== null) {
-				TINA.update();
-				requestAnimFrame(updateTINA);
-			}
+	stop: function () {
+		if (this._stopAutomaticUpdate() === false) {
+			return;
 		}
 
-		// Starting the animation loop
-		this._requestAnimFrameId = requestAnimFrame(updateTINA);
-	},
-
-	stop: function () {
-		this._running = false;
 		var runningTweeners = this._tweeners.slice(0);
 		for (var t = 0; t < runningTweeners.length; t += 1) {
 			runningTweeners[t]._stop();
@@ -161,24 +155,46 @@ var TINA = {
 			this._onStop();
 		}
 
-		this._stopAutomaticUpdate();
 		return this;
+	},
+
+	// internal start method, called by start and resume
+	_startAutomaticUpdate: function () {
+		if (this._running === true) {
+			console.warn('[TINA.start] TINA is already running');
+			return false;
+		}
+
+		function updateTINA() {
+			if (TINA._running === true) {
+				TINA.update();
+				requestAnimFrame(updateTINA);
+			}
+		}
+
+		// Starting the animation loop
+		this._running = true;
+		requestAnimFrame(updateTINA);
+		return true;
 	},
 
 	// Internal stop method, called by stop and pause
 	_stopAutomaticUpdate: function () {
-		// Starting the animation loop
-		cancelAnimFrame(this._requestAnimFrameId);
-		this._requestAnimFrameId = null;
+		if (this._running === false) {
+			console.warn('[TINA.pause] TINA is not running');
+			return false;
+		}
+
+		// Stopping the animation loop
+		this._running = false;
+		return true;
 	},
 
 	pause: function () {
-		if (this._requestAnimFrameId === null) {
-			console.warn('[TINA.pause] TINA is not running');
-			return this;
+		if (this._stopAutomaticUpdate() === false) {
+			return;
 		}
 
-		this._running = false;
 		for (var t = 0; t < this._tweeners.length; t += 1) {
 			this._tweeners[t]._pause();
 		}
@@ -186,18 +202,14 @@ var TINA = {
 		if (this._onPause !== null) {
 			this._onPause();
 		}
-
-		this._stopAutomaticUpdate();
 		return this;
 	},
 
 	resume: function () {
-		if (this._running === true) {
-			console.warn('[TINA.resume] TINA is already running');
-			return this;
+		if (this._startAutomaticUpdate() === false) {
+			return;
 		}
 
-		this._running = true;
 		if (this._onResume !== null) {
 			this._onResume();
 		}
@@ -215,11 +227,70 @@ var TINA = {
 			this._tweeners[t]._resume();
 		}
 
-		this._startAutomaticUpdate();
 		return this;
 	},
 
+	_initialisePauseOnLostFocus: function () {
+		if (this._pauseOnLostFocusInitialised === true) {
+			return;
+		}
+
+		if (document === undefined) {
+			// Document is not defined (TINA might be running on node.js)
+			console.warn('[TINA.pauseOnLostFocus] Cannot pause on lost focus because TINA is not running in a webpage (node.js does not allow this functionality)');
+			return;
+		}
+
+		// To handle lost of focus of the page
+		var hidden, visbilityChange; 
+		if (typeof document.hidden !== 'undefined') {
+			// Recent browser support 
+			hidden = 'hidden';
+			visbilityChange = 'visibilitychange';
+		} else if (typeof document.mozHidden !== 'undefined') {
+			hidden = 'mozHidden';
+			visbilityChange = 'mozvisibilitychange';
+		} else if (typeof document.msHidden !== 'undefined') {
+			hidden = 'msHidden';
+			visbilityChange = 'msvisibilitychange';
+		} else if (typeof document.webkitHidden !== 'undefined') {
+			hidden = 'webkitHidden';
+			visbilityChange = 'webkitvisibilitychange';
+		}
+
+		if (typeof document[hidden] === 'undefined') {
+			console.warn('[Tweener] Cannot pause on lost focus because the browser does not support the Page Visibility API');
+			return;
+		}
+
+		this._pauseOnLostFocusInitialised = true;
+
+		// Handle page visibility change
+		var wasRunning = false;
+		document.addEventListener(visbilityChange, function () {
+			if (document[hidden]) {
+				// document is hiding
+				wasRunning = TINA.isRunning();
+				if (wasRunning && TINA._pauseOnLostFocus) {
+					TINA.pause();
+				}
+			}
+
+			if (!document[hidden]) {
+				// document is back (we missed you buddy)
+				if (wasRunning && TINA._pauseOnLostFocus) {
+					// Running TINA only if it was running when the document focus was lost
+					TINA.resume();
+				}
+			}
+		}, false);
+	},
+
 	pauseOnLostFocus: function (pauseOnLostFocus) {
+		if (pauseOnLostFocus === true && this._pauseOnLostFocusInitialised === false) {
+			this._initialisePauseOnLostFocus();
+		}
+
 		this._pauseOnLostFocus = pauseOnLostFocus;
 		return this;
 	},
@@ -272,54 +343,4 @@ var TINA = {
 	}
 };
 
-// To handle lost of focus of the page
-// Constants to manage lost of focus of the page
-var hidden, visbilityChange; 
-if (typeof document.hidden !== 'undefined') {
-	// Recent browser support 
-	hidden = 'hidden';
-	visbilityChange = 'visibilitychange';
-} else if (typeof document.mozHidden !== 'undefined') {
-	hidden = 'mozHidden';
-	visbilityChange = 'mozvisibilitychange';
-} else if (typeof document.msHidden !== 'undefined') {
-	hidden = 'msHidden';
-	visbilityChange = 'msvisibilitychange';
-} else if (typeof document.webkitHidden !== 'undefined') {
-	hidden = 'webkitHidden';
-	visbilityChange = 'webkitvisibilitychange';
-}
-
-if (typeof document[hidden] === 'undefined') {
-	this._warn('[Tweener] Cannot pause on lost focus because the browser does not support the Page Visibility API');
-} else {
-	// Handle page visibility change
-	var wasRunning = false;
-	document.addEventListener(visbilityChange, function () {
-		if (document[hidden]) {
-			// document is hiding
-			wasRunning = TINA.isRunning();
-			if (wasRunning && TINA._pauseOnLostFocus) {
-				TINA.pause();
-			}
-		}
-
-		if (!document[hidden]) {
-			// document is back (we missed you buddy)
-			if (wasRunning && TINA._pauseOnLostFocus) {
-				// Running TINA only if it was running when the document focus was lost
-				TINA.resume();
-			}
-		}
-	}, false);
-}
-
-(function (root) {
-	// Global variable
-	root.TINA = TINA;
-	if (root !== window && window) {
-		window.TINA = TINA;
-	}
-})(this);
-
-module.exports = TINA;
+module.exports = global.TINA = TINA;

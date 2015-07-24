@@ -1,8 +1,5 @@
 var Tweener = require('./Tweener');
 
-// Performance.now gives better precision than Date.now
-var clock = window.performance || Date;
-
 /**
  *
  * @classdesc
