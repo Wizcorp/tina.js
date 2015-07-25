@@ -1,8 +1,8 @@
 # TINA
 
-[![Install with NPM](https://nodei.co/npm/tina.png?downloads=true&stars=true)](https://nodei.co/npm/tina/)
-
 **Tweening and INterpolations for Animation**
+
+[![Install with NPM](https://nodei.co/npm/tina.png?downloads=true&stars=true)](https://nodei.co/npm/tina/)
 
 A comprehensive, high performance, easy to use, open source animation library in JavaScript. 
 
@@ -22,6 +22,7 @@ A comprehensive, high performance, easy to use, open source animation library in
 * Bonus: Creation and removal of tweens within the callback of another tween will not result in any unwanted side effect (infamous bug of other tweening libraries)
 
 Note: Do not hesitate to contribute by reporting issues or by submitting your own components and interpolations.
+
 Warning: Still in beta version!
 
 ## How to use
@@ -41,8 +42,8 @@ var TINA = require('tina');
 
 ## API
 
-Existing playable components are: Tween, NestedTween, Timeline, Sequence, Delay, Timer, Ticker (Recorder coming soon).
-The following is a non-exhaustive list of possibilities offered by the API.
+Existing playable components are: Tween, NestedTween, Timeline, Sequence, Delay, Timer, Ticker (Recorder and CSS Tween coming soon).
+The following is a non-exhaustive list of possibilities offered by the TINA.
 
 ### Tween
 To create and start a **tween** (it will be automatically updated):
