@@ -1,15 +1,14 @@
 # TINA
+
 **Tweening and INterpolations for Animation**
 
 [![Install with NPM](https://nodei.co/npm/tina.png?downloads=true&stars=true)](https://nodei.co/npm/tina/)
 
-## Warning: Still in beta version!
-
-A comprehensive, high performance, easy to use, open source animation library in JavaScript.
+A comprehensive, high performance, easy to use, open source animation library in JavaScript. 
 
 * **Easy to use** (API strongly inspired by Tween.js)
 * **Easy to debug** (Proper warnings)
-* **High performance** (Competitive with Tweenjs, benchmark coming soon)
+* **High performance** (Competitive with Tweenjs and GSAP, benchmark coming soon)
 * **High flexibility** (tween transitions can easily be modified after creation)
 * **High customizability** (possibility to use custom easings, interpolations and components)
 * **Running options** (delay, iterations, pingpong, persist and speed)
@@ -19,22 +18,32 @@ A comprehensive, high performance, easy to use, open source animation library in
 * **Good synchronisation** between tweens
 * **Relative tweening** enables the possibility to alter objects while they are tweening
 * **Nested object tweening** enables the possibility to alter nested objects using a single tween
+* **Compatible with Node.js!**
 * Bonus: Creation and removal of tweens within the callback of another tween will not result in any unwanted side effect (infamous bug of other tweening libraries)
 
 Note: Do not hesitate to contribute by reporting issues or by submitting your own components and interpolations.
 
+Warning: Still in beta version!
+
 ## How to use
 
-Include tina's build in your html using either the [minified library](https://raw.githubusercontent.com/Wizcorp/tina/master/build/tina.min.js) or the [unminified version](https://raw.githubusercontent.com/Wizcorp/tina/master/build/tina.js).
+### In a browser
+Include TINA's build in your html using either the [minified library](https://raw.githubusercontent.com/Wizcorp/tina/master/build/tina.min.js) or the [unminified version](https://raw.githubusercontent.com/Wizcorp/tina/master/build/tina.js).
 
 ```html
 <script src="tina.min.js"></script>
 ```
 
+### In Node.js
+Install TINA using ```npm install tina```, then require it:
+```javascript
+var TINA = require('tina');
+```
+
 ## API
 
-Existing playable components are: Tween, NestedTween, Timeline, Sequence, Delay, Timer, Ticker (Recorder coming soon).
-The following is a non-exhaustive list of possibilities offered by the API.
+Existing playable components are: **Tween, NestedTween, Timeline, Sequence, Delay, Timer, Ticker** (Recorder and CSS Tween coming soon).
+The following is a non-exhaustive list of possibilities offered by the TINA.
 
 ### Tween
 To create and start a **tween** (it will be automatically updated):
@@ -96,13 +105,13 @@ To use **interpolation** functions:
 var myObject = { abc: 'Hello' };
 
 var myTween = new TINA.Tween(myObject, ['abc'])
-	.to({ abc: 'World' }, duration)
 	.interpolations({ abc: 'string' })
+	.to({ abc: 'World' }, duration)
 	.start();
 // or
 var myTween = new TINA.Tween(myObject, ['abc'])
-	.to({ abc: 'World' }, duration)
 	.interpolations({ abc: TINA.interpolation.string })
+	.to({ abc: 'World' }, duration)
 	.start();
 ```
 
@@ -131,7 +140,7 @@ var myTween = new TINA.Tween(myObject, ['x'])
 
 ### NestedTween
 Nested tweens give the ability to tween nested objects using a single tween.
-A nested tween allows to interpolation between the given nested objects.
+A nested tween allows to interpolate between nested objects.
 To tween a **nested tween**:
 ``` javascript
 var nestedObject = {
@@ -146,7 +155,7 @@ var myNestedTween = new TINA.NestedTween(nestedObject, ['position.x', 'position.
 }, 500)
 .start();
 ```
-Note: the NestedTween API remains identical to Tween and all the functionalities of Tween are available to a NestedTween object.
+Note: the NestedTween API remains identical to Tween and all the functionalities of Tween are available to the NestedTween component.
 
 ### Timeline
 Timelines are used to play tweens in parallel.
@@ -225,8 +234,10 @@ To specify the default tweener for every tween:
 ``` javascript
 // I choose a timer as my default tweener
 var myTimer = new TINA.Timer().useAsDefault();
-// myTween will be attached to myTimer and will take 500 milliseconds to tween
-var myTween = new TINA.Tween(myObject, ['x']).to({ x: 5 }, 500).start();
+// myTween will be attached to myTimer
+var myTween = new TINA.Tween(myObject, ['x'])
+	.to({ x: 5 }, 1000)
+	.start();
 ```
 
 #### Timer
@@ -297,7 +308,8 @@ function update() {
 requestAnimationFrame(update);
 ```
 
-Similarly to a timer it is possible to specify how fast the time goes for a ticker.
+By default the ticker goes at a speed of 1 unit per update.
+But similarly to a timer it is possible to specify how fast the time goes for a ticker.
 At every update the time will increase by the given ```tupt```:
 ``` javascript
 var tupt = 2; // Time units per tick/update

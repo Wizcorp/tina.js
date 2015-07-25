@@ -25,68 +25,121 @@ var TWO_PI      = Math.PI * 2;
 var EXP         = 2.718281828;
 
 // No easing
-exports.none = function() {
+exports.none = function () {
 	return 1;
 };
 
 // Linear
-exports.linear = function(t) {
+exports.linear = function (t) {
 	return t;
 };
 
 // Flash style transition
 // ease in [-1, 1] for usage similar to flash
 // but works with ease in ]-Inf, +Inf[
-exports.flash = function(t, ease) {
+exports.flash = function (t, ease) {
 	return t + t * ease - t * t * ease;
 };
 
 // Parabolic
-exports.parabolic = function(t) {
+exports.parabolic = function (t) {
 	var r = (2 * t - 1);
 	return 1 - r * r;
 };
 
 // Trigonometric, n = number of iterations in ]-Inf, +Inf[
-exports.trigo = function(t, n) {
+exports.trigo = function (t, n) {
 	return 0.5 * (1 - Math.cos(TWO_PI * t * n));
 };
 
 // Elastic, e = elasticity in ]0, +Inf[
-exports.elastic = function(t, e) {
+exports.elastic = function (t, e) {
 	if (t === 1) return 1;
 	e /= (e + 1); // transforming e
 	var n = (1 + e) * Math.log(1 - t) / Math.log(e);
 	return Math.cos(n - PI_OVER_TWO) * Math.pow(e, n);
 };
 
+// Quadratric
+exports.quadIn = function (t) { 
+	return t * t;
+};
+
+exports.quadOut = function (t) {
+	return 2 * t - t * t;
+};
+
+exports.quadInOut = function (t) {
+	if (t < 0.5) {
+		return 2 * t * t;
+	} else {
+		return 2 * (2 * t - t * t) - 1;
+	}
+};
+
+// Cubic
+exports.cubicIn = function (t) { 
+	return t * t * t;
+};
+
+exports.cubicOut = function (t) {
+	return 3 * t - 3 * t * t + t * t * t;
+};
+
+exports.cubicInOut = function (t) {
+	if (t < 0.5) {
+		return 4 * t * t * t;
+	} else {
+		return 4 * (3 * t - 3 * t * t + t * t * t) - 3;
+	}
+};
+
+// Quartic
+exports.quarticIn = function (t) { 
+	return t * t * t * t;
+};
+
+exports.quarticOut = function (t) {
+	var t2 = t * t;
+	return 4 * t - 6 * t2 + 4 * t2 * t - t2 * t2;
+};
+
+exports.quarticOut = function (t) {
+	if (t < 0.5) {
+		return 8 * t * t * t * t;
+	} else {
+		var t2 = t * t;
+		return 8 * (4 * t - 6 * t2 + 4 * t2 * t - t2 * t2) - 7;
+	}
+};
+
 // Polynomial, p = power in ]0, + Inf[
-exports.polyIn = function(t, p) { 
+exports.polyIn = function (t, p) { 
 	return Math.pow(t, p);
 };
 
-exports.polyOut = function(t, p) {
-	return 1 - Math.pow((1 - t) / 1, p);
+exports.polyOut = function (t, p) {
+	return 1 - Math.pow(1 - t, p);
 };
 
-exports.polyInOut = function(t, p) {
+exports.polyInOut = function (t, p) {
 	if (t < 0.5) {
 		return Math.pow(2 * t, p) / 2;
 	} else {
-		return (1 + (1 - Math.pow(2 * (1 - t), p))) / 2;
+		return (2 - Math.pow(2 * (1 - t), p)) / 2;
 	}
 };
 
 // Sine
-exports.sineIn = function(t) {
+exports.sineIn = function (t) {
 	return 1 - Math.cos(PI_OVER_TWO * t);
 };
 
-exports.sineOut = function(t) {
+exports.sineOut = function (t) {
 	return Math.sin(PI_OVER_TWO * t);
 };
 
-exports.sineInOut = function(t) {
+exports.sineInOut = function (t) {
 	if (t < 0.5) {
 		return (1 - Math.cos(PI * t)) / 2;
 	} else {
@@ -95,15 +148,15 @@ exports.sineInOut = function(t) {
 };
 
 // Exponential, e = exponent in ]0, + Inf[
-exports.expIn = function(t, e) {
+exports.expIn = function (t, e) {
 	return (1 - Math.pow(EXP, e * t)) / (1 - Math.pow(EXP, e));
 };
 
-exports.expOut = function(t, e) {
+exports.expOut = function (t, e) {
 	return (1 - Math.pow(EXP, - e * t)) / (1 - Math.pow(EXP, - e));
 };
 
-exports.expInOut = function(t, e) {
+exports.expInOut = function (t, e) {
 	if (t < 0.5) {
 		return (1 - Math.pow(EXP, 2 * e * t)) / (1 - Math.pow(EXP, e)) / 2;
 	} else {
@@ -112,15 +165,15 @@ exports.expInOut = function(t, e) {
 };
 
 // Circular
-exports.circIn = function(t) {
+exports.circIn = function (t) {
 	return 1 - Math.sqrt(1 - Math.pow(t, 2));
 };
 
-exports.circOut = function(t) {
+exports.circOut = function (t) {
 	return Math.sqrt(1 - Math.pow(1 - t, 2));
 };
 
-exports.circInOut = function(t) {
+exports.circInOut = function (t) {
 	if (t < 0.5) {
 		return (1 - Math.sqrt(1 - 4 * t * t)) / 2;
 	} else {
@@ -129,21 +182,21 @@ exports.circInOut = function(t) {
 };
 
 // Elastic, e = elasticity in ]0, +Inf[
-exports.elasticIn = function(t, e) {
+exports.elasticIn = function (t, e) {
 	if (t === 0) { return 0; }
 	e /= (e + 1); // transforming e
 	var n = (1 + e) * Math.log(t) / Math.log(e);
 	return Math.cos(n) * Math.pow(e, n);
 };
 
-exports.elasticOut = function(t, e) {
+exports.elasticOut = function (t, e) {
 	if (t === 1) { return 1; }
 	e /= (e + 1); // transforming e
 	var n = (1 + e) * Math.log(1 - t) / Math.log(e);
 	return 1.0 - Math.cos(n) * Math.pow(e, n);
 };
 
-exports.elasticInOut = function(t, e) {
+exports.elasticInOut = function (t, e) {
 	var n;
 	if (t < 0.5) {
 		if (t === 0) { return 0; }
@@ -159,21 +212,21 @@ exports.elasticInOut = function(t, e) {
 };
 
 // Bounce, e = elasticity in ]0, +Inf[
-exports.bounceIn = function(t, e) {
+exports.bounceIn = function (t, e) {
 	if (t === 0) { return 0; }
 	e /= (e + 1); // transforming e
 	var n = (1 + e) * Math.log(t) / Math.log(e);
 	return Math.abs(Math.cos(n) * Math.pow(e, n));
 };
 
-exports.bounceOut = function(t, e) {
+exports.bounceOut = function (t, e) {
 	if (t === 1) { return 1; }
 	e /= (e + 1); // transforming e
 	var n = (1 + e) * Math.log(1 - t) / Math.log(e);
 	return 1.0 - Math.abs(Math.cos(n) * Math.pow(e, n));
 };
 
-exports.bounceInOut = function(t, e) {
+exports.bounceInOut = function (t, e) {
 	var n;
 	if (t < 0.5) {
 		if (t === 0) { return 0; }
@@ -189,16 +242,16 @@ exports.bounceInOut = function(t, e) {
 };
 
 // Back, e = elasticity in [0, +Inf[
-exports.backIn = function(t, e) {
+exports.backIn = function (t, e) {
 	return t * t * ((e + 1) * t - e);
 };
 
-exports.backOut = function(t, e) {
+exports.backOut = function (t, e) {
 	t -= 1;
 	return t * t * ((e + 1) * t + e) + 1;
 };
 
-exports.backInOut = function(t, e) {
+exports.backInOut = function (t, e) {
 	if (t < 0.5) {
 		t *= 2;
 		return 0.5 * (t * t * ((e + 1) * t - e));
