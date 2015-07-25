@@ -3,7 +3,8 @@
 
 A comprehensive, high performance, easy to use, open source animation library in JavaScript. 
 
-**Compatible with Node.js!***
+**Compatible with Node.js!**
+
 [![Install with NPM](https://nodei.co/npm/tina.png?downloads=true&stars=true)](https://nodei.co/npm/tina/)
 
 * **Easy to use** (API strongly inspired by Tween.js)
