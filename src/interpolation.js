@@ -20,28 +20,28 @@
 
 // TODO: Test them all!
 
-exports.none = function(t, a, b) {
+exports.none = function (t, a, b) {
 	return b;
 };
 
-exports.linear = function(t, a, b) {
+exports.linear = function (t, a, b) {
 	return a * (1 - t) + b * t;
 };
 
 // d = discretization
-exports.discrete = function(t, a, b, d) {
+exports.discrete = function (t, a, b, d) {
 	if (d === undefined) { d = 1; }
 	return Math.floor((a * (1 - t) + b * t) / d) * d;
 };
 
-exports.vectorXY = function(t, a, b) {
+exports.vectorXY = function (t, a, b) {
 	return {
 		x: a.x * (1 - t) + b.x * t,
 		y: a.y * (1 - t) + b.y * t
 	};
 };
 
-exports.vectorXYZ = function(t, a, b) {
+exports.vectorXYZ = function (t, a, b) {
 	return {
 		x: a.x * (1 - t) + b.x * t,
 		y: a.y * (1 - t) + b.y * t,
@@ -50,7 +50,7 @@ exports.vectorXYZ = function(t, a, b) {
 };
 
 // a, b = vectors
-exports.vector = function(t, a, b) {
+exports.vector = function (t, a, b) {
 	var c = [];
 	for (var i = 0; i < a.length; i += 1) {
 		c[i] = a[i] * (1 - t) + b[i] * t;
@@ -59,7 +59,7 @@ exports.vector = function(t, a, b) {
 };
 
 // a, b = states, c = array of intermediary states
-exports.state = function(t, a, b, c) {
+exports.state = function (t, a, b, c) {
 	var nbStates = b.length + 2;
 	var stateIdx = Math.floor(t * nbStates);
 	if (stateIdx < 1) { return a; }
@@ -68,7 +68,7 @@ exports.state = function(t, a, b, c) {
 };
 
 // a, b = colors
-exports.colorRGB = function(t, a, b) {
+exports.colorRGB = function (t, a, b) {
 	return {
 		r: a.r * (1 - t) + b.r * t,
 		g: a.g * (1 - t) + b.g * t,
@@ -76,7 +76,7 @@ exports.colorRGB = function(t, a, b) {
 	};
 };
 
-exports.colorRGBA = function(t, a, b) {
+exports.colorRGBA = function (t, a, b) {
 	return {
 		r: a.r * (1 - t) + b.r * t,
 		g: a.g * (1 - t) + b.g * t,
@@ -85,7 +85,7 @@ exports.colorRGBA = function(t, a, b) {
 	};
 };
 
-exports.colorRGBToHexa = function(t, a, b) {
+exports.colorRGBToHexa = function (t, a, b) {
 	var cr = Math.round(a.r * (1 - t) + b.r * t);
 	var cg = Math.round(a.g * (1 - t) + b.g * t);
 	var cb = Math.round(a.b * (1 - t) + b.b * t);
@@ -93,7 +93,7 @@ exports.colorRGBToHexa = function(t, a, b) {
 	return '#' + cr.toString(16) + cg.toString(16) + cb.toString(16);
 };
 
-exports.colorRGBToString = function(t, a, b) {
+exports.colorRGBToString = function (t, a, b) {
 	var cr = Math.round(a.r * (1 - t) + b.r * t);
 	var cg = Math.round(a.g * (1 - t) + b.g * t);
 	var cb = Math.round(a.b * (1 - t) + b.b * t);
@@ -101,7 +101,7 @@ exports.colorRGBToString = function(t, a, b) {
 	return 'rgb(' + cr.toString(16) + ',' + cg.toString(16) + ',' + cb.toString(16) + ')';
 };
 
-exports.colorRGBAToString = function(t, a, b) {
+exports.colorRGBAToString = function (t, a, b) {
 	var cr = Math.round(a.r * (1 - t) + b.r * t);
 	var cg = Math.round(a.g * (1 - t) + b.g * t);
 	var cb = Math.round(a.b * (1 - t) + b.b * t);
@@ -112,7 +112,7 @@ exports.colorRGBAToString = function(t, a, b) {
 
 // Interpolation between 2 strings a and b (yes that's possible)
 // Returns a string of the same size as b
-exports.string = function(t, a, b) {
+exports.string = function (t, a, b) {
 	var nbCharsA = a.length;
 	var nbCharsB = b.length;
 	var newString = '';
@@ -133,29 +133,29 @@ exports.string = function(t, a, b) {
 };
 
 // Bezier, c = array of control points in ]-Inf, +Inf[
-exports.bezierQuadratic = function(t, a, b, c) {
+exports.bezierQuadratic = function (t, a, b, c) {
 	var u = 1 - t;
 	return u * u * a + t * (2 * u * c[0] + t * b);
 };
 
-exports.bezierCubic = function(t, a, b, c) {
+exports.bezierCubic = function (t, a, b, c) {
 	var u = 1 - t;
 	return u * u * u * a + t * (3 * u * u * c[0] + t * (3 * u * c[1] + t * b));
 };
 
-exports.bezierQuartic = function(t, a, b, c) {
+exports.bezierQuartic = function (t, a, b, c) {
 	var u = 1 - t;
 	var u2 = 2 * u;
 	return u2 * u2 * a + t * (4 * u * u2 * c[0] + t * (6 * u2 * c[1] + t * (4 * u * c[2] + t * b)));
 };
 
-exports.bezierQuintic = function(t, a, b, c) {
+exports.bezierQuintic = function (t, a, b, c) {
 	var u = 1 - t;
 	var u2 = 2 * u;
 	return u2 * u2 * u * a + t * (5 * u2 * u2 * c[0] + t * (10 * u * u2 * c[1] + t * (10 * u2 * c[2] + t * (5 * u * c[3] + t * b))));
 };
 
-exports.bezier = function(t, a, b, c) {
+exports.bezier = function (t, a, b, c) {
 	var n = c.length;
 	var u = 1 - t;
 	var x = b;
@@ -170,7 +170,7 @@ exports.bezier = function(t, a, b, c) {
 };
 
 // Bezier 2D, c = array of control points in ]-Inf, +Inf[ ^ 2
-exports.bezier2d = function(t, a, b, c) {
+exports.bezier2d = function (t, a, b, c) {
 	var n = c.length;
 	var u = 1 - t;
 	var x = b[0];
@@ -194,7 +194,7 @@ exports.bezier2d = function(t, a, b, c) {
 };
 
 // Bezier 3D, c = array of control points in ]-Inf, +Inf[ ^ 3
-exports.bezier3d = function(t, a, b, c) {
+exports.bezier3d = function (t, a, b, c) {
 	var n = c.length;
 	var u = 1 - t;
 	var x = b[0];
@@ -221,7 +221,7 @@ exports.bezier3d = function(t, a, b, c) {
 };
 
 // Bezier k-dimensions, c = array of control points in ]-Inf, +Inf[ ^ k
-exports.bezierKd = function(t, a, b, c) {
+exports.bezierKd = function (t, a, b, c) {
 	var n = c.length;
 	var u = 1 - t;
 	var k = a.length;
@@ -253,7 +253,7 @@ exports.bezierKd = function(t, a, b, c) {
 };
 
 // CatmullRom, b = array of control points in ]-Inf, +Inf[
-exports.catmullRom = function(t, a, b, c) {
+exports.catmullRom = function (t, a, b, c) {
 	if (t === 1) {
 		return c;
 	}
@@ -294,7 +294,7 @@ exports.catmullRom = function(t, a, b, c) {
 // Only 1d and 2d for now, if any request for 3d then I will add it to the list
 
 // Creating a closure for the noise function to make 'perm' and 'grad' only accessible to it
-exports.noise = (function() {
+exports.noise = (function () {
 	// permutation table
 	var perm = [
 		182, 235, 131, 26, 88, 132, 100, 117, 202, 176, 10, 19, 83, 243, 75, 52,
@@ -348,7 +348,7 @@ exports.noise = (function() {
 	};
 })();
 
-exports.simplex2d = (function() {
+exports.simplex2d = (function () {
 	// permutation table
 	var perm = [
 		182, 235, 131, 26, 88, 132, 100, 117, 202, 176, 10, 19, 83, 243, 75, 52,
