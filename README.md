@@ -1,11 +1,10 @@
 # TINA
 **Tweening and INterpolations for Animation**
 
+A comprehensive, high performance, easy to use, open source animation library in JavaScript. 
+
+**Compatible with Node.js!***
 [![Install with NPM](https://nodei.co/npm/tina.png?downloads=true&stars=true)](https://nodei.co/npm/tina/)
-
-## Warning: Still in beta version!
-
-A comprehensive, high performance, easy to use, open source animation library in JavaScript.
 
 * **Easy to use** (API strongly inspired by Tween.js)
 * **Easy to debug** (Proper warnings)
@@ -22,13 +21,21 @@ A comprehensive, high performance, easy to use, open source animation library in
 * Bonus: Creation and removal of tweens within the callback of another tween will not result in any unwanted side effect (infamous bug of other tweening libraries)
 
 Note: Do not hesitate to contribute by reporting issues or by submitting your own components and interpolations.
+Warning: Still in beta version!
 
 ## How to use
 
+### In a browser
 Include tina's build in your html using either the [minified library](https://raw.githubusercontent.com/Wizcorp/tina/master/build/tina.min.js) or the [unminified version](https://raw.githubusercontent.com/Wizcorp/tina/master/build/tina.js).
 
 ```html
 <script src="tina.min.js"></script>
+```
+
+### In Node.js
+Install tina using ```npm install tina```, then require it:
+```javascript
+var TINA = require('tina');
 ```
 
 ## API
@@ -96,13 +103,13 @@ To use **interpolation** functions:
 var myObject = { abc: 'Hello' };
 
 var myTween = new TINA.Tween(myObject, ['abc'])
-	.to({ abc: 'World' }, duration)
 	.interpolations({ abc: 'string' })
+	.to({ abc: 'World' }, duration)
 	.start();
 // or
 var myTween = new TINA.Tween(myObject, ['abc'])
-	.to({ abc: 'World' }, duration)
 	.interpolations({ abc: TINA.interpolation.string })
+	.to({ abc: 'World' }, duration)
 	.start();
 ```
 
