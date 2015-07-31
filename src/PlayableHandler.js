@@ -229,4 +229,4 @@ PlayableHandler.prototype._update = function (dt) {
 
 // Overridable methods
 PlayableHandler.prototype._onRemovePlayables = function (/* playable */) {};
-PlayableHandler.prototype._onPlayableChange  = function (/* playable */) { console.log('nada'); };
+PlayableHandler.prototype._onPlayableChange  = function (/* playable */) {};
