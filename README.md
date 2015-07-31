@@ -42,8 +42,8 @@ var TINA = require('tina');
 
 ## API
 
-Existing playable components are: **Tween, NestedTween, Timeline, Sequence, Delay, Timer, Ticker** (Recorder and CSS Tween coming soon).
-The following is a non-exhaustive list of possibilities offered by the TINA.
+Existing playable components are: **Tween, NestedTween, Timeline, Sequence, Delay, Timer, Ticker** (Recorder and CSSTween coming soon).
+The following is a non-exhaustive list of possibilities offered by TINA.
 
 ### Tween
 To create and start a **tween** (it will be automatically updated):
@@ -164,8 +164,8 @@ To create a **timeline**:
 var timePosTweenA = 0;
 var timePosTweenB = 2000;
 var myTimeline = new TINA.Timeline()
-	.add(timePosTweenA, myTweenA)
-	.add(timePosTweenB, myTweenB)
+	.add(myTweenA, timePosTweenA)
+	.add(myTweenB, timePosTweenB)
 	.start();
 ```
 

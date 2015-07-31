@@ -1,15 +1,13 @@
-var DoublyList = require('./DoublyList');
-
-function PlayableHandle(playable) {
-	this.playable = playable;
-	this.handle = null;
-}
+var Playable     = require('./Playable');
+var DoublyList   = require('./DoublyList');
 
 /**
  * @classdesc
  * Manages the update of a list of playable with respect to a given elapsed time.
  */
 function PlayableHandler() {
+	Playable.call(this);
+
 	// A DoublyList, rather than an Array, is used to store playables.
 	// It allows for faster removal and is similar in speed for iterations.
 
@@ -19,10 +17,9 @@ function PlayableHandler() {
 	// (KUDOs to the JS engines guys)
 
 	// List of active playables handled by this player
-	this._activePlayables   = new DoublyList();
+	this._activePlayables = new DoublyList();
 
 	// List of inactive playables handled by this player
-	// TODO: use a priority list of inactive playables (ordered by starting time)
 	this._inactivePlayables = new DoublyList();
 
 	// List of playables that are not handled by this player anymore and are waiting to be removed
@@ -34,9 +31,11 @@ function PlayableHandler() {
 	// Whether to trigger the debugger on warnings
 	this._debug = false;
 }
+PlayableHandler.prototype = Object.create(Playable.prototype);
+PlayableHandler.prototype.constructor = PlayableHandler;
 module.exports = PlayableHandler;
 
-PlayableHandler.prototype._add = function (playable) {
+PlayableHandler.prototype._add = function (playable, delay) {
 	if (playable._handle === null) {
 		// Playable can be added
 		playable._handle = this._inactivePlayables.add(playable);
@@ -75,12 +74,11 @@ PlayableHandler.prototype._remove = function (playable) {
 	if (playable._handle.container === this._activePlayables) {
 		// Playable was active, adding to remove list
 		playable._handle = this._playablesToRemove.add(playable._handle);
-		playable._stop();
 		return true;
 	}
 
 	if (playable._handle.container === this._inactivePlayables) {
-		// Playable was being started, removing from starting playables
+		// Playable was inactive, removing from inactive playables
 		playable._handle = this._inactivePlayables.removeByReference(playable._handle);
 		return true;
 	}
@@ -95,7 +93,14 @@ PlayableHandler.prototype._remove = function (playable) {
 };
 
 PlayableHandler.prototype.remove = function (playable) {
-	this._remove(playable);
+	if (playable._handle.container === this._activePlayables) {
+		playable.stop();
+	}
+
+	if (playable._handle.container !== this._playablesToRemove) {
+		this._remove(playable);
+	}
+
 	this._onRemovePlayables();
 	return this;
 };
@@ -105,7 +110,7 @@ PlayableHandler.prototype.removeAll = function () {
 	var handle = this._activePlayables.first; 
 	while (handle !== null) {
 		var next = handle.next;
-		this._remove(handle.object);
+		handle.object.stop();
 		handle = next;
 	}
 
@@ -114,22 +119,12 @@ PlayableHandler.prototype.removeAll = function () {
 	return this;
 };
 
-// Overridable method
-PlayableHandler.prototype._onRemovePlayables = function () {};
-
 PlayableHandler.prototype.possess = function (playable) {
 	if (playable._handle === null) {
 		return false;
 	}
 
 	return (playable._handle.container === this._activePlayables) || (playable._handle.container === this._inactivePlayables);
-};
-
-PlayableHandler.prototype._inactivate = function (playable) {
-	this._activePlayables.removeByReference(playable._handle);
-
-	// Playable is moved to the list of inactive playables
-	playable._handle = this._inactivePlayables.add(playable);
 };
 
 PlayableHandler.prototype._handlePlayablesToRemove = function () {
@@ -147,10 +142,10 @@ PlayableHandler.prototype._handlePlayablesToRemove = function () {
 };
 
 PlayableHandler.prototype.clear = function () {
-	this._handledPlayables.clear();
 	this._activePlayables.clear();
 	this._inactivePlayables.clear();
 	this._playablesToRemove.clear();
+	this._controls.clear();
 	return this;
 };
 
@@ -174,3 +169,64 @@ PlayableHandler.prototype.debug = function (debug) {
 	this._debug = debug;
 	return this;
 };
+
+PlayableHandler.prototype.stop = function () {
+	// Stopping all active playables
+	var handle = this._activePlayables.first; 
+	while (handle !== null) {
+		var next = handle.next;
+		var playable = handle.object;
+		playable.stop();
+		handle = next;
+	}
+
+	this._handlePlayablesToRemove();
+
+	Playable.prototype.stop.call(this);
+};
+
+PlayableHandler.prototype._activate = function (playable) {
+	// O(1)
+	this._inactivePlayables.removeByReference(playable._handle);
+	playable._handle = this._activePlayables.addBack(playable);
+};
+
+PlayableHandler.prototype._inactivate = function (playable) {
+	// O(1)
+	this._activePlayables.removeByReference(playable._handle);
+	playable._handle = this._inactivePlayables.addBack(playable);
+};
+
+PlayableHandler.prototype._updatePlayableList = function (dt) {
+	this._handlePlayablesToRemove();
+
+	// Activating playables
+	var handle = this._inactivePlayables.first; 
+	while (handle !== null) {
+		var playable = handle.object;
+
+		// Fetching handle of next playable
+		handle = handle.next;
+
+		var startTime = playable._startTime;
+		var endTime   = startTime + playable.getDuration();
+		if (startTime <= this._time && this._time <= endTime) {
+			// O(1)
+			this._inactivePlayables.removeByReference(playable._handle);
+			playable._handle = this._activePlayables.addBack(playable);
+
+			playable._start(this._time - startTime);
+		}
+	}
+};
+
+PlayableHandler.prototype._update = function (dt) {
+	this._updatePlayableList(dt);
+	for (var handle = this._activePlayables.first; handle !== null; handle = handle.next) {
+		handle.object._moveTo(this._time, dt);
+	}
+};
+
+// Overridable methods
+PlayableHandler.prototype._onRemovePlayables = function (/* playable */) {};
+PlayableHandler.prototype._onPlayableChange  = function (/* playable */) {};

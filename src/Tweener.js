@@ -21,37 +21,11 @@ Tweener.prototype._inactivate = function (playable) {
 };
 
 Tweener.prototype._moveTo = function (time, dt) {
-	this._time = this._getElapsedTime(time - this._startTime);
-	dt = this._getSingleStepDuration(dt);
+	dt = this._getSingleStepDuration(dt) * this._speed;
+	this._time = this._getElapsedTime(time - this._startTime) * this._speed;
 
-	// // Computing time overflow and clamping time
-	// var overflow;
-	// if (dt > 0) {
-	// 	if (this._time >= this._duration) {
-	// 		overflow = this._time - this._duration;
-	// 		dt -= overflow;
-	// 		this._time = this._duration;
-	// 	}
-	// } else if (dt < 0) {
-	// 	if (this._time <= 0) {
-	// 		overflow = this._time;
-	// 		dt -= overflow;
-	// 		this._time = 0;
-	// 	}
-	// }
-
-	this._handlePlayablesToRemove();
-
-	// Inactive playables are set as active
-	while (this._inactivePlayables.length > 0) {
-		// O(1)
-		playable = this._inactivePlayables.pop();
-		playable._handle = this._activePlayables.add(playable);
-	}
-
-	for (var handle = this._activePlayables.first; handle !== null; handle = handle.next) {
-		handle.object._moveTo(this._time, dt);
-	}
+	this._updatePlayableList(dt);
+	this._update(dt);
 
 	if (this._onUpdate !== null) {
 		this._onUpdate(this._time, dt);

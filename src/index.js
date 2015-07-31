@@ -2,8 +2,9 @@ var TINA = require('./TINA.js');
 
 // TINA.CSSTween        = require('./CSSTween');
 TINA.Delay           = require('./Delay');
-TINA.BoundedPlayable = require('./BoundedPlayable');
-TINA.BoundedPlayer   = require('./BoundedPlayer');
+TINA.BriefExtension  = require('./BriefExtension');
+TINA.BriefPlayable   = require('./BriefPlayable');
+TINA.BriefPlayer     = require('./BriefPlayer');
 TINA.easing          = require('./easing');
 TINA.interpolation   = require('./interpolation');
 TINA.NestedTween     = require('./NestedTween');

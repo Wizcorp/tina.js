@@ -30,7 +30,6 @@ Object.defineProperty(Timer.prototype, 'tups', {
 			tups = 0;
 		}
 
-		var dt = this._time - this._startTime;
 		if (tups === 0) {
 			// Setting start as if new tups was 1
 			this._startTime += this._time / this._tups - this._time;

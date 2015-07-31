@@ -131,7 +131,7 @@ var TINA = {
 		this._time = 0;
 
 		for (var t = 0; t < this._tweeners.length; t += 1) {
-			this._tweeners[t]._start();
+			this._tweeners[t]._start(0);
 		}
 
 		return this;
@@ -144,7 +144,7 @@ var TINA = {
 
 		var runningTweeners = this._tweeners.slice(0);
 		for (var t = 0; t < runningTweeners.length; t += 1) {
-			runningTweeners[t]._stop();
+			runningTweeners[t].stop();
 		}
 
 		// Stopping the tweeners have the effect of automatically removing them from TINA

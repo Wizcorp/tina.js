@@ -24,10 +24,7 @@ Sequence.prototype.constructor = Sequence;
 module.exports = Sequence;
 
 Sequence.prototype.add = function (playable) {
-	playable._startTime = this._duration;
-	this._duration += playable._duration;
-	this._add(playable);
-	return this;
+	return Timeline.prototype.add.call(this, playable, this._duration);
 };
 
 Sequence.prototype.addDelay = function (duration) {

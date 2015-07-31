@@ -1,5 +1,5 @@
-var BoundedPlayable = require('./BoundedPlayable');
-var AbstractTween   = require('./AbstractTween');
+var BriefPlayable = require('./BriefPlayable');
+var AbstractTween = require('./AbstractTween');
 
 var inherit = require('./inherit');
 /**
@@ -11,16 +11,15 @@ var inherit = require('./inherit');
  * @param {array}  properties - Properties of the object to tween
  *
  */
-
 function Tween(object, properties) {
 	if ((this instanceof Tween) === false) {
 		return new Tween(object, properties);
 	}
 
-	BoundedPlayable.call(this);
+	BriefPlayable.call(this);
 	AbstractTween.call(this, object, properties);
 }
-Tween.prototype = Object.create(BoundedPlayable.prototype);
+Tween.prototype = Object.create(BriefPlayable.prototype);
 Tween.prototype.constructor = Tween;
 inherit(Tween, AbstractTween);
 module.exports = Tween;
