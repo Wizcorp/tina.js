@@ -1,4 +1,4 @@
-var BoundedPlayable = require('./BoundedPlayable');
+var BriefPlayable = require('./BriefPlayable');
 var AbstractTween   = require('./AbstractTween');
 
 /**
@@ -16,7 +16,7 @@ function NestedTween(object, properties) {
 		return new NestedTween(object, properties);
 	}
 
-	BoundedPlayable.call(this);
+	BriefPlayable.call(this);
 
 	// Map if tween per object for fast access
 	this._tweensPerObject = {};
@@ -82,7 +82,7 @@ function NestedTween(object, properties) {
 		this._tweensPerObject[propertyChainString] = tween;
 	}
 }
-NestedTween.prototype = Object.create(BoundedPlayable.prototype);
+NestedTween.prototype = Object.create(BriefPlayable.prototype);
 NestedTween.prototype.constructor = NestedTween;
 module.exports = NestedTween;
 

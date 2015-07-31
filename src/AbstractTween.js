@@ -79,8 +79,8 @@ AbstractTween.prototype.relative = function (relative) {
 
 AbstractTween.prototype.reset = function () {
 	this._index       = 0;
+	this._duration    = 0;
 	this._transitions = [];
-
 	return this;
 };
 
@@ -204,4 +204,13 @@ AbstractTween.prototype._update = function () {
 
 	// Updating the object with respect to the current transition and time
 	transition.update(this._object, (this._time - transition.start) / transition.duration);
+};
+
+AbstractTween.prototype._validate = function () {
+	if (this._transitions.length === 0) {
+		console.warn('[AbstractTween._validate] Cannot start a tween with no transition:', this);
+		return false;
+	}
+
+	return true;
 };

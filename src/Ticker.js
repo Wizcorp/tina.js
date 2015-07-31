@@ -32,6 +32,21 @@ Object.defineProperty(Ticker.prototype, 'tupt', {
 			tupt = 0;
 		}
 
+		// TODO: compute number of ticks so that (tupt_old * nbTicks_old) === (tupt_new * nbTicks_new)
+		// if (tupt === 0) {
+		// 	// Setting start as if new tups was 1
+		// 	this._startTime += this._time / this._tups - this._time;
+		// } else {
+		// 	if (this._tups === 0) {
+		// 		// If current tupt is 0,
+		// 		// it corresponds to a virtual tupt of 1
+		// 		// when it comes to determing where the start is
+		// 		this._startTime = this._time - this._time / tupt;
+		// 	} else {
+		// 		this._startTime = this._time / this._tups - this._time / tupt;
+		// 	}
+		// }
+
 		this._tupt = tupt;
 	}
 });

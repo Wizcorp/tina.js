@@ -80,8 +80,8 @@ AbstractTween.prototype.relative = function (relative) {
 
 AbstractTween.prototype.reset = function () {
 	this._index       = 0;
+	this._duration    = 0;
 	this._transitions = [];
-
 	return this;
 };
 
@@ -206,77 +206,91 @@ AbstractTween.prototype._update = function () {
 	// Updating the object with respect to the current transition and time
 	transition.update(this._object, (this._time - transition.start) / transition.duration);
 };
-},{"./Transition":15,"./TransitionRelative":16,"./easing":19,"./interpolation":22}],2:[function(require,module,exports){
-var Playable = require('./Playable');
 
-/** @class */
+AbstractTween.prototype._validate = function () {
+	if (this._transitions.length === 0) {
+		console.warn('[AbstractTween._validate] Cannot start a tween with no transition:', this);
+		return false;
+	}
 
-// A playable with its time 
-function BoundedPlayable() {
-	Playable.call(this);
+	return true;
+};
+},{"./Transition":16,"./TransitionRelative":17,"./easing":20,"./interpolation":23}],2:[function(require,module,exports){
+
+function BriefExtension() {
+	// A brief component has a duration
 	this._duration   = 0;
+
+	// And can complete
+	this._onComplete = null;
 
 	// Playing options
 	this._iterations = 1; // Number of times to iterate the playable
 	this._persist    = false; // To keep the playable running instead of completing
 	this._pingpong   = false; // To make the playable go backward on even iterations
-
-	this._onComplete = null;
 }
 
-BoundedPlayable.prototype = Object.create(Playable.prototype);
-BoundedPlayable.prototype.constructor = BoundedPlayable;
-module.exports = BoundedPlayable;
+module.exports = BriefExtension;
 
-BoundedPlayable.prototype.onComplete = function (onComplete) {
+BriefExtension.prototype.onComplete = function (onComplete) {
 	this._onComplete = onComplete;
 	return this;
 };
 
-BoundedPlayable.prototype.getDuration = function () {
+BriefExtension.prototype.getDuration = function () {
 	// Duration from outside the playable
 	return this._duration * this._iterations / this._speed;
 };
 
-BoundedPlayable.prototype.goToEnd = function () {
+BriefExtension.prototype.goToEnd = function () {
 	this.goTo(this.getDuration(), this._iterations - 1);
 	return this;
 };
 
-BoundedPlayable.prototype.loop = function () {
+BriefExtension.prototype.loop = function () {
 	return this.iterations(Infinity);
 };
 
-BoundedPlayable.prototype.iterations = function (iterations) {
+BriefExtension.prototype.iterations = function (iterations) {
 	if (iterations < 0) {
-		console.warn('[BoundedPlayable.iterations] Number of iterations cannot be negative');
+		console.warn('[BriefExtension.iterations] Number of iterations cannot be negative');
 		return this;
 	}
 
 	this._iterations = iterations;
+	if (this._player !== null) {
+		this._player._onPlayableChange(this);
+	}
 	return this;
 };
 
-BoundedPlayable.prototype.persist = function (persist) {
+BriefExtension.prototype.persist = function (persist) {
 	this._persist = persist;
+	if (this._player !== null) {
+		this._player._onPlayableChange(this);
+	}
 	return this;
 };
 
-BoundedPlayable.prototype.pingpong = function (pingpong) {
+BriefExtension.prototype.pingpong = function (pingpong) {
 	this._pingpong = pingpong;
+	if (this._player !== null) {
+		this._player._onPlayableChange(this);
+	}
 	return this;
 };
 
-BoundedPlayable.prototype._complete = function (overflow) {
+BriefExtension.prototype._complete = function (overflow) {
 	if (this._persist === true) {
-		// BoundedPlayable is persisting
+		// Playable is persisting
 		// i.e it never completes
 		this._startTime += overflow;
+		this._player._onPlayableChange(this);
 		return;
 	}
 
-	// Removing playable before it completes
-	// So that the playable can be started again within _onComplete callback
+	// Inactivating playable before it completes
+	// So that the playable can be reactivated again within _onComplete callback
 	if (this._player._inactivate(this) === false) {
 		// Could not be completed
 		return this;
@@ -287,30 +301,14 @@ BoundedPlayable.prototype._complete = function (overflow) {
 	}
 };
 
-BoundedPlayable.prototype._start = function (timeOffset) {
-	this._startTime = -timeOffset;
-
-	if (this._onStart !== null) {
-		this._onStart();
-	}
-
-	// Making sure the playable is not over yet
-	if (timeOffset >= this.getDuration()) {
-		// Playable is over
-		// Moving it to given time offset
-		// This will have the effect of completing it
-		this._moveTo(this._startTime + timeOffset, timeOffset);
-	}
-};
-
-BoundedPlayable.prototype._moveTo = function (time, dt) {
+BriefExtension.prototype._moveTo = function (time, dt) {
 	dt *= this._speed;
 
 	// Computing overflow and clamping time
 	var overflow;
-	if (this._speed !== 0) {
+	if (dt !== 0) {
 		if (this._iterations === 1) {
-			// Converting into local time (relative to speed and when the playable started)
+			// Converting into local time (relative to speed and starting time)
 			this._time = (time - this._startTime) * this._speed;
 			if (dt > 0) {
 				if (this._time >= this._duration) {
@@ -379,134 +377,41 @@ BoundedPlayable.prototype._moveTo = function (time, dt) {
 		this._complete(overflow);
 	}
 };
+},{}],3:[function(require,module,exports){
+var inherit        = require('./inherit');
+var Playable       = require('./Playable');
+var BriefExtension = require('./BriefExtension');
 
-// Overridable method
-BoundedPlayable.prototype._update  = function () {};
-},{"./Playable":7}],3:[function(require,module,exports){
-var BoundedPlayable = require('./BoundedPlayable');
+function BriefPlayable() {
+	Playable.call(this);
+	BriefExtension.call(this);
+}
+
+BriefPlayable.prototype = Object.create(Playable.prototype);
+BriefPlayable.prototype.constructor = BriefPlayable;
+inherit(BriefPlayable, BriefExtension);
+
+module.exports = BriefPlayable;
+},{"./BriefExtension":2,"./Playable":8,"./inherit":22}],4:[function(require,module,exports){
+var inherit         = require('./inherit');
 var PlayableHandler = require('./PlayableHandler');
-
-var inherit = require('./inherit');
+var BriefExtension  = require('./BriefExtension');
 
 /**
  * @classdesc
  * Manages the update of a list of playable with respect to a given elapsed time.
  */
-function BoundedPlayer() {
-	BoundedPlayable.call(this);
+function BriefPlayer() {
 	PlayableHandler.call(this);
+	BriefExtension.call(this);
 }
-BoundedPlayer.prototype = Object.create(BoundedPlayable.prototype);
-BoundedPlayer.prototype.constructor = BoundedPlayer;
-inherit(BoundedPlayer, PlayableHandler);
+BriefPlayer.prototype = Object.create(PlayableHandler.prototype);
+BriefPlayer.prototype.constructor = BriefPlayer;
+inherit(BriefPlayer, BriefExtension);
 
-module.exports = BoundedPlayer;
-
-BoundedPlayer.prototype._delay = function () {
-	this._warn('[BoundedPlayer._delay] This player does not support the delay functionality', this);
-};
-
-BoundedPlayer.prototype.stop = function () {
-	// Stopping all active playables
-	var handle = this._activePlayables.first; 
-	while (handle !== null) {
-		var next = handle.next;
-		var playable = handle.object;
-		playable.stop();
-		handle = next;
-	}
-
-	this._handlePlayablesToRemove();
-
-	if (this._player._inactivate(this) === false) {
-		// Could not be stopped
-		return this;
-	}
-
-	this._stop();
-	return this;
-};
-
-BoundedPlayer.prototype._moveTo = function (time, dt) {
-	dt *= this._speed;
-
-	// Computing overflow and clamping time
-	var overflow;
-	if (this._iterations === 1) {
-		// Converting into local time (relative to speed and when the playable started)
-		this._time = (time - this._startTime) * this._speed;
-		if (dt > 0) {
-			if (this._time >= this._duration) {
-				overflow = this._time - this._duration;
-				dt -= overflow;
-				this._time = this._duration;
-			}
-		} else if (dt < 0) {
-			if (this._time <= 0) {
-				overflow = this._time;
-				dt -= overflow;
-				this._time = 0;
-			}
-		}
-	} else {
-		time = (time - this._startTime) * this._speed;
-
-		// Iteration at current update
-		var iteration = time / this._duration;
-
-		if (dt > 0) {
-			if (iteration < this._iterations) {
-				this._time = time % this._duration;
-			} else {
-				overflow = (iteration - this._iterations) * this._duration;
-				dt -= overflow;
-				this._time = this._duration * (1 - (Math.ceil(this._iterations) - this._iterations));
-			}
-		} else if (dt < 0) {
-			if (0 < iteration) {
-				this._time = time % this._duration;
-			} else {
-				overflow = iteration * this._duration;
-				dt -= overflow;
-				this._time = 0;
-			}
-		}
-
-		if ((this._pingpong === true)) {
-			if (Math.ceil(this._iterations) === this._iterations) {
-				if (overflow === undefined) {
-					if ((Math.ceil(iteration) & 1) === 0) {
-						this._time = this._duration - this._time;
-					}
-				} else {
-					if ((Math.ceil(iteration) & 1) === 1) {
-						this._time = this._duration - this._time;
-					}
-				}
-			} else {
-				if ((Math.ceil(iteration) & 1) === 0) {
-					this._time = this._duration - this._time;
-				}
-			}
-		}
-	}
-
-	this._updatePlayableList(); // <- This is the difference from Playable._moveTo
-	this._update(dt);
-
-	if (this._onUpdate !== null) {
-		this._onUpdate(this._time, dt);
-	}
-
-	if (overflow !== undefined) {
-		this._complete(overflow);
-	}
-};
-
-// Overridable method
-BoundedPlayer.prototype._updatePlayableList = function () {};
-},{"./BoundedPlayable":2,"./PlayableHandler":8,"./inherit":21}],4:[function(require,module,exports){
-var BoundedPlayable = require('./BoundedPlayable');
+module.exports = BriefPlayer;
+},{"./BriefExtension":2,"./PlayableHandler":9,"./inherit":22}],5:[function(require,module,exports){
+var BriefPlayable = require('./BriefPlayable');
 
 /**
  * @classdesc
@@ -518,13 +423,13 @@ function Delay(duration) {
 		return new Delay(duration);
 	}
 
-	BoundedPlayable.call(this);
+	BriefPlayable.call(this);
 	this._duration = duration;
 }
-Delay.prototype = Object.create(BoundedPlayable.prototype);
+Delay.prototype = Object.create(BriefPlayable.prototype);
 Delay.prototype.constructor = Delay;
 module.exports = Delay;
-},{"./BoundedPlayable":2}],5:[function(require,module,exports){
+},{"./BriefPlayable":3}],6:[function(require,module,exports){
 /**
  * DOUBLY LIST Class
  *
@@ -542,9 +447,9 @@ module.exports = Delay;
  * Memory Complexity in O(n)
  */
 
-function ListNode(obj, prev, next, container) {
+function ListNode(obj, previous, next, container) {
 	this.object    = obj;
-	this.prev      = prev;
+	this.previous  = previous;
 	this.next      = next;
 	this.container = container;
 }
@@ -562,8 +467,8 @@ DoublyList.prototype.addFront = function (obj) {
 		this.first = newNode;
 		this.last  = newNode;
 	} else {
-		this.first.prev = newNode;
-		this.first      = newNode;
+		this.first.previous = newNode;
+		this.first = newNode;
 	}
 
 	this.length += 1;
@@ -598,6 +503,40 @@ DoublyList.prototype.popBack = function (obj) {
 	return object;
 };
 
+DoublyList.prototype.addBefore = function (node, obj) {
+	var newNode = new ListNode(obj, node, node.next, this);
+
+	if (node.next !== null) {
+		node.next.previous = newNode;
+	}
+
+	node.next = newNode;
+
+	if (this.first === node) {
+		this.first = newNode;
+	}
+
+	this.length += 1;
+	return newNode;
+};
+
+DoublyList.prototype.addAfter = function (node, obj) {
+	var newNode = new ListNode(obj, node.previous, node, this);
+
+	if (node.previous !== null) {
+		node.previous.next = newNode;
+	}
+
+	node.previous = newNode;
+
+	if (this.last === node) {
+		this.last = newNode;
+	}
+
+	this.length += 1;
+	return newNode;
+};
+
 DoublyList.prototype.removeByReference = function (node) {
 	if (node.container !== this) {
 		console.warn('[DoublyList.removeByReference] Trying to remove a node that does not belong to the list');
@@ -606,20 +545,20 @@ DoublyList.prototype.removeByReference = function (node) {
 
 	// Removing any existing reference to the node
 	if (node.next === null) {
-		this.last = node.prev;
+		this.last = node.previous;
 	} else {
-		node.next.prev = node.prev;
+		node.next.previous = node.previous;
 	}
 
-	if (node.prev === null) {
+	if (node.previous === null) {
 		this.first = node.next;
 	} else {
-		node.prev.next = node.next;
+		node.previous.next = node.next;
 	}
 
 	// Removing any existing reference from the node
 	node.next = null;
-	node.prev = null;
+	node.previous = null;
 	node.container = null;
 
 	// One less node in the list
@@ -664,8 +603,8 @@ DoublyList.prototype.toArray = function () {
 
 	return objects;
 };
-},{}],6:[function(require,module,exports){
-var BoundedPlayable = require('./BoundedPlayable');
+},{}],7:[function(require,module,exports){
+var BriefPlayable = require('./BriefPlayable');
 var AbstractTween   = require('./AbstractTween');
 
 /**
@@ -683,7 +622,7 @@ function NestedTween(object, properties) {
 		return new NestedTween(object, properties);
 	}
 
-	BoundedPlayable.call(this);
+	BriefPlayable.call(this);
 
 	// Map if tween per object for fast access
 	this._tweensPerObject = {};
@@ -749,7 +688,7 @@ function NestedTween(object, properties) {
 		this._tweensPerObject[propertyChainString] = tween;
 	}
 }
-NestedTween.prototype = Object.create(BoundedPlayable.prototype);
+NestedTween.prototype = Object.create(BriefPlayable.prototype);
 NestedTween.prototype.constructor = NestedTween;
 module.exports = NestedTween;
 
@@ -852,7 +791,7 @@ NestedTween.prototype._update = function () {
 		tween._update();
 	}
 };
-},{"./AbstractTween":1,"./BoundedPlayable":2}],7:[function(require,module,exports){
+},{"./AbstractTween":1,"./BriefPlayable":3}],8:[function(require,module,exports){
 /** @class */
 function Playable() {
 	// Player component handling this playable
@@ -865,7 +804,7 @@ function Playable() {
 	this._startTime  = 0;
 
 	// Current time, is local (relative to starting time)
-	// i.e this._time === 0 implies this._player._time ===  this._startTime
+	// i.e this._time === 0 implies this._player._time === this._startTime
 	this._time       = 0;
 
 	// Playing speed of the playable
@@ -884,11 +823,6 @@ module.exports = Playable;
 Object.defineProperty(Playable.prototype, 'speed', {
 	get: function () { return this._speed; },
 	set: function (speed) {
-		// TODO: enable speed of a playable to be changed while attached to a bounded player
-		if ((this._player !== null) && (this._player._duration !== undefined)) {
-			console.warn('[Playable.speed] It is not recommended to change the speed of a playable that is attached to the given player:', this._player);
-		}
-
 		if (speed === 0) {
 			if (this._speed !== 0) {
 				// Setting timeStart as if new speed was 1
@@ -906,16 +840,15 @@ Object.defineProperty(Playable.prototype, 'speed', {
 		}
 
 		this._speed = speed;
+		if (this._player !== null) {
+			this._player._onPlayableChange(this);
+		}
 	}
 });
 
 Object.defineProperty(Playable.prototype, 'time', {
 	get: function () { return this._time; },
 	set: function (time) {
-		if ((this._player !== null) && (this._player._duration !== undefined)) {
-			console.warn('[Playable.time] It is not recommended to change the time of a playable that is attached to the given player:', this._player);
-		}
-
 		this.goTo(time);
 	}
 });
@@ -926,12 +859,12 @@ Playable.prototype.onStop     = function (onStop)     { this._onStop     = onSto
 Playable.prototype.onPause    = function (onPause)    { this._onPause    = onPause;    return this; };
 Playable.prototype.onResume   = function (onResume)   { this._onResume   = onResume;   return this; };
 
-Playable.prototype._update   = function () { if (this._onUpdate   !== null) { this._onUpdate();   } };
-Playable.prototype._stop     = function () { if (this._onStop     !== null) { this._onStop();     } };
-Playable.prototype._pause    = function () { if (this._onPause    !== null) { this._onPause();    } };
-Playable.prototype._resume   = function () { if (this._onResume   !== null) { this._onResume();   } };
-
 Playable.prototype.tweener = function (tweener) {
+	if (tweener === null || tweener === undefined) {
+		console.warn('[Playable.tweener] Given tweener is invalid:', tweener);
+		return this;
+	}
+
 	this._player = tweener;
 	return this;
 };
@@ -957,9 +890,9 @@ Playable.prototype.goTo = function (timePosition, iteration) {
 	}
 
 	this._time = timePosition;
-	// iteration = iteration || 0;
-	// // Offsetting start time with respect to current time and given iteration
-	// this._startTime = this._time - time - iteration * this._duration;
+	if (this._player !== null) {
+		this._player._onPlayableChange(this);
+	}
 	return this;
 };
 
@@ -969,22 +902,21 @@ Playable.prototype.rewind = function () {
 };
 
 Playable.prototype.delay = function (delay) {
-	if (this._player === null) {
-		this._player = TINA._getDefaultTweener();
-	}
-	// TODO: add _delay method to TINA
-	this._player._delay(this, delay);
-	return this;
+	return this.start(-delay);
 };
 
 Playable.prototype.start = function (timeOffset) {
-	var player = this._player;
-	if (player === null) {
-		player = TINA._getDefaultTweener();
+	if (this._player === null) {
+		this._player = TINA._getDefaultTweener();
 	}
 
-	if (player._add(this) === false) {
-		// Could not be started
+	if (this._validate() === false) {
+		// Did not pass validation
+		return this;
+	}
+
+	if (this._player._add(this) === false) {
+		// Could not be added to player
 		return this;
 	}
 
@@ -992,13 +924,11 @@ Playable.prototype.start = function (timeOffset) {
 		timeOffset = 0;
 	}
 
-	this._start(timeOffset - player._time);
+	this._startTime = this._player._time - timeOffset;
 	return this;
 };
 
 Playable.prototype._start = function (timeOffset) {
-	this._startTime = -timeOffset;
-
 	if (this._onStart !== null) {
 		this._onStart();
 	}
@@ -1007,21 +937,25 @@ Playable.prototype._start = function (timeOffset) {
 Playable.prototype.stop = function () {
 	// Stopping playable without performing any additional update nor completing
 	if (this._player._inactivate(this) === false) {
-		// Could not be stopped
+		// Could not be removed
 		return this;
 	}
 
-	this._stop();
+	if (this._onStop !== null) {
+		this._onStop();
+	}
 	return this;
 };
 
 Playable.prototype.resume = function () {
-	if (this._player._add(this) === false) {
+	if (this._player._activate(this) === false) {
 		// Could not be resumed
 		return this;
 	}
 
-	this._resume();
+	if (this._onResume !== null) {
+		this._onResume();
+	}
 	return this;
 };
 
@@ -1031,10 +965,11 @@ Playable.prototype.pause = function () {
 		return this;
 	}
 
-	this._pause();
+	if (this._onPause !== null) {
+		this._onPause();
+	}
 	return this;
 };
-
 
 Playable.prototype._moveTo = function (time, dt) {
 	dt *= this._speed;
@@ -1048,20 +983,19 @@ Playable.prototype._moveTo = function (time, dt) {
 };
 
 // Overridable method
-Playable.prototype._update  = function () {};
-},{}],8:[function(require,module,exports){
-var DoublyList = require('./DoublyList');
-
-function PlayableHandle(playable) {
-	this.playable = playable;
-	this.handle = null;
-}
+Playable.prototype._update   = function () {};
+Playable.prototype._validate = function () {};
+},{}],9:[function(require,module,exports){
+var Playable     = require('./Playable');
+var DoublyList   = require('./DoublyList');
 
 /**
  * @classdesc
  * Manages the update of a list of playable with respect to a given elapsed time.
  */
 function PlayableHandler() {
+	Playable.call(this);
+
 	// A DoublyList, rather than an Array, is used to store playables.
 	// It allows for faster removal and is similar in speed for iterations.
 
@@ -1071,10 +1005,9 @@ function PlayableHandler() {
 	// (KUDOs to the JS engines guys)
 
 	// List of active playables handled by this player
-	this._activePlayables   = new DoublyList();
+	this._activePlayables = new DoublyList();
 
 	// List of inactive playables handled by this player
-	// TODO: use a priority list of inactive playables (ordered by starting time)
 	this._inactivePlayables = new DoublyList();
 
 	// List of playables that are not handled by this player anymore and are waiting to be removed
@@ -1086,9 +1019,11 @@ function PlayableHandler() {
 	// Whether to trigger the debugger on warnings
 	this._debug = false;
 }
+PlayableHandler.prototype = Object.create(Playable.prototype);
+PlayableHandler.prototype.constructor = PlayableHandler;
 module.exports = PlayableHandler;
 
-PlayableHandler.prototype._add = function (playable) {
+PlayableHandler.prototype._add = function (playable, delay) {
 	if (playable._handle === null) {
 		// Playable can be added
 		playable._handle = this._inactivePlayables.add(playable);
@@ -1127,12 +1062,11 @@ PlayableHandler.prototype._remove = function (playable) {
 	if (playable._handle.container === this._activePlayables) {
 		// Playable was active, adding to remove list
 		playable._handle = this._playablesToRemove.add(playable._handle);
-		playable._stop();
 		return true;
 	}
 
 	if (playable._handle.container === this._inactivePlayables) {
-		// Playable was being started, removing from starting playables
+		// Playable was inactive, removing from inactive playables
 		playable._handle = this._inactivePlayables.removeByReference(playable._handle);
 		return true;
 	}
@@ -1147,7 +1081,14 @@ PlayableHandler.prototype._remove = function (playable) {
 };
 
 PlayableHandler.prototype.remove = function (playable) {
-	this._remove(playable);
+	if (playable._handle.container === this._activePlayables) {
+		playable.stop();
+	}
+
+	if (playable._handle.container !== this._playablesToRemove) {
+		this._remove(playable);
+	}
+
 	this._onRemovePlayables();
 	return this;
 };
@@ -1157,7 +1098,7 @@ PlayableHandler.prototype.removeAll = function () {
 	var handle = this._activePlayables.first; 
 	while (handle !== null) {
 		var next = handle.next;
-		this._remove(handle.object);
+		handle.object.stop();
 		handle = next;
 	}
 
@@ -1166,22 +1107,12 @@ PlayableHandler.prototype.removeAll = function () {
 	return this;
 };
 
-// Overridable method
-PlayableHandler.prototype._onRemovePlayables = function () {};
-
 PlayableHandler.prototype.possess = function (playable) {
 	if (playable._handle === null) {
 		return false;
 	}
 
 	return (playable._handle.container === this._activePlayables) || (playable._handle.container === this._inactivePlayables);
-};
-
-PlayableHandler.prototype._inactivate = function (playable) {
-	this._activePlayables.removeByReference(playable._handle);
-
-	// Playable is moved to the list of inactive playables
-	playable._handle = this._inactivePlayables.add(playable);
 };
 
 PlayableHandler.prototype._handlePlayablesToRemove = function () {
@@ -1199,10 +1130,10 @@ PlayableHandler.prototype._handlePlayablesToRemove = function () {
 };
 
 PlayableHandler.prototype.clear = function () {
-	this._handledPlayables.clear();
 	this._activePlayables.clear();
 	this._inactivePlayables.clear();
 	this._playablesToRemove.clear();
+	this._controls.clear();
 	return this;
 };
 
@@ -1227,87 +1158,81 @@ PlayableHandler.prototype.debug = function (debug) {
 	return this;
 };
 
-},{"./DoublyList":5}],9:[function(require,module,exports){
-var Delay           = require('./Delay');
-var Playable        = require('./Playable');
-var PlayableHandler = require('./PlayableHandler');
+PlayableHandler.prototype.stop = function () {
+	// Stopping all active playables
+	var handle = this._activePlayables.first; 
+	while (handle !== null) {
+		var next = handle.next;
+		var playable = handle.object;
+		playable.stop();
+		handle = next;
+	}
 
-var inherit = require('./inherit');
+	this._handlePlayablesToRemove();
+
+	Playable.prototype.stop.call(this);
+};
+
+PlayableHandler.prototype._activate = function (playable) {
+	// O(1)
+	this._inactivePlayables.removeByReference(playable._handle);
+	playable._handle = this._activePlayables.addBack(playable);
+};
+
+PlayableHandler.prototype._inactivate = function (playable) {
+	// O(1)
+	this._activePlayables.removeByReference(playable._handle);
+	playable._handle = this._inactivePlayables.addBack(playable);
+};
+
+PlayableHandler.prototype._updatePlayableList = function (dt) {
+	this._handlePlayablesToRemove();
+
+	// Activating playables
+	var handle = this._inactivePlayables.first; 
+	while (handle !== null) {
+		var playable = handle.object;
+
+		// Fetching handle of next playable
+		handle = handle.next;
+
+		var startTime = playable._startTime;
+		var endTime   = startTime + playable.getDuration();
+		if (startTime <= this._time && this._time <= endTime) {
+			// O(1)
+			this._inactivePlayables.removeByReference(playable._handle);
+			playable._handle = this._activePlayables.addBack(playable);
+
+			playable._start(this._time - startTime);
+		}
+	}
+};
+
+PlayableHandler.prototype._update = function (dt) {
+	this._updatePlayableList(dt);
+	for (var handle = this._activePlayables.first; handle !== null; handle = handle.next) {
+		handle.object._moveTo(this._time, dt);
+	}
+};
+
+// Overridable methods
+PlayableHandler.prototype._onRemovePlayables = function (/* playable */) {};
+PlayableHandler.prototype._onPlayableChange  = function (/* playable */) { console.log('nada'); };
+},{"./DoublyList":6,"./Playable":8}],10:[function(require,module,exports){
+var PlayableHandler = require('./PlayableHandler');
 
 /**
  * @classdesc
  * Manages the update of a list of playable with respect to a given elapsed time.
  */
 function Player() {
-	Playable.call(this);
 	PlayableHandler.call(this);
 }
-Player.prototype = Object.create(Playable.prototype);
+Player.prototype = Object.create(PlayableHandler.prototype);
 Player.prototype.constructor = Player;
-inherit(Player, PlayableHandler);
 
 module.exports = Player;
-
-Player.prototype._delay = function (playable, delay) {
-	if (delay <= 0) {
-		this._warn('[Tweener.add] Delay null or negative (' + delay + ').' +
-			'Starting the playable with a delay of 0.');
-		playable.start();
-		return;
-	}
-
-	Delay(delay).tweener(this).onComplete(function (timeOverflow) {
-		playable.start(timeOverflow);
-	}).start();
-};
-
-Player.prototype.stop = function () {
-	this.removeAll();
-
-	if (this._player._inactivate(this) === false) {
-		// Could not be stopped
-		return this;
-	}
-
-	this._stop();
-	return this;
-};
-
-Player.prototype._moveTo = function (time, dt) {
-	this._time = time - this._startTime;
-
-	// Computing time overflow and clamping time
-	var overflow;
-	if (dt > 0) {
-		if (this._time >= this._duration) {
-			overflow = this._time - this._duration;
-			dt -= overflow;
-			this._time = this._duration;
-		}
-	} else if (dt < 0) {
-		if (this._time <= 0) {
-			overflow = this._time;
-			dt -= overflow;
-			this._time = 0;
-		}
-	}
-
-	this._updatePlayableList();
-	this._update(dt);
-
-	if (this._onUpdate !== null) {
-		this._onUpdate(this._time, dt);
-	}
-
-	if (overflow !== undefined) {
-		this._complete(overflow);
-	}
-};
-
-// Overridable method
-Player.prototype._updatePlayableList = function () {};
-
-},{"./Delay":4,"./Playable":7,"./PlayableHandler":8,"./inherit":21}],10:[function(require,module,exports){
+},{"./PlayableHandler":9}],11:[function(require,module,exports){
 var Timeline = require('./Timeline');
 
 /**
@@ -1334,17 +1259,14 @@ Sequence.prototype.constructor = Sequence;
 module.exports = Sequence;
 
 Sequence.prototype.add = function (playable) {
-	playable._startTime = this._duration;
-	this._duration += playable._duration;
-	this._add(playable);
-	return this;
+	return Timeline.prototype.add.call(this, playable, this._duration);
 };
 
 Sequence.prototype.addDelay = function (duration) {
 	this._duration += duration;
 	return this;
 };
-},{"./Timeline":13}],11:[function(require,module,exports){
+},{"./Timeline":14}],12:[function(require,module,exports){
 (function (global){
 
 /**
@@ -1479,7 +1401,7 @@ var TINA = {
 		this._time = 0;
 
 		for (var t = 0; t < this._tweeners.length; t += 1) {
-			this._tweeners[t]._start();
+			this._tweeners[t]._start(0);
 		}
 
 		return this;
@@ -1492,7 +1414,7 @@ var TINA = {
 
 		var runningTweeners = this._tweeners.slice(0);
 		for (var t = 0; t < runningTweeners.length; t += 1) {
-			runningTweeners[t]._stop();
+			runningTweeners[t].stop();
 		}
 
 		// Stopping the tweeners have the effect of automatically removing them from TINA
@@ -1694,7 +1616,7 @@ var TINA = {
 module.exports = global.TINA = TINA;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],12:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 var Tweener = require('./Tweener');
 
 /**
@@ -1729,6 +1651,21 @@ Object.defineProperty(Ticker.prototype, 'tupt', {
 			tupt = 0;
 		}
 
+		// TODO: compute number of ticks so that (tupt_old * nbTicks_old) === (tupt_new * nbTicks_new)
+		// if (tupt === 0) {
+		// 	// Setting start as if new tups was 1
+		// 	this._startTime += this._time / this._tups - this._time;
+		// } else {
+		// 	if (this._tups === 0) {
+		// 		// If current tupt is 0,
+		// 		// it corresponds to a virtual tupt of 1
+		// 		// when it comes to determing where the start is
+		// 		this._startTime = this._time - this._time / tupt;
+		// 	} else {
+		// 		this._startTime = this._time / this._tups - this._time / tupt;
+		// 	}
+		// }
+
 		this._tupt = tupt;
 	}
 });
@@ -1749,8 +1686,8 @@ Ticker.prototype.convertToTimeUnits = function(nbTicks) {
 	return nbTicks * this._tupt;
 };
 
-},{"./Tweener":18}],13:[function(require,module,exports){
-var BoundedPlayer = require('./BoundedPlayer');
+},{"./Tweener":19}],14:[function(require,module,exports){
+var BriefPlayer = require('./BriefPlayer');
 
 /**
  *
@@ -1769,74 +1706,23 @@ function Timeline() {
 		return new Timeline();
 	}
 
-	BoundedPlayer.call(this);
+	BriefPlayer.call(this);
 }
-Timeline.prototype = Object.create(BoundedPlayer.prototype);
+Timeline.prototype = Object.create(BriefPlayer.prototype);
 Timeline.prototype.constructor = Timeline;
 module.exports = Timeline;
 
-Timeline.prototype.add = function (startTime, playable) {
+Timeline.prototype.add = function (playable, startTime) {
+	if (startTime === null || startTime === undefined) {
+		startTime = 0;
+	}
+
 	playable._startTime = startTime;
 	this._add(playable);
 	this._duration = Math.max(this._duration, startTime + playable.getDuration());
 	return this;
 };
-
-Timeline.prototype._computeDuration = function () {
-	var playable;
-	var duration = 0;
-	for (var handle = this._inactivePlayables.first; handle !== null; handle = handle.next) {
-		playable = handle.object;
-		duration = Math.max(duration, playable._startTime + playable.getDuration());
-	}
-
-	for (handle = this._activePlayables.first; handle !== null; handle = handle.next) {
-		playable = handle.object;
-		duration = Math.max(duration, playable._startTime + playable.getDuration());
-	}
-
-	this._duration = duration;
-};
-
-Timeline.prototype._onRemovePlayables = Timeline.prototype._computeDuration;
-
-Timeline.prototype._start = function (player, timeOffset) {
-	BoundedPlayer.prototype._start.call(this, player, timeOffset);
-
-	// Computing duration of the timeline
-	this._computeDuration();
-};
-
-Timeline.prototype._updatePlayableList = function () {
-	this._handlePlayablesToRemove();
-
-	// Inactive playables 
-	var handle = this._inactivePlayables.first; 
-	while (handle !== null) {
-		var playable = handle.object;
-
-		// Fetching handle of next playable
-		handle = handle.next;
-
-		var startTime = playable._startTime;
-		var endTime   = startTime + playable.getDuration();
-		if (startTime <= this._time && this._time <= endTime) {
-			// O(1)
-			this._inactivePlayables.removeByReference(playable._handle);
-			playable._handle = this._activePlayables.addBack(playable);
-
-			playable._start(-startTime);
-		}
-	}
-};
-
-Timeline.prototype._update = function (dt) {
-	for (var handle = this._activePlayables.first; handle !== null; handle = handle.next) {
-		var playable = handle.object;
-		playable._moveTo(this._time, dt);
-	}
-};
-},{"./BoundedPlayer":3}],14:[function(require,module,exports){
+},{"./BriefPlayer":4}],15:[function(require,module,exports){
 var Tweener = require('./Tweener');
 
 /**
@@ -1869,7 +1755,6 @@ Object.defineProperty(Timer.prototype, 'tups', {
 			tups = 0;
 		}
 
-		var dt = this._time - this._startTime;
 		if (tups === 0) {
 			// Setting start as if new tups was 1
 			this._startTime += this._time / this._tups - this._time;
@@ -1903,7 +1788,7 @@ Timer.prototype.convertToSeconds = function(timeUnits) {
 Timer.prototype.convertToTimeUnits = function(seconds) {
 	return seconds * this._tups;
 };
-},{"./Tweener":18}],15:[function(require,module,exports){
+},{"./Tweener":19}],16:[function(require,module,exports){
 // The file is a good representation of the constant fight between maintainability and performance
 // For performance reasons several update methods are created
 // The appropriate method should be used for tweening. The selection depends on:
@@ -2037,7 +1922,7 @@ function Transition(properties, from, to, start, duration, easing, easingParam, 
 }
 
 module.exports = Transition;
-},{}],16:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 
 // One property
 function update(object, t) {
@@ -2186,9 +2071,9 @@ function Transition(properties, from, to, start, duration, easing, easingParam, 
 }
 
 module.exports = Transition;
-},{}],17:[function(require,module,exports){
-var BoundedPlayable = require('./BoundedPlayable');
-var AbstractTween   = require('./AbstractTween');
+},{}],18:[function(require,module,exports){
+var BriefPlayable = require('./BriefPlayable');
+var AbstractTween = require('./AbstractTween');
 
 var inherit = require('./inherit');
 /**
@@ -2200,20 +2085,19 @@ var inherit = require('./inherit');
  * @param {array}  properties - Properties of the object to tween
  *
  */
-
 function Tween(object, properties) {
 	if ((this instanceof Tween) === false) {
 		return new Tween(object, properties);
 	}
 
-	BoundedPlayable.call(this);
+	BriefPlayable.call(this);
 	AbstractTween.call(this, object, properties);
 }
-Tween.prototype = Object.create(BoundedPlayable.prototype);
+Tween.prototype = Object.create(BriefPlayable.prototype);
 Tween.prototype.constructor = Tween;
 inherit(Tween, AbstractTween);
 module.exports = Tween;
-},{"./AbstractTween":1,"./BoundedPlayable":2,"./inherit":21}],18:[function(require,module,exports){
+},{"./AbstractTween":1,"./BriefPlayable":3,"./inherit":22}],19:[function(require,module,exports){
 var Player = require('./Player');
 var TINA   = require('./TINA');
 
@@ -2237,37 +2121,11 @@ Tweener.prototype._inactivate = function (playable) {
 };
 
 Tweener.prototype._moveTo = function (time, dt) {
-	this._time = this._getElapsedTime(time - this._startTime);
-	dt = this._getSingleStepDuration(dt);
+	dt = this._getSingleStepDuration(dt) * this._speed;
+	this._time = this._getElapsedTime(time - this._startTime) * this._speed;
 
-	// // Computing time overflow and clamping time
-	// var overflow;
-	// if (dt > 0) {
-	// 	if (this._time >= this._duration) {
-	// 		overflow = this._time - this._duration;
-	// 		dt -= overflow;
-	// 		this._time = this._duration;
-	// 	}
-	// } else if (dt < 0) {
-	// 	if (this._time <= 0) {
-	// 		overflow = this._time;
-	// 		dt -= overflow;
-	// 		this._time = 0;
-	// 	}
-	// }
-
-	this._handlePlayablesToRemove();
-
-	// Inactive playables are set as active
-	while (this._inactivePlayables.length > 0) {
-		// O(1)
-		playable = this._inactivePlayables.pop();
-		playable._handle = this._activePlayables.add(playable);
-	}
-
-	for (var handle = this._activePlayables.first; handle !== null; handle = handle.next) {
-		handle.object._moveTo(this._time, dt);
-	}
+	this._updatePlayableList(dt);
+	this._update(dt);
 
 	if (this._onUpdate !== null) {
 		this._onUpdate(this._time, dt);
@@ -2278,7 +2136,7 @@ Tweener.prototype.useAsDefault = function () {
 	TINA.setDefaultTweener(this);
 	return this;
 };
-},{"./Player":9,"./TINA":11}],19:[function(require,module,exports){
+},{"./Player":10,"./TINA":12}],20:[function(require,module,exports){
 /**
  *
  * @file A set of ease functions
@@ -2306,68 +2164,121 @@ var TWO_PI      = Math.PI * 2;
 var EXP         = 2.718281828;
 
 // No easing
-exports.none = function() {
+exports.none = function () {
 	return 1;
 };
 
 // Linear
-exports.linear = function(t) {
+exports.linear = function (t) {
 	return t;
 };
 
 // Flash style transition
 // ease in [-1, 1] for usage similar to flash
 // but works with ease in ]-Inf, +Inf[
-exports.flash = function(t, ease) {
+exports.flash = function (t, ease) {
 	return t + t * ease - t * t * ease;
 };
 
 // Parabolic
-exports.parabolic = function(t) {
+exports.parabolic = function (t) {
 	var r = (2 * t - 1);
 	return 1 - r * r;
 };
 
 // Trigonometric, n = number of iterations in ]-Inf, +Inf[
-exports.trigo = function(t, n) {
+exports.trigo = function (t, n) {
 	return 0.5 * (1 - Math.cos(TWO_PI * t * n));
 };
 
 // Elastic, e = elasticity in ]0, +Inf[
-exports.elastic = function(t, e) {
+exports.elastic = function (t, e) {
 	if (t === 1) return 1;
 	e /= (e + 1); // transforming e
 	var n = (1 + e) * Math.log(1 - t) / Math.log(e);
 	return Math.cos(n - PI_OVER_TWO) * Math.pow(e, n);
 };
 
+// Quadratric
+exports.quadIn = function (t) { 
+	return t * t;
+};
+
+exports.quadOut = function (t) {
+	return 2 * t - t * t;
+};
+
+exports.quadInOut = function (t) {
+	if (t < 0.5) {
+		return 2 * t * t;
+	} else {
+		return 2 * (2 * t - t * t) - 1;
+	}
+};
+
+// Cubic
+exports.cubicIn = function (t) { 
+	return t * t * t;
+};
+
+exports.cubicOut = function (t) {
+	return 3 * t - 3 * t * t + t * t * t;
+};
+
+exports.cubicInOut = function (t) {
+	if (t < 0.5) {
+		return 4 * t * t * t;
+	} else {
+		return 4 * (3 * t - 3 * t * t + t * t * t) - 3;
+	}
+};
+
+// Quartic
+exports.quarticIn = function (t) { 
+	return t * t * t * t;
+};
+
+exports.quarticOut = function (t) {
+	var t2 = t * t;
+	return 4 * t - 6 * t2 + 4 * t2 * t - t2 * t2;
+};
+
+exports.quarticOut = function (t) {
+	if (t < 0.5) {
+		return 8 * t * t * t * t;
+	} else {
+		var t2 = t * t;
+		return 8 * (4 * t - 6 * t2 + 4 * t2 * t - t2 * t2) - 7;
+	}
+};
+
 // Polynomial, p = power in ]0, + Inf[
-exports.polyIn = function(t, p) { 
+exports.polyIn = function (t, p) { 
 	return Math.pow(t, p);
 };
 
-exports.polyOut = function(t, p) {
-	return 1 - Math.pow((1 - t) / 1, p);
+exports.polyOut = function (t, p) {
+	return 1 - Math.pow(1 - t, p);
 };
 
-exports.polyInOut = function(t, p) {
+exports.polyInOut = function (t, p) {
 	if (t < 0.5) {
 		return Math.pow(2 * t, p) / 2;
 	} else {
-		return (1 + (1 - Math.pow(2 * (1 - t), p))) / 2;
+		return (2 - Math.pow(2 * (1 - t), p)) / 2;
 	}
 };
 
 // Sine
-exports.sineIn = function(t) {
+exports.sineIn = function (t) {
 	return 1 - Math.cos(PI_OVER_TWO * t);
 };
 
-exports.sineOut = function(t) {
+exports.sineOut = function (t) {
 	return Math.sin(PI_OVER_TWO * t);
 };
 
-exports.sineInOut = function(t) {
+exports.sineInOut = function (t) {
 	if (t < 0.5) {
 		return (1 - Math.cos(PI * t)) / 2;
 	} else {
@@ -2376,15 +2287,15 @@ exports.sineInOut = function(t) {
 };
 
 // Exponential, e = exponent in ]0, + Inf[
-exports.expIn = function(t, e) {
+exports.expIn = function (t, e) {
 	return (1 - Math.pow(EXP, e * t)) / (1 - Math.pow(EXP, e));
 };
 
-exports.expOut = function(t, e) {
+exports.expOut = function (t, e) {
 	return (1 - Math.pow(EXP, - e * t)) / (1 - Math.pow(EXP, - e));
 };
 
-exports.expInOut = function(t, e) {
+exports.expInOut = function (t, e) {
 	if (t < 0.5) {
 		return (1 - Math.pow(EXP, 2 * e * t)) / (1 - Math.pow(EXP, e)) / 2;
 	} else {
@@ -2393,15 +2304,15 @@ exports.expInOut = function(t, e) {
 };
 
 // Circular
-exports.circIn = function(t) {
+exports.circIn = function (t) {
 	return 1 - Math.sqrt(1 - Math.pow(t, 2));
 };
 
-exports.circOut = function(t) {
+exports.circOut = function (t) {
 	return Math.sqrt(1 - Math.pow(1 - t, 2));
 };
 
-exports.circInOut = function(t) {
+exports.circInOut = function (t) {
 	if (t < 0.5) {
 		return (1 - Math.sqrt(1 - 4 * t * t)) / 2;
 	} else {
@@ -2410,21 +2321,21 @@ exports.circInOut = function(t) {
 };
 
 // Elastic, e = elasticity in ]0, +Inf[
-exports.elasticIn = function(t, e) {
+exports.elasticIn = function (t, e) {
 	if (t === 0) { return 0; }
 	e /= (e + 1); // transforming e
 	var n = (1 + e) * Math.log(t) / Math.log(e);
 	return Math.cos(n) * Math.pow(e, n);
 };
 
-exports.elasticOut = function(t, e) {
+exports.elasticOut = function (t, e) {
 	if (t === 1) { return 1; }
 	e /= (e + 1); // transforming e
 	var n = (1 + e) * Math.log(1 - t) / Math.log(e);
 	return 1.0 - Math.cos(n) * Math.pow(e, n);
 };
 
-exports.elasticInOut = function(t, e) {
+exports.elasticInOut = function (t, e) {
 	var n;
 	if (t < 0.5) {
 		if (t === 0) { return 0; }
@@ -2440,21 +2351,21 @@ exports.elasticInOut = function(t, e) {
 };
 
 // Bounce, e = elasticity in ]0, +Inf[
-exports.bounceIn = function(t, e) {
+exports.bounceIn = function (t, e) {
 	if (t === 0) { return 0; }
 	e /= (e + 1); // transforming e
 	var n = (1 + e) * Math.log(t) / Math.log(e);
 	return Math.abs(Math.cos(n) * Math.pow(e, n));
 };
 
-exports.bounceOut = function(t, e) {
+exports.bounceOut = function (t, e) {
 	if (t === 1) { return 1; }
 	e /= (e + 1); // transforming e
 	var n = (1 + e) * Math.log(1 - t) / Math.log(e);
 	return 1.0 - Math.abs(Math.cos(n) * Math.pow(e, n));
 };
 
-exports.bounceInOut = function(t, e) {
+exports.bounceInOut = function (t, e) {
 	var n;
 	if (t < 0.5) {
 		if (t === 0) { return 0; }
@@ -2470,16 +2381,16 @@ exports.bounceInOut = function(t, e) {
 };
 
 // Back, e = elasticity in [0, +Inf[
-exports.backIn = function(t, e) {
+exports.backIn = function (t, e) {
 	return t * t * ((e + 1) * t - e);
 };
 
-exports.backOut = function(t, e) {
+exports.backOut = function (t, e) {
 	t -= 1;
 	return t * t * ((e + 1) * t + e) + 1;
 };
 
-exports.backInOut = function(t, e) {
+exports.backInOut = function (t, e) {
 	if (t < 0.5) {
 		t *= 2;
 		return 0.5 * (t * t * ((e + 1) * t - e));
@@ -2488,13 +2399,14 @@ exports.backInOut = function(t, e) {
 	return 0.5 * (t * t * ((e + 1) * t + e)) + 1;
 };
 
-},{}],20:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 var TINA = require('./TINA.js');
 
 // TINA.CSSTween        = require('./CSSTween');
 TINA.Delay           = require('./Delay');
-TINA.BoundedPlayable = require('./BoundedPlayable');
-TINA.BoundedPlayer   = require('./BoundedPlayer');
+TINA.BriefExtension  = require('./BriefExtension');
+TINA.BriefPlayable   = require('./BriefPlayable');
+TINA.BriefPlayer     = require('./BriefPlayer');
 TINA.easing          = require('./easing');
 TINA.interpolation   = require('./interpolation');
 TINA.NestedTween     = require('./NestedTween');
@@ -2512,7 +2424,7 @@ TINA.Tweener         = require('./Tweener');
 
 module.exports = TINA;
 
-},{"./BoundedPlayable":2,"./BoundedPlayer":3,"./Delay":4,"./NestedTween":6,"./Playable":7,"./PlayableHandler":8,"./Player":9,"./Sequence":10,"./TINA.js":11,"./Ticker":12,"./Timeline":13,"./Timer":14,"./Tween":17,"./Tweener":18,"./easing":19,"./interpolation":22}],21:[function(require,module,exports){
+},{"./BriefExtension":2,"./BriefPlayable":3,"./BriefPlayer":4,"./Delay":5,"./NestedTween":7,"./Playable":8,"./PlayableHandler":9,"./Player":10,"./Sequence":11,"./TINA.js":12,"./Ticker":13,"./Timeline":14,"./Timer":15,"./Tween":18,"./Tweener":19,"./easing":20,"./interpolation":23}],22:[function(require,module,exports){
 module.exports = function (subobject, superobject) {
 	var prototypes = Object.keys(superobject.prototype);
 	for (var p = 0; p < prototypes.length; p += 1) {
@@ -2520,7 +2432,7 @@ module.exports = function (subobject, superobject) {
 		subobject.prototype[prototypeName] = superobject.prototype[prototypeName];
 	}
 };
-},{}],22:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 /**
  *
  * @file A set of interpolation functions
@@ -2543,28 +2455,28 @@ module.exports = function (subobject, superobject) {
 
 // TODO: Test them all!
 
-exports.none = function(t, a, b) {
+exports.none = function (t, a, b) {
 	return b;
 };
 
-exports.linear = function(t, a, b) {
+exports.linear = function (t, a, b) {
 	return a * (1 - t) + b * t;
 };
 
 // d = discretization
-exports.discrete = function(t, a, b, d) {
+exports.discrete = function (t, a, b, d) {
 	if (d === undefined) { d = 1; }
 	return Math.floor((a * (1 - t) + b * t) / d) * d;
 };
 
-exports.vectorXY = function(t, a, b) {
+exports.vectorXY = function (t, a, b) {
 	return {
 		x: a.x * (1 - t) + b.x * t,
 		y: a.y * (1 - t) + b.y * t
 	};
 };
 
-exports.vectorXYZ = function(t, a, b) {
+exports.vectorXYZ = function (t, a, b) {
 	return {
 		x: a.x * (1 - t) + b.x * t,
 		y: a.y * (1 - t) + b.y * t,
@@ -2573,7 +2485,7 @@ exports.vectorXYZ = function(t, a, b) {
 };
 
 // a, b = vectors
-exports.vector = function(t, a, b) {
+exports.vector = function (t, a, b) {
 	var c = [];
 	for (var i = 0; i < a.length; i += 1) {
 		c[i] = a[i] * (1 - t) + b[i] * t;
@@ -2582,7 +2494,7 @@ exports.vector = function(t, a, b) {
 };
 
 // a, b = states, c = array of intermediary states
-exports.state = function(t, a, b, c) {
+exports.state = function (t, a, b, c) {
 	var nbStates = b.length + 2;
 	var stateIdx = Math.floor(t * nbStates);
 	if (stateIdx < 1) { return a; }
@@ -2591,7 +2503,7 @@ exports.state = function(t, a, b, c) {
 };
 
 // a, b = colors
-exports.colorRGB = function(t, a, b) {
+exports.colorRGB = function (t, a, b) {
 	return {
 		r: a.r * (1 - t) + b.r * t,
 		g: a.g * (1 - t) + b.g * t,
@@ -2599,7 +2511,7 @@ exports.colorRGB = function(t, a, b) {
 	};
 };
 
-exports.colorRGBA = function(t, a, b) {
+exports.colorRGBA = function (t, a, b) {
 	return {
 		r: a.r * (1 - t) + b.r * t,
 		g: a.g * (1 - t) + b.g * t,
@@ -2608,7 +2520,7 @@ exports.colorRGBA = function(t, a, b) {
 	};
 };
 
-exports.colorRGBToHexa = function(t, a, b) {
+exports.colorRGBToHexa = function (t, a, b) {
 	var cr = Math.round(a.r * (1 - t) + b.r * t);
 	var cg = Math.round(a.g * (1 - t) + b.g * t);
 	var cb = Math.round(a.b * (1 - t) + b.b * t);
@@ -2616,7 +2528,7 @@ exports.colorRGBToHexa = function(t, a, b) {
 	return '#' + cr.toString(16) + cg.toString(16) + cb.toString(16);
 };
 
-exports.colorRGBToString = function(t, a, b) {
+exports.colorRGBToString = function (t, a, b) {
 	var cr = Math.round(a.r * (1 - t) + b.r * t);
 	var cg = Math.round(a.g * (1 - t) + b.g * t);
 	var cb = Math.round(a.b * (1 - t) + b.b * t);
@@ -2624,7 +2536,7 @@ exports.colorRGBToString = function(t, a, b) {
 	return 'rgb(' + cr.toString(16) + ',' + cg.toString(16) + ',' + cb.toString(16) + ')';
 };
 
-exports.colorRGBAToString = function(t, a, b) {
+exports.colorRGBAToString = function (t, a, b) {
 	var cr = Math.round(a.r * (1 - t) + b.r * t);
 	var cg = Math.round(a.g * (1 - t) + b.g * t);
 	var cb = Math.round(a.b * (1 - t) + b.b * t);
@@ -2635,7 +2547,7 @@ exports.colorRGBAToString = function(t, a, b) {
 
 // Interpolation between 2 strings a and b (yes that's possible)
 // Returns a string of the same size as b
-exports.string = function(t, a, b) {
+exports.string = function (t, a, b) {
 	var nbCharsA = a.length;
 	var nbCharsB = b.length;
 	var newString = '';
@@ -2656,29 +2568,29 @@ exports.string = function(t, a, b) {
 };
 
 // Bezier, c = array of control points in ]-Inf, +Inf[
-exports.bezierQuadratic = function(t, a, b, c) {
+exports.bezierQuadratic = function (t, a, b, c) {
 	var u = 1 - t;
 	return u * u * a + t * (2 * u * c[0] + t * b);
 };
 
-exports.bezierCubic = function(t, a, b, c) {
+exports.bezierCubic = function (t, a, b, c) {
 	var u = 1 - t;
 	return u * u * u * a + t * (3 * u * u * c[0] + t * (3 * u * c[1] + t * b));
 };
 
-exports.bezierQuartic = function(t, a, b, c) {
+exports.bezierQuartic = function (t, a, b, c) {
 	var u = 1 - t;
 	var u2 = 2 * u;
 	return u2 * u2 * a + t * (4 * u * u2 * c[0] + t * (6 * u2 * c[1] + t * (4 * u * c[2] + t * b)));
 };
 
-exports.bezierQuintic = function(t, a, b, c) {
+exports.bezierQuintic = function (t, a, b, c) {
 	var u = 1 - t;
 	var u2 = 2 * u;
 	return u2 * u2 * u * a + t * (5 * u2 * u2 * c[0] + t * (10 * u * u2 * c[1] + t * (10 * u2 * c[2] + t * (5 * u * c[3] + t * b))));
 };
 
-exports.bezier = function(t, a, b, c) {
+exports.bezier = function (t, a, b, c) {
 	var n = c.length;
 	var u = 1 - t;
 	var x = b;
@@ -2693,7 +2605,7 @@ exports.bezier = function(t, a, b, c) {
 };
 
 // Bezier 2D, c = array of control points in ]-Inf, +Inf[ ^ 2
-exports.bezier2d = function(t, a, b, c) {
+exports.bezier2d = function (t, a, b, c) {
 	var n = c.length;
 	var u = 1 - t;
 	var x = b[0];
@@ -2717,7 +2629,7 @@ exports.bezier2d = function(t, a, b, c) {
 };
 
 // Bezier 3D, c = array of control points in ]-Inf, +Inf[ ^ 3
-exports.bezier3d = function(t, a, b, c) {
+exports.bezier3d = function (t, a, b, c) {
 	var n = c.length;
 	var u = 1 - t;
 	var x = b[0];
@@ -2744,7 +2656,7 @@ exports.bezier3d = function(t, a, b, c) {
 };
 
 // Bezier k-dimensions, c = array of control points in ]-Inf, +Inf[ ^ k
-exports.bezierKd = function(t, a, b, c) {
+exports.bezierKd = function (t, a, b, c) {
 	var n = c.length;
 	var u = 1 - t;
 	var k = a.length;
@@ -2776,7 +2688,7 @@ exports.bezierKd = function(t, a, b, c) {
 };
 
 // CatmullRom, b = array of control points in ]-Inf, +Inf[
-exports.catmullRom = function(t, a, b, c) {
+exports.catmullRom = function (t, a, b, c) {
 	if (t === 1) {
 		return c;
 	}
@@ -2817,7 +2729,7 @@ exports.catmullRom = function(t, a, b, c) {
 // Only 1d and 2d for now, if any request for 3d then I will add it to the list
 
 // Creating a closure for the noise function to make 'perm' and 'grad' only accessible to it
-exports.noise = (function() {
+exports.noise = (function () {
 	// permutation table
 	var perm = [
 		182, 235, 131, 26, 88, 132, 100, 117, 202, 176, 10, 19, 83, 243, 75, 52,
@@ -2871,7 +2783,7 @@ exports.noise = (function() {
 	};
 })();
 
-exports.simplex2d = (function() {
+exports.simplex2d = (function () {
 	// permutation table
 	var perm = [
 		182, 235, 131, 26, 88, 132, 100, 117, 202, 176, 10, 19, 83, 243, 75, 52,
@@ -3012,4 +2924,4 @@ exports.simplex2d = (function() {
 		return a * (1 - t) + b * t;
 	};
 })();
-},{}]},{},[20]);
+},{}]},{},[21]);

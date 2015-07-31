@@ -15,9 +15,9 @@
  * Memory Complexity in O(n)
  */
 
-function ListNode(obj, prev, next, container) {
+function ListNode(obj, previous, next, container) {
 	this.object    = obj;
-	this.prev      = prev;
+	this.previous  = previous;
 	this.next      = next;
 	this.container = container;
 }
@@ -35,8 +35,8 @@ DoublyList.prototype.addFront = function (obj) {
 		this.first = newNode;
 		this.last  = newNode;
 	} else {
-		this.first.prev = newNode;
-		this.first      = newNode;
+		this.first.previous = newNode;
+		this.first = newNode;
 	}
 
 	this.length += 1;
@@ -71,6 +71,40 @@ DoublyList.prototype.popBack = function (obj) {
 	return object;
 };
 
+DoublyList.prototype.addBefore = function (node, obj) {
+	var newNode = new ListNode(obj, node, node.next, this);
+
+	if (node.next !== null) {
+		node.next.previous = newNode;
+	}
+
+	node.next = newNode;
+
+	if (this.first === node) {
+		this.first = newNode;
+	}
+
+	this.length += 1;
+	return newNode;
+};
+
+DoublyList.prototype.addAfter = function (node, obj) {
+	var newNode = new ListNode(obj, node.previous, node, this);
+
+	if (node.previous !== null) {
+		node.previous.next = newNode;
+	}
+
+	node.previous = newNode;
+
+	if (this.last === node) {
+		this.last = newNode;
+	}
+
+	this.length += 1;
+	return newNode;
+};
+
 DoublyList.prototype.removeByReference = function (node) {
 	if (node.container !== this) {
 		console.warn('[DoublyList.removeByReference] Trying to remove a node that does not belong to the list');
@@ -79,20 +113,20 @@ DoublyList.prototype.removeByReference = function (node) {
 
 	// Removing any existing reference to the node
 	if (node.next === null) {
-		this.last = node.prev;
+		this.last = node.previous;
 	} else {
-		node.next.prev = node.prev;
+		node.next.previous = node.previous;
 	}
 
-	if (node.prev === null) {
+	if (node.previous === null) {
 		this.first = node.next;
 	} else {
-		node.prev.next = node.next;
+		node.previous.next = node.next;
 	}
 
 	// Removing any existing reference from the node
 	node.next = null;
-	node.prev = null;
+	node.previous = null;
 	node.container = null;
 
 	// One less node in the list

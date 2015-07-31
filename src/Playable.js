@@ -10,7 +10,7 @@ function Playable() {
 	this._startTime  = 0;
 
 	// Current time, is local (relative to starting time)
-	// i.e this._time === 0 implies this._player._time ===  this._startTime
+	// i.e this._time === 0 implies this._player._time === this._startTime
 	this._time       = 0;
 
 	// Playing speed of the playable
@@ -29,11 +29,6 @@ module.exports = Playable;
 Object.defineProperty(Playable.prototype, 'speed', {
 	get: function () { return this._speed; },
 	set: function (speed) {
-		// TODO: enable speed of a playable to be changed while attached to a bounded player
-		if ((this._player !== null) && (this._player._duration !== undefined)) {
-			console.warn('[Playable.speed] It is not recommended to change the speed of a playable that is attached to the given player:', this._player);
-		}
-
 		if (speed === 0) {
 			if (this._speed !== 0) {
 				// Setting timeStart as if new speed was 1
@@ -51,16 +46,15 @@ Object.defineProperty(Playable.prototype, 'speed', {
 		}
 
 		this._speed = speed;
+		if (this._player !== null) {
+			this._player._onPlayableChange(this);
+		}
 	}
 });
 
 Object.defineProperty(Playable.prototype, 'time', {
 	get: function () { return this._time; },
 	set: function (time) {
-		if ((this._player !== null) && (this._player._duration !== undefined)) {
-			console.warn('[Playable.time] It is not recommended to change the time of a playable that is attached to the given player:', this._player);
-		}
-
 		this.goTo(time);
 	}
 });
@@ -71,12 +65,12 @@ Playable.prototype.onStop     = function (onStop)     { this._onStop     = onSto
 Playable.prototype.onPause    = function (onPause)    { this._onPause    = onPause;    return this; };
 Playable.prototype.onResume   = function (onResume)   { this._onResume   = onResume;   return this; };
 
-Playable.prototype._update   = function () { if (this._onUpdate   !== null) { this._onUpdate();   } };
-Playable.prototype._stop     = function () { if (this._onStop     !== null) { this._onStop();     } };
-Playable.prototype._pause    = function () { if (this._onPause    !== null) { this._onPause();    } };
-Playable.prototype._resume   = function () { if (this._onResume   !== null) { this._onResume();   } };
-
 Playable.prototype.tweener = function (tweener) {
+	if (tweener === null || tweener === undefined) {
+		console.warn('[Playable.tweener] Given tweener is invalid:', tweener);
+		return this;
+	}
+
 	this._player = tweener;
 	return this;
 };
@@ -102,9 +96,9 @@ Playable.prototype.goTo = function (timePosition, iteration) {
 	}
 
 	this._time = timePosition;
-	// iteration = iteration || 0;
-	// // Offsetting start time with respect to current time and given iteration
-	// this._startTime = this._time - time - iteration * this._duration;
+	if (this._player !== null) {
+		this._player._onPlayableChange(this);
+	}
 	return this;
 };
 
@@ -114,22 +108,21 @@ Playable.prototype.rewind = function () {
 };
 
 Playable.prototype.delay = function (delay) {
-	if (this._player === null) {
-		this._player = TINA._getDefaultTweener();
-	}
-	// TODO: add _delay method to TINA
-	this._player._delay(this, delay);
-	return this;
+	return this.start(-delay);
 };
 
 Playable.prototype.start = function (timeOffset) {
-	var player = this._player;
-	if (player === null) {
-		player = TINA._getDefaultTweener();
+	if (this._player === null) {
+		this._player = TINA._getDefaultTweener();
 	}
 
-	if (player._add(this) === false) {
-		// Could not be started
+	if (this._validate() === false) {
+		// Did not pass validation
+		return this;
+	}
+
+	if (this._player._add(this) === false) {
+		// Could not be added to player
 		return this;
 	}
 
@@ -137,13 +130,11 @@ Playable.prototype.start = function (timeOffset) {
 		timeOffset = 0;
 	}
 
-	this._start(timeOffset - player._time);
+	this._startTime = this._player._time - timeOffset;
 	return this;
 };
 
 Playable.prototype._start = function (timeOffset) {
-	this._startTime = -timeOffset;
-
 	if (this._onStart !== null) {
 		this._onStart();
 	}
@@ -152,21 +143,25 @@ Playable.prototype._start = function (timeOffset) {
 Playable.prototype.stop = function () {
 	// Stopping playable without performing any additional update nor completing
 	if (this._player._inactivate(this) === false) {
-		// Could not be stopped
+		// Could not be removed
 		return this;
 	}
 
-	this._stop();
+	if (this._onStop !== null) {
+		this._onStop();
+	}
 	return this;
 };
 
 Playable.prototype.resume = function () {
-	if (this._player._add(this) === false) {
+	if (this._player._activate(this) === false) {
 		// Could not be resumed
 		return this;
 	}
 
-	this._resume();
+	if (this._onResume !== null) {
+		this._onResume();
+	}
 	return this;
 };
 
@@ -176,10 +171,11 @@ Playable.prototype.pause = function () {
 		return this;
 	}
 
-	this._pause();
+	if (this._onPause !== null) {
+		this._onPause();
+	}
 	return this;
 };
-
 
 Playable.prototype._moveTo = function (time, dt) {
 	dt *= this._speed;
@@ -193,4 +189,5 @@ Playable.prototype._moveTo = function (time, dt) {
 };
 
 // Overridable method
-Playable.prototype._update  = function () {};
+Playable.prototype._update   = function () {};
+Playable.prototype._validate = function () {};

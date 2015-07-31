@@ -16,7 +16,7 @@ A comprehensive, high performance, easy to use, open source animation library in
 * A consequent library of **easing and interpolation methods**
 * A variety of components such as **Timeline** and **Sequence** (**Recorder** and **CSSTween** coming soon)
 * **Good synchronisation** between tweens
-* **Relative tweening** enables the possibility to alter objects while they are tweening
+* **Relative tweening** enables the possibility to alter objects while they are tweening.
 * **Nested object tweening** enables the possibility to alter nested objects using a single tween
 * **Compatible with Node.js!**
 * Bonus: Creation and removal of tweens within the callback of another tween will not result in any unwanted side effect (infamous bug of other tweening libraries)
@@ -42,8 +42,8 @@ var TINA = require('tina');
 
 ## API
 
-Existing playable components are: **Tween, NestedTween, Timeline, Sequence, Delay, Timer, Ticker** (Recorder and CSS Tween coming soon).
-The following is a non-exhaustive list of possibilities offered by the TINA.
+Existing playable components are: **Tween, NestedTween, Timeline, Sequence, Delay, Timer, Ticker** (Recorder and CSSTween coming soon).
+The following is a non-exhaustive list of possibilities offered by TINA.
 
 ### Tween
 To create and start a **tween** (it will be automatically updated):
@@ -164,8 +164,8 @@ To create a **timeline**:
 var timePosTweenA = 0;
 var timePosTweenB = 2000;
 var myTimeline = new TINA.Timeline()
-	.add(timePosTweenA, myTweenA)
-	.add(timePosTweenB, myTweenB)
+	.add(myTweenA, timePosTweenA)
+	.add(myTweenB, timePosTweenB)
 	.start();
 ```
 
