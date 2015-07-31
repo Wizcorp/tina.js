@@ -16,53 +16,26 @@ function Ticker(tupt) {
 
 	// Time units per tick (tupt)
 	// Every second, 'tupt' time units elapse
-	this._tupt = tupt || 1;
+	this.tupt = tupt || 1;
 
-	this._nbTicks = 0;
 }
 Ticker.prototype = Object.create(Tweener.prototype);
 Ticker.prototype.constructor = Ticker;
 module.exports = Ticker;
 
-Object.defineProperty(Ticker.prototype, 'tupt', {
-	get: function () { return this._tupt; },
-	set: function (tupt) {
-		if (tupt < 0) {
-			this._warn('[Timer.tupt] tupt cannot be negative, stop messing with time.');
-			tupt = 0;
-		}
-
-		// TODO: compute number of ticks so that (tupt_old * nbTicks_old) === (tupt_new * nbTicks_new)
-		// if (tupt === 0) {
-		// 	// Setting start as if new tups was 1
-		// 	this._startTime += this._time / this._tups - this._time;
-		// } else {
-		// 	if (this._tups === 0) {
-		// 		// If current tupt is 0,
-		// 		// it corresponds to a virtual tupt of 1
-		// 		// when it comes to determing where the start is
-		// 		this._startTime = this._time - this._time / tupt;
-		// 	} else {
-		// 		this._startTime = this._time / this._tups - this._time / tupt;
-		// 	}
-		// }
-
-		this._tupt = tupt;
-	}
-});
-
 Ticker.prototype._getElapsedTime = function () {
-	return this._tupt * (this._nbTicks++);
+	this._nbTicks += this.tupt;
+	return this._nbTicks;
 };
 
 Ticker.prototype._getSingleStepDuration = function () {
-	return this._tupt;
+	return this.tupt;
 };
 
 Ticker.prototype.convertToTicks = function(timeUnits) {
-	return timeUnits / this._tupt;
+	return timeUnits / this.tupt;
 };
 
 Ticker.prototype.convertToTimeUnits = function(nbTicks) {
-	return nbTicks * this._tupt;
+	return nbTicks * this.tupt;
 };
