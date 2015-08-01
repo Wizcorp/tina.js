@@ -87,16 +87,18 @@ var TINA = {
 		var now = clock.now() - this._startTime;
 		var dt = now - this._time;
 		if (dt < 0) {
-			// Clock error, ignoring this update
+			// Clock error
 			// Date.now is based on a clock that is resynchronized
 			// every 15-20 mins and could cause the timer to go backward in time.
 			// (legend or reality? not sure, but I think I noticed it once)
 			// To get some explanation from Paul Irish:
 			// http://updates.html5rocks.com/2012/08/When-milliseconds-are-not-enough-performance-now
-			return;
+			dt = 1; // incrementing time by 1 millisecond
+			this._startTime -= 1;
+			this._time += 1;
+		} else {
+			this._time = now;
 		}
-
-		this._time = now;
 
 		// Making a copy of the tweener array
 		// to avoid funky stuff happening
@@ -113,7 +115,14 @@ var TINA = {
 	},
 
 	reset: function () {
-		this._startTime = clock.now();
+		// Resetting the clock
+		// Getting time difference between last update and now
+		var now = clock.now();
+		var dt = now - this._time;
+
+		// Moving starting time by this difference
+		// As if the time had virtually not moved
+		this._startTime += dt;
 		this._time = 0;
 	},
 
@@ -126,12 +135,8 @@ var TINA = {
 			this._onStart();
 		}
 
-		// Setting the clock
-		this._startTime = clock.now();
-		this._time = 0;
-
 		for (var t = 0; t < this._tweeners.length; t += 1) {
-			this._tweeners[t]._start(0);
+			this._tweeners[t]._start();
 		}
 
 		return this;
@@ -171,6 +176,8 @@ var TINA = {
 				requestAnimFrame(updateTINA);
 			}
 		}
+
+		this.reset();
 
 		// Starting the animation loop
 		this._running = true;
@@ -213,15 +220,6 @@ var TINA = {
 		if (this._onResume !== null) {
 			this._onResume();
 		}
-
-		// Resetting the clock
-		// Getting time difference between last update and now
-		var now = clock.now();
-		var dt = now - this._time;
-
-		// Moving starting time by this difference
-		// As if the time had virtually not moved
-		this._startTime += dt;
 
 		for (var t = 0; t < this._tweeners.length; t += 1) {
 			this._tweeners[t]._resume();
