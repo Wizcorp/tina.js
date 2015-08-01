@@ -215,7 +215,7 @@ Player.prototype._updatePlayableList = function (dt) {
 			this._inactivePlayables.removeByReference(playable._handle);
 			playable._handle = this._activePlayables.addBack(playable);
 
-			playable._start(this._time - startTime);
+			playable._start();
 		}
 	}
 };
