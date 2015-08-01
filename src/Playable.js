@@ -102,6 +102,10 @@ Playable.prototype.goTo = function (timePosition, iteration) {
 	return this;
 };
 
+Playable.prototype.getDuration = function () {
+	return Infinity;
+};
+
 Playable.prototype.rewind = function () {
 	this.goTo(0, 0);
 	return this;

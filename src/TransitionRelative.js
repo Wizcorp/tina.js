@@ -13,8 +13,8 @@ function updateP(object, t) {
 	for (var i = 0; i < this.props.length; i += 1) {
 		var p = q[i];
 		var now = this.from[p] * (1 - t) + this.to[p] * t;
-		object[p] = object[p] + (now - this.prev[p]);
-		this.prev[p] = now;
+		object[p] = object[p] + (now - this.prevs[p]);
+		this.prevs[p] = now;
 	}
 }
 
@@ -29,12 +29,12 @@ function updateI(object, t) {
 // Interpolation
 // Several Properties
 function updatePI(object, t) {
-	var q = this.properties;
+	var q = this.props;
 	for (var i = 0; i < q.length; i += 1) {
 		var p = q[i];
 		var now = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);
-		object[p] = object[p] + (now - this.prev[p]);
-		this.prev[p] = now;
+		object[p] = object[p] + (now - this.prevs[p]);
+		this.prevs[p] = now;
 	}
 }
 
@@ -50,13 +50,13 @@ function updateE(object, t) {
 // Easing
 // Several Properties
 function updatePE(object, t) {
-	var q = this.properties;
+	var q = this.props;
 	t = this.easing(t, this.easingParams);
 	for (var i = 0; i < q.length; i += 1) {
 		var p = q[i];
 		var now = this.from[p] * (1 - t) + this.to[p] * t;
-		object[p] = object[p] + (now - this.prev[p]);
-		this.prev[p] = now;
+		object[p] = object[p] + (now - this.prevs[p]);
+		this.prevs[p] = now;
 	}
 }
 
@@ -73,13 +73,13 @@ function updateIE(object, t) {
 // Interpolation
 // Several Properties
 function updatePIE(object, t) {
-	var q = this.properties;
+	var q = this.props;
 	t = this.easing(t, this.easingParams);
 	for (var i = 0; i < q.length; i += 1) {
 		var p = q[i];
 		var now = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);
-		object[p] = object[p] + (now - this.prev[p]);
-		this.prev[p] = now;
+		object[p] = object[p] + (now - this.prevs[p]);
+		this.prevs[p] = now;
 	}
 }
 
@@ -130,13 +130,17 @@ function Transition(properties, from, to, start, duration, easing, easingParam, 
 	// 1 => Several properties
 	var propsFlag;
 	if (properties.length === 1) {
-		propsFlag = 0;
-		this.prop = properties[0];
-		this.prev = 0;
+		propsFlag  = 0;
+		this.prop  = properties[0]; // string
+		this.props = null;
+		this.prev  = 0;
+		this.prevs = null;
 	} else {
 		propsFlag  = 1;
-		this.props = properties;
-		this.prev  = {};
+		this.prop  = null;
+		this.props = properties; // array
+		this.prev  = null;
+		this.prevs = {};
 		for (var p = 0; p < properties.length; p += 1) {
 			this.prev[properties[p]] = 0;
 		}

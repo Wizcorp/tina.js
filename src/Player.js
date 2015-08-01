@@ -211,19 +211,16 @@ Player.prototype._updatePlayableList = function (dt) {
 		var startTime = playable._startTime;
 		var endTime   = startTime + playable.getDuration();
 		if (startTime <= this._time && this._time <= endTime) {
-			// O(1)
-			this._inactivePlayables.removeByReference(playable._handle);
-			playable._handle = this._activePlayables.addBack(playable);
-
+			this._activate(playable);
 			playable._start();
 		}
 	}
 };
 
-Player.prototype._update = function (dt) {
+Player.prototype._update = function (dt, overflow) {
 	this._updatePlayableList(dt);
 	for (var handle = this._activePlayables.first; handle !== null; handle = handle.next) {
-		handle.object._moveTo(this._time, dt);
+		handle.object._moveTo(this._time, dt, overflow);
 	}
 };
 

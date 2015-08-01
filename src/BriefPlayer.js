@@ -19,5 +19,6 @@ module.exports = BriefPlayer;
 // BriefPlayer.prototype._onPlayableChanged = function (/* playable */) {};
 // BriefPlayer.prototype._onPlayableRemoved = function (/* playable */) {};
 BriefPlayer.prototype._onAllPlayablesRemoved = function () {
-	
+	this._duration = 0;
 };
+
