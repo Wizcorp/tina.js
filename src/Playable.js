@@ -47,7 +47,7 @@ Object.defineProperty(Playable.prototype, 'speed', {
 
 		this._speed = speed;
 		if (this._player !== null) {
-			this._player._onPlayableChange(this);
+			this._player._onPlayableChanged(this);
 		}
 	}
 });
@@ -97,7 +97,7 @@ Playable.prototype.goTo = function (timePosition, iteration) {
 
 	this._time = timePosition;
 	if (this._player !== null) {
-		this._player._onPlayableChange(this);
+		this._player._onPlayableChanged(this);
 	}
 	return this;
 };
@@ -178,6 +178,11 @@ Playable.prototype.pause = function () {
 };
 
 Playable.prototype._moveTo = function (time, dt) {
+	// N.B local time is calculated as follow: localTime = (GlobalTime - startTime) * speed
+	// Rather than using the following equation: localTime += dt
+	// The goal is to avoid stacking up rounding errors that could (in very rare cases)
+	// lead to callbacks not being triggered simultaneously, or not being triggered at all
+
 	dt *= this._speed;
 
 	this._time = (time - this._startTime) * this._speed;

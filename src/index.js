@@ -10,7 +10,6 @@ TINA.interpolation   = require('./interpolation');
 TINA.NestedTween     = require('./NestedTween');
 TINA.PixiTween       = require('./NestedTween');
 TINA.Playable        = require('./Playable');
-TINA.PlayableHandler = require('./PlayableHandler');
 TINA.Player          = require('./Player');
 // TINA.Recorder        = require('./Recorder');
 TINA.Sequence        = require('./Sequence');

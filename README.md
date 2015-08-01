@@ -23,7 +23,7 @@ A comprehensive, high performance, easy to use, open source animation library in
 
 Note: Do not hesitate to contribute by reporting issues or by submitting your own components and interpolations.
 
-Warning: Still in beta version!
+Warning: Still in beta version! Do not be shy, [report issues](https://github.com/Wizcorp/tina.js/issues)
 
 ## How to use
 

@@ -215,7 +215,7 @@ AbstractTween.prototype._validate = function () {
 
 	return true;
 };
-},{"./Transition":16,"./TransitionRelative":17,"./easing":20,"./interpolation":23}],2:[function(require,module,exports){
+},{"./Transition":15,"./TransitionRelative":16,"./easing":19,"./interpolation":22}],2:[function(require,module,exports){
 
 function BriefExtension() {
 	// A brief component has a duration
@@ -259,7 +259,7 @@ BriefExtension.prototype.iterations = function (iterations) {
 
 	this._iterations = iterations;
 	if (this._player !== null) {
-		this._player._onPlayableChange(this);
+		this._player._onPlayableChanged(this);
 	}
 	return this;
 };
@@ -267,7 +267,7 @@ BriefExtension.prototype.iterations = function (iterations) {
 BriefExtension.prototype.persist = function (persist) {
 	this._persist = persist;
 	if (this._player !== null) {
-		this._player._onPlayableChange(this);
+		this._player._onPlayableChanged(this);
 	}
 	return this;
 };
@@ -275,7 +275,7 @@ BriefExtension.prototype.persist = function (persist) {
 BriefExtension.prototype.pingpong = function (pingpong) {
 	this._pingpong = pingpong;
 	if (this._player !== null) {
-		this._player._onPlayableChange(this);
+		this._player._onPlayableChanged(this);
 	}
 	return this;
 };
@@ -285,7 +285,7 @@ BriefExtension.prototype._complete = function (overflow) {
 		// Playable is persisting
 		// i.e it never completes
 		this._startTime += overflow;
-		this._player._onPlayableChange(this);
+		this._player._onPlayableChanged(this);
 		return;
 	}
 
@@ -392,25 +392,31 @@ BriefPlayable.prototype.constructor = BriefPlayable;
 inherit(BriefPlayable, BriefExtension);
 
 module.exports = BriefPlayable;
-},{"./BriefExtension":2,"./Playable":8,"./inherit":22}],4:[function(require,module,exports){
-var inherit         = require('./inherit');
-var PlayableHandler = require('./PlayableHandler');
-var BriefExtension  = require('./BriefExtension');
+},{"./BriefExtension":2,"./Playable":8,"./inherit":21}],4:[function(require,module,exports){
+var inherit        = require('./inherit');
+var Player         = require('./Player');
+var BriefExtension = require('./BriefExtension');
 
 /**
  * @classdesc
  * Manages the update of a list of playable with respect to a given elapsed time.
  */
 function BriefPlayer() {
-	PlayableHandler.call(this);
+	Player.call(this);
 	BriefExtension.call(this);
 }
-BriefPlayer.prototype = Object.create(PlayableHandler.prototype);
+BriefPlayer.prototype = Object.create(Player.prototype);
 BriefPlayer.prototype.constructor = BriefPlayer;
 inherit(BriefPlayer, BriefExtension);
 
 module.exports = BriefPlayer;
-},{"./BriefExtension":2,"./PlayableHandler":9,"./inherit":22}],5:[function(require,module,exports){
+
+// BriefPlayer.prototype._onPlayableChanged = function (/* playable */) {};
+// BriefPlayer.prototype._onPlayableRemoved = function (/* playable */) {};
+BriefPlayer.prototype._onAllPlayablesRemoved = function () {
+	
+};
+},{"./BriefExtension":2,"./Player":9,"./inherit":21}],5:[function(require,module,exports){
 var BriefPlayable = require('./BriefPlayable');
 
 /**
@@ -841,7 +847,7 @@ Object.defineProperty(Playable.prototype, 'speed', {
 
 		this._speed = speed;
 		if (this._player !== null) {
-			this._player._onPlayableChange(this);
+			this._player._onPlayableChanged(this);
 		}
 	}
 });
@@ -891,7 +897,7 @@ Playable.prototype.goTo = function (timePosition, iteration) {
 
 	this._time = timePosition;
 	if (this._player !== null) {
-		this._player._onPlayableChange(this);
+		this._player._onPlayableChanged(this);
 	}
 	return this;
 };
@@ -972,6 +978,11 @@ Playable.prototype.pause = function () {
 };
 
 Playable.prototype._moveTo = function (time, dt) {
+	// N.B local time is calculated as follow: localTime = (GlobalTime - startTime) * speed
+	// Rather than using the following equation: localTime += dt
+	// The goal is to avoid stacking up rounding errors that could (in very rare cases)
+	// lead to callbacks not being triggered simultaneously, or not being triggered at all
+
 	dt *= this._speed;
 
 	this._time = (time - this._startTime) * this._speed;
@@ -993,7 +1004,7 @@ var DoublyList   = require('./DoublyList');
  * @classdesc
  * Manages the update of a list of playable with respect to a given elapsed time.
  */
-function PlayableHandler() {
+function Player() {
 	Playable.call(this);
 
 	// A DoublyList, rather than an Array, is used to store playables.
@@ -1019,11 +1030,11 @@ function PlayableHandler() {
 	// Whether to trigger the debugger on warnings
 	this._debug = false;
 }
-PlayableHandler.prototype = Object.create(Playable.prototype);
-PlayableHandler.prototype.constructor = PlayableHandler;
-module.exports = PlayableHandler;
+Player.prototype = Object.create(Playable.prototype);
+Player.prototype.constructor = Player;
+module.exports = Player;
 
-PlayableHandler.prototype._add = function (playable, delay) {
+Player.prototype._add = function (playable, delay) {
 	if (playable._handle === null) {
 		// Playable can be added
 		playable._handle = this._inactivePlayables.add(playable);
@@ -1039,22 +1050,22 @@ PlayableHandler.prototype._add = function (playable, delay) {
 	}
 
 	if (playable._handle.container === this._activePlayables) {
-		this._warn('[PlayableHandler._add] Playable is already present, and active');
+		this._warn('[Player._add] Playable is already present, and active');
 		return false;
 	}
 
 	if (playable._handle.container === this._inactivePlayables) {
-		this._warn('[PlayableHandler._add] Playable is already present, but inactive (could be starting)');
+		this._warn('[Player._add] Playable is already present, but inactive (could be starting)');
 		return false;
 	}
 
-	this._warn('[PlayableHandler._add] Playable is used elsewhere');
+	this._warn('[Player._add] Playable is used elsewhere');
 	return false;
 };
 
-PlayableHandler.prototype._remove = function (playable) {
+Player.prototype._remove = function (playable) {
 	if (playable._handle === null) {
-		this._warn('[PlayableHandler._remove] Playable is not being used');
+		this._warn('[Player._remove] Playable is not being used');
 		return false;
 	}
 
@@ -1072,15 +1083,15 @@ PlayableHandler.prototype._remove = function (playable) {
 	}
 
 	if (playable._handle.container === this._playablesToRemove) {
-		this._warn('[PlayableHandler._remove] Playable is already being removed');
+		this._warn('[Player._remove] Playable is already being removed');
 		return false;
 	}
 
-	this._warn('[PlayableHandler._add] Playable is used elsewhere');
+	this._warn('[Player._add] Playable is used elsewhere');
 	return false;
 };
 
-PlayableHandler.prototype.remove = function (playable) {
+Player.prototype.remove = function (playable) {
 	if (playable._handle.container === this._activePlayables) {
 		playable.stop();
 	}
@@ -1089,11 +1100,11 @@ PlayableHandler.prototype.remove = function (playable) {
 		this._remove(playable);
 	}
 
-	this._onRemovePlayables();
+	this._onPlayableRemoved(playable);
 	return this;
 };
 
-PlayableHandler.prototype.removeAll = function () {
+Player.prototype.removeAll = function () {
 	// Stopping all active playables
 	var handle = this._activePlayables.first; 
 	while (handle !== null) {
@@ -1103,11 +1114,11 @@ PlayableHandler.prototype.removeAll = function () {
 	}
 
 	this._handlePlayablesToRemove();
-	this._onRemovePlayables();
+	this._onAllPlayablesRemoved();
 	return this;
 };
 
-PlayableHandler.prototype.possess = function (playable) {
+Player.prototype.possess = function (playable) {
 	if (playable._handle === null) {
 		return false;
 	}
@@ -1115,7 +1126,7 @@ PlayableHandler.prototype.possess = function (playable) {
 	return (playable._handle.container === this._activePlayables) || (playable._handle.container === this._inactivePlayables);
 };
 
-PlayableHandler.prototype._handlePlayablesToRemove = function () {
+Player.prototype._handlePlayablesToRemove = function () {
 	while (this._playablesToRemove.length > 0) {
 		// O(1) where O stands for "Oh yeah"
 
@@ -1129,7 +1140,7 @@ PlayableHandler.prototype._handlePlayablesToRemove = function () {
 	}
 };
 
-PlayableHandler.prototype.clear = function () {
+Player.prototype.clear = function () {
 	this._activePlayables.clear();
 	this._inactivePlayables.clear();
 	this._playablesToRemove.clear();
@@ -1137,7 +1148,7 @@ PlayableHandler.prototype.clear = function () {
 	return this;
 };
 
-PlayableHandler.prototype._warn = function (warning) {
+Player.prototype._warn = function (warning) {
 	// jshint debug: true
 	if (this._silent === false) {
 		console.warn(warning);
@@ -1148,17 +1159,17 @@ PlayableHandler.prototype._warn = function (warning) {
 	}
 };
 
-PlayableHandler.prototype.silent = function (silent) {
+Player.prototype.silent = function (silent) {
 	this._silent = silent;
 	return this;
 };
 
-PlayableHandler.prototype.debug = function (debug) {
+Player.prototype.debug = function (debug) {
 	this._debug = debug;
 	return this;
 };
 
-PlayableHandler.prototype.stop = function () {
+Player.prototype.stop = function () {
 	// Stopping all active playables
 	var handle = this._activePlayables.first; 
 	while (handle !== null) {
@@ -1173,19 +1184,19 @@ PlayableHandler.prototype.stop = function () {
 	Playable.prototype.stop.call(this);
 };
 
-PlayableHandler.prototype._activate = function (playable) {
+Player.prototype._activate = function (playable) {
 	// O(1)
 	this._inactivePlayables.removeByReference(playable._handle);
 	playable._handle = this._activePlayables.addBack(playable);
 };
 
-PlayableHandler.prototype._inactivate = function (playable) {
+Player.prototype._inactivate = function (playable) {
 	// O(1)
 	this._activePlayables.removeByReference(playable._handle);
 	playable._handle = this._inactivePlayables.addBack(playable);
 };
 
-PlayableHandler.prototype._updatePlayableList = function (dt) {
+Player.prototype._updatePlayableList = function (dt) {
 	this._handlePlayablesToRemove();
 
 	// Activating playables
@@ -1208,7 +1219,7 @@ PlayableHandler.prototype._updatePlayableList = function (dt) {
 	}
 };
 
-PlayableHandler.prototype._update = function (dt) {
+Player.prototype._update = function (dt) {
 	this._updatePlayableList(dt);
 	for (var handle = this._activePlayables.first; handle !== null; handle = handle.next) {
 		handle.object._moveTo(this._time, dt);
@@ -1216,23 +1227,10 @@ PlayableHandler.prototype._update = function (dt) {
 };
 
 // Overridable methods
-PlayableHandler.prototype._onRemovePlayables = function (/* playable */) {};
-PlayableHandler.prototype._onPlayableChange  = function (/* playable */) { console.log('nada'); };
+Player.prototype._onPlayableChanged = function (/* playable */) {};
+Player.prototype._onPlayableRemoved = function (/* playable */) {};
+Player.prototype._onAllPlayablesRemoved = function () {};
 },{"./DoublyList":6,"./Playable":8}],10:[function(require,module,exports){
-var PlayableHandler = require('./PlayableHandler');
-
-/**
- * @classdesc
- * Manages the update of a list of playable with respect to a given elapsed time.
- */
-function Player() {
-	PlayableHandler.call(this);
-}
-Player.prototype = Object.create(PlayableHandler.prototype);
-Player.prototype.constructor = Player;
-
-module.exports = Player;
-},{"./PlayableHandler":9}],11:[function(require,module,exports){
 var Timeline = require('./Timeline');
 
 /**
@@ -1266,7 +1264,7 @@ Sequence.prototype.addDelay = function (duration) {
 	this._duration += duration;
 	return this;
 };
-},{"./Timeline":14}],12:[function(require,module,exports){
+},{"./Timeline":13}],11:[function(require,module,exports){
 (function (global){
 
 /**
@@ -1616,7 +1614,7 @@ var TINA = {
 module.exports = global.TINA = TINA;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],13:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 var Tweener = require('./Tweener');
 
 /**
@@ -1635,58 +1633,31 @@ function Ticker(tupt) {
 
 	// Time units per tick (tupt)
 	// Every second, 'tupt' time units elapse
-	this._tupt = tupt || 1;
+	this.tupt = tupt || 1;
 
-	this._nbTicks = 0;
 }
 Ticker.prototype = Object.create(Tweener.prototype);
 Ticker.prototype.constructor = Ticker;
 module.exports = Ticker;
 
-Object.defineProperty(Ticker.prototype, 'tupt', {
-	get: function () { return this._tupt; },
-	set: function (tupt) {
-		if (tupt < 0) {
-			this._warn('[Timer.tupt] tupt cannot be negative, stop messing with time.');
-			tupt = 0;
-		}
-
-		// TODO: compute number of ticks so that (tupt_old * nbTicks_old) === (tupt_new * nbTicks_new)
-		// if (tupt === 0) {
-		// 	// Setting start as if new tups was 1
-		// 	this._startTime += this._time / this._tups - this._time;
-		// } else {
-		// 	if (this._tups === 0) {
-		// 		// If current tupt is 0,
-		// 		// it corresponds to a virtual tupt of 1
-		// 		// when it comes to determing where the start is
-		// 		this._startTime = this._time - this._time / tupt;
-		// 	} else {
-		// 		this._startTime = this._time / this._tups - this._time / tupt;
-		// 	}
-		// }
-
-		this._tupt = tupt;
-	}
-});
-
 Ticker.prototype._getElapsedTime = function () {
-	return this._tupt * (this._nbTicks++);
+	this._nbTicks += this.tupt;
+	return this._nbTicks;
 };
 
 Ticker.prototype._getSingleStepDuration = function () {
-	return this._tupt;
+	return this.tupt;
 };
 
 Ticker.prototype.convertToTicks = function(timeUnits) {
-	return timeUnits / this._tupt;
+	return timeUnits / this.tupt;
 };
 
 Ticker.prototype.convertToTimeUnits = function(nbTicks) {
-	return nbTicks * this._tupt;
+	return nbTicks * this.tupt;
 };
 
-},{"./Tweener":19}],14:[function(require,module,exports){
+},{"./Tweener":18}],13:[function(require,module,exports){
 var BriefPlayer = require('./BriefPlayer');
 
 /**
@@ -1722,7 +1693,7 @@ Timeline.prototype.add = function (playable, startTime) {
 	this._duration = Math.max(this._duration, startTime + playable.getDuration());
 	return this;
 };
-},{"./BriefPlayer":4}],15:[function(require,module,exports){
+},{"./BriefPlayer":4}],14:[function(require,module,exports){
 var Tweener = require('./Tweener');
 
 /**
@@ -1788,7 +1759,7 @@ Timer.prototype.convertToSeconds = function(timeUnits) {
 Timer.prototype.convertToTimeUnits = function(seconds) {
 	return seconds * this._tups;
 };
-},{"./Tweener":19}],16:[function(require,module,exports){
+},{"./Tweener":18}],15:[function(require,module,exports){
 // The file is a good representation of the constant fight between maintainability and performance
 // For performance reasons several update methods are created
 // The appropriate method should be used for tweening. The selection depends on:
@@ -1922,7 +1893,7 @@ function Transition(properties, from, to, start, duration, easing, easingParam, 
 }
 
 module.exports = Transition;
-},{}],17:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 
 // One property
 function update(object, t) {
@@ -2071,7 +2042,7 @@ function Transition(properties, from, to, start, duration, easing, easingParam, 
 }
 
 module.exports = Transition;
-},{}],18:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 var BriefPlayable = require('./BriefPlayable');
 var AbstractTween = require('./AbstractTween');
 
@@ -2097,7 +2068,7 @@ Tween.prototype = Object.create(BriefPlayable.prototype);
 Tween.prototype.constructor = Tween;
 inherit(Tween, AbstractTween);
 module.exports = Tween;
-},{"./AbstractTween":1,"./BriefPlayable":3,"./inherit":22}],19:[function(require,module,exports){
+},{"./AbstractTween":1,"./BriefPlayable":3,"./inherit":21}],18:[function(require,module,exports){
 var Player = require('./Player');
 var TINA   = require('./TINA');
 
@@ -2136,7 +2107,7 @@ Tweener.prototype.useAsDefault = function () {
 	TINA.setDefaultTweener(this);
 	return this;
 };
-},{"./Player":10,"./TINA":12}],20:[function(require,module,exports){
+},{"./Player":9,"./TINA":11}],19:[function(require,module,exports){
 /**
  *
  * @file A set of ease functions
@@ -2399,7 +2370,7 @@ exports.backInOut = function (t, e) {
 	return 0.5 * (t * t * ((e + 1) * t + e)) + 1;
 };
 
-},{}],21:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 var TINA = require('./TINA.js');
 
 // TINA.CSSTween        = require('./CSSTween');
@@ -2412,7 +2383,6 @@ TINA.interpolation   = require('./interpolation');
 TINA.NestedTween     = require('./NestedTween');
 TINA.PixiTween       = require('./NestedTween');
 TINA.Playable        = require('./Playable');
-TINA.PlayableHandler = require('./PlayableHandler');
 TINA.Player          = require('./Player');
 // TINA.Recorder        = require('./Recorder');
 TINA.Sequence        = require('./Sequence');
@@ -2424,7 +2394,7 @@ TINA.Tweener         = require('./Tweener');
 
 module.exports = TINA;
 
-},{"./BriefExtension":2,"./BriefPlayable":3,"./BriefPlayer":4,"./Delay":5,"./NestedTween":7,"./Playable":8,"./PlayableHandler":9,"./Player":10,"./Sequence":11,"./TINA.js":12,"./Ticker":13,"./Timeline":14,"./Timer":15,"./Tween":18,"./Tweener":19,"./easing":20,"./interpolation":23}],22:[function(require,module,exports){
+},{"./BriefExtension":2,"./BriefPlayable":3,"./BriefPlayer":4,"./Delay":5,"./NestedTween":7,"./Playable":8,"./Player":9,"./Sequence":10,"./TINA.js":11,"./Ticker":12,"./Timeline":13,"./Timer":14,"./Tween":17,"./Tweener":18,"./easing":19,"./interpolation":22}],21:[function(require,module,exports){
 module.exports = function (subobject, superobject) {
 	var prototypes = Object.keys(superobject.prototype);
 	for (var p = 0; p < prototypes.length; p += 1) {
@@ -2432,7 +2402,7 @@ module.exports = function (subobject, superobject) {
 		subobject.prototype[prototypeName] = superobject.prototype[prototypeName];
 	}
 };
-},{}],23:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 /**
  *
  * @file A set of interpolation functions
@@ -2924,4 +2894,4 @@ exports.simplex2d = (function () {
 		return a * (1 - t) + b * t;
 	};
 })();
-},{}]},{},[21]);
+},{}]},{},[20]);
