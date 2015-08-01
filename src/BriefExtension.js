@@ -41,7 +41,7 @@ BriefExtension.prototype.iterations = function (iterations) {
 
 	this._iterations = iterations;
 	if (this._player !== null) {
-		this._player._onPlayableChange(this);
+		this._player._onPlayableChanged(this);
 	}
 	return this;
 };
@@ -49,7 +49,7 @@ BriefExtension.prototype.iterations = function (iterations) {
 BriefExtension.prototype.persist = function (persist) {
 	this._persist = persist;
 	if (this._player !== null) {
-		this._player._onPlayableChange(this);
+		this._player._onPlayableChanged(this);
 	}
 	return this;
 };
@@ -57,7 +57,7 @@ BriefExtension.prototype.persist = function (persist) {
 BriefExtension.prototype.pingpong = function (pingpong) {
 	this._pingpong = pingpong;
 	if (this._player !== null) {
-		this._player._onPlayableChange(this);
+		this._player._onPlayableChanged(this);
 	}
 	return this;
 };
@@ -67,7 +67,7 @@ BriefExtension.prototype._complete = function (overflow) {
 		// Playable is persisting
 		// i.e it never completes
 		this._startTime += overflow;
-		this._player._onPlayableChange(this);
+		this._player._onPlayableChanged(this);
 		return;
 	}
 
