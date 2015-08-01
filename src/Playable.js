@@ -134,7 +134,7 @@ Playable.prototype.start = function (timeOffset) {
 	return this;
 };
 
-Playable.prototype._start = function (timeOffset) {
+Playable.prototype._start = function () {
 	if (this._onStart !== null) {
 		this._onStart();
 	}
@@ -178,11 +178,6 @@ Playable.prototype.pause = function () {
 };
 
 Playable.prototype._moveTo = function (time, dt) {
-	// N.B local time is calculated as follow: localTime = (GlobalTime - startTime) * speed
-	// Rather than using the following equation: localTime += dt
-	// The goal is to avoid stacking up rounding errors that could (in very rare cases)
-	// lead to callbacks not being triggered simultaneously, or not being triggered at all
-
 	dt *= this._speed;
 
 	this._time = (time - this._startTime) * this._speed;
@@ -193,6 +188,6 @@ Playable.prototype._moveTo = function (time, dt) {
 	}
 };
 
-// Overridable method
+// Overridable methods
 Playable.prototype._update   = function () {};
 Playable.prototype._validate = function () {};

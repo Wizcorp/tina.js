@@ -23,13 +23,15 @@ Ticker.prototype = Object.create(Tweener.prototype);
 Ticker.prototype.constructor = Ticker;
 module.exports = Ticker;
 
-Ticker.prototype._getElapsedTime = function () {
-	this._nbTicks += this.tupt;
-	return this._nbTicks;
-};
+Ticker.prototype._moveTo = function (time, dt) {
+	dt = this.tupt;
+	this._time = this.tupt * (this._nbTicks++);
 
-Ticker.prototype._getSingleStepDuration = function () {
-	return this.tupt;
+	this._update(dt);
+
+	if (this._onUpdate !== null) {
+		this._onUpdate(this._time, dt);
+	}
 };
 
 Ticker.prototype.convertToTicks = function(timeUnits) {

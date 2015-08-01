@@ -218,16 +218,16 @@ AbstractTween.prototype._validate = function () {
 },{"./Transition":15,"./TransitionRelative":16,"./easing":19,"./interpolation":22}],2:[function(require,module,exports){
 
 function BriefExtension() {
-	// A brief component has a duration
-	this._duration   = 0;
+	// Local duration of the playable, independent from speed and iterations
+	this._duration = 0;
 
-	// And can complete
+	// On complete callback
 	this._onComplete = null;
 
 	// Playing options
 	this._iterations = 1; // Number of times to iterate the playable
-	this._persist    = false; // To keep the playable running instead of completing
 	this._pingpong   = false; // To make the playable go backward on even iterations
+	this._persist    = false; // To keep the playable running instead of completing
 }
 
 module.exports = BriefExtension;
@@ -934,7 +934,7 @@ Playable.prototype.start = function (timeOffset) {
 	return this;
 };
 
-Playable.prototype._start = function (timeOffset) {
+Playable.prototype._start = function () {
 	if (this._onStart !== null) {
 		this._onStart();
 	}
@@ -978,11 +978,6 @@ Playable.prototype.pause = function () {
 };
 
 Playable.prototype._moveTo = function (time, dt) {
-	// N.B local time is calculated as follow: localTime = (GlobalTime - startTime) * speed
-	// Rather than using the following equation: localTime += dt
-	// The goal is to avoid stacking up rounding errors that could (in very rare cases)
-	// lead to callbacks not being triggered simultaneously, or not being triggered at all
-
 	dt *= this._speed;
 
 	this._time = (time - this._startTime) * this._speed;
@@ -993,7 +988,7 @@ Playable.prototype._moveTo = function (time, dt) {
 	}
 };
 
-// Overridable method
+// Overridable methods
 Playable.prototype._update   = function () {};
 Playable.prototype._validate = function () {};
 },{}],9:[function(require,module,exports){
@@ -1214,7 +1209,7 @@ Player.prototype._updatePlayableList = function (dt) {
 			this._inactivePlayables.removeByReference(playable._handle);
 			playable._handle = this._activePlayables.addBack(playable);
 
-			playable._start(this._time - startTime);
+			playable._start();
 		}
 	}
 };
@@ -1355,16 +1350,18 @@ var TINA = {
 		var now = clock.now() - this._startTime;
 		var dt = now - this._time;
 		if (dt < 0) {
-			// Clock error, ignoring this update
+			// Clock error
 			// Date.now is based on a clock that is resynchronized
 			// every 15-20 mins and could cause the timer to go backward in time.
 			// (legend or reality? not sure, but I think I noticed it once)
 			// To get some explanation from Paul Irish:
 			// http://updates.html5rocks.com/2012/08/When-milliseconds-are-not-enough-performance-now
-			return;
+			dt = 1; // incrementing time by 1 millisecond
+			this._startTime -= 1;
+			this._time += 1;
+		} else {
+			this._time = now;
 		}
-
-		this._time = now;
 
 		// Making a copy of the tweener array
 		// to avoid funky stuff happening
@@ -1381,7 +1378,14 @@ var TINA = {
 	},
 
 	reset: function () {
-		this._startTime = clock.now();
+		// Resetting the clock
+		// Getting time difference between last update and now
+		var now = clock.now();
+		var dt = now - this._time;
+
+		// Moving starting time by this difference
+		// As if the time had virtually not moved
+		this._startTime += dt;
 		this._time = 0;
 	},
 
@@ -1394,12 +1398,8 @@ var TINA = {
 			this._onStart();
 		}
 
-		// Setting the clock
-		this._startTime = clock.now();
-		this._time = 0;
-
 		for (var t = 0; t < this._tweeners.length; t += 1) {
-			this._tweeners[t]._start(0);
+			this._tweeners[t]._start();
 		}
 
 		return this;
@@ -1439,6 +1439,8 @@ var TINA = {
 				requestAnimFrame(updateTINA);
 			}
 		}
+
+		this.reset();
 
 		// Starting the animation loop
 		this._running = true;
@@ -1481,15 +1483,6 @@ var TINA = {
 		if (this._onResume !== null) {
 			this._onResume();
 		}
-
-		// Resetting the clock
-		// Getting time difference between last update and now
-		var now = clock.now();
-		var dt = now - this._time;
-
-		// Moving starting time by this difference
-		// As if the time had virtually not moved
-		this._startTime += dt;
 
 		for (var t = 0; t < this._tweeners.length; t += 1) {
 			this._tweeners[t]._resume();
@@ -1640,13 +1633,15 @@ Ticker.prototype = Object.create(Tweener.prototype);
 Ticker.prototype.constructor = Ticker;
 module.exports = Ticker;
 
-Ticker.prototype._getElapsedTime = function () {
-	this._nbTicks += this.tupt;
-	return this._nbTicks;
-};
+Ticker.prototype._moveTo = function (time, dt) {
+	dt = this.tupt;
+	this._time = this.tupt * (this._nbTicks++);
 
-Ticker.prototype._getSingleStepDuration = function () {
-	return this.tupt;
+	this._update(dt);
+
+	if (this._onUpdate !== null) {
+		this._onUpdate(this._time, dt);
+	}
 };
 
 Ticker.prototype.convertToTicks = function(timeUnits) {
@@ -1712,52 +1707,23 @@ function Timer(tups) {
 
 	// Time units per second (tups)
 	// Every second, 'tups' time units elapse
-	this._tups = tups || 1000;
+	this._speed = (tups / 1000) || 1;
 }
 Timer.prototype = Object.create(Tweener.prototype);
 Timer.prototype.constructor = Timer;
 module.exports = Timer;
 
 Object.defineProperty(Timer.prototype, 'tups', {
-	get: function () { return this._tups; },
-	set: function (tups) {
-		if (tups < 0) {
-			this._warn('[Timer.tups] tups cannot be negative, stop messing with time.');
-			tups = 0;
-		}
-
-		if (tups === 0) {
-			// Setting start as if new tups was 1
-			this._startTime += this._time / this._tups - this._time;
-		} else {
-			if (this._tups === 0) {
-				// If current tups is 0,
-				// it corresponds to a virtual tups of 1
-				// when it comes to determing where the start is
-				this._startTime = this._time - this._time / tups;
-			} else {
-				this._startTime = this._time / this._tups - this._time / tups;
-			}
-		}
-
-		this._tups = tups;
-	}
+	get: function () { return this._speed * 1000; },
+	set: function (tups) { this.speed = tups / 1000; }
 });
 
-Timer.prototype._getElapsedTime = function (time) {
-	return this._tups * (time - this._startTime) / 1000;
-};
-
-Timer.prototype._getSingleStepDuration = function (dt) {
-	return this._tups * dt / 1000;
-};
-
 Timer.prototype.convertToSeconds = function(timeUnits) {
-	return timeUnits / this._tups;
+	return timeUnits / (this._speed * 1000);
 };
 
 Timer.prototype.convertToTimeUnits = function(seconds) {
-	return seconds * this._tups;
+	return seconds * this._speed * 1000;
 };
 },{"./Tweener":18}],15:[function(require,module,exports){
 // The file is a good representation of the constant fight between maintainability and performance
@@ -2087,20 +2053,8 @@ Tweener.prototype.constructor = Tweener;
 module.exports = Tweener;
 
 Tweener.prototype._inactivate = function (playable) {
-	// In a tweener, a playable that finishes is simply removed
+	// In a tweener, playables are removed when inactivated
 	this._remove(playable);
-};
-
-Tweener.prototype._moveTo = function (time, dt) {
-	dt = this._getSingleStepDuration(dt) * this._speed;
-	this._time = this._getElapsedTime(time - this._startTime) * this._speed;
-
-	this._updatePlayableList(dt);
-	this._update(dt);
-
-	if (this._onUpdate !== null) {
-		this._onUpdate(this._time, dt);
-	}
 };
 
 Tweener.prototype.useAsDefault = function () {

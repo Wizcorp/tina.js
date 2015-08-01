@@ -1,15 +1,15 @@
 
 function BriefExtension() {
-	// A brief component has a duration
-	this._duration   = 0;
+	// Local duration of the playable, independent from speed and iterations
+	this._duration = 0;
 
-	// And can complete
+	// On complete callback
 	this._onComplete = null;
 
 	// Playing options
 	this._iterations = 1; // Number of times to iterate the playable
-	this._persist    = false; // To keep the playable running instead of completing
 	this._pingpong   = false; // To make the playable go backward on even iterations
+	this._persist    = false; // To keep the playable running instead of completing
 }
 
 module.exports = BriefExtension;
