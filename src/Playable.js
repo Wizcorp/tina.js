@@ -59,11 +59,11 @@ Object.defineProperty(Playable.prototype, 'time', {
 	}
 });
 
-Playable.prototype.onStart    = function (onStart)    { this._onStart    = onStart;    return this; };
-Playable.prototype.onUpdate   = function (onUpdate)   { this._onUpdate   = onUpdate;   return this; };
-Playable.prototype.onStop     = function (onStop)     { this._onStop     = onStop;     return this; };
-Playable.prototype.onPause    = function (onPause)    { this._onPause    = onPause;    return this; };
-Playable.prototype.onResume   = function (onResume)   { this._onResume   = onResume;   return this; };
+Playable.prototype.onStart  = function (onStart)  { this._onStart  = onStart;  return this; };
+Playable.prototype.onUpdate = function (onUpdate) { this._onUpdate = onUpdate; return this; };
+Playable.prototype.onStop   = function (onStop)   { this._onStop   = onStop;   return this; };
+Playable.prototype.onPause  = function (onPause)  { this._onPause  = onPause;  return this; };
+Playable.prototype.onResume = function (onResume) { this._onResume = onResume; return this; };
 
 Playable.prototype.tweener = function (tweener) {
 	if (tweener === null || tweener === undefined) {

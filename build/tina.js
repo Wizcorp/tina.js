@@ -970,11 +970,11 @@ Object.defineProperty(Playable.prototype, 'time', {
 	}
 });
 
-Playable.prototype.onStart    = function (onStart)    { this._onStart    = onStart;    return this; };
-Playable.prototype.onUpdate   = function (onUpdate)   { this._onUpdate   = onUpdate;   return this; };
-Playable.prototype.onStop     = function (onStop)     { this._onStop     = onStop;     return this; };
-Playable.prototype.onPause    = function (onPause)    { this._onPause    = onPause;    return this; };
-Playable.prototype.onResume   = function (onResume)   { this._onResume   = onResume;   return this; };
+Playable.prototype.onStart  = function (onStart)  { this._onStart  = onStart;  return this; };
+Playable.prototype.onUpdate = function (onUpdate) { this._onUpdate = onUpdate; return this; };
+Playable.prototype.onStop   = function (onStop)   { this._onStop   = onStop;   return this; };
+Playable.prototype.onPause  = function (onPause)  { this._onPause  = onPause;  return this; };
+Playable.prototype.onResume = function (onResume) { this._onResume = onResume; return this; };
 
 Playable.prototype.tweener = function (tweener) {
 	if (tweener === null || tweener === undefined) {
@@ -1177,6 +1177,7 @@ Player.prototype._add = function (playable, delay) {
 		// Playable can be added
 		playable._handle = this._inactivePlayables.add(playable);
 		playable._player = this;
+		// this._onPlayableAdded(playable);
 		return true;
 	}
 
@@ -1252,7 +1253,6 @@ Player.prototype.removeAll = function () {
 	}
 
 	this._handlePlayablesToRemove();
-	this._onAllPlayablesRemoved();
 	return this;
 };
 
@@ -1275,6 +1275,10 @@ Player.prototype._handlePlayablesToRemove = function () {
 		var playable = handle.object;
 		playable._handle = this._activePlayables.removeByReference(handle);
 		playable._player = null;
+	}
+
+	if ((this._activePlayables.length === 0) && (this._inactivePlayables.length === 0)) {
+		this._onAllPlayablesRemoved();
 	}
 };
 
@@ -1361,6 +1365,7 @@ Player.prototype._update = function (dt, overflow) {
 };
 
 // Overridable methods
+// Player.prototype._onPlayableAdded   = function (/* playable */) {};
 Player.prototype._onPlayableChanged = function (/* playable */) {};
 Player.prototype._onPlayableRemoved = function (/* playable */) {};
 Player.prototype._onAllPlayablesRemoved = function () {};

@@ -40,6 +40,7 @@ Player.prototype._add = function (playable, delay) {
 		// Playable can be added
 		playable._handle = this._inactivePlayables.add(playable);
 		playable._player = this;
+		// this._onPlayableAdded(playable);
 		return true;
 	}
 
@@ -115,7 +116,6 @@ Player.prototype.removeAll = function () {
 	}
 
 	this._handlePlayablesToRemove();
-	this._onAllPlayablesRemoved();
 	return this;
 };
 
@@ -138,6 +138,10 @@ Player.prototype._handlePlayablesToRemove = function () {
 		var playable = handle.object;
 		playable._handle = this._activePlayables.removeByReference(handle);
 		playable._player = null;
+	}
+
+	if ((this._activePlayables.length === 0) && (this._inactivePlayables.length === 0)) {
+		this._onAllPlayablesRemoved();
 	}
 };
 
@@ -224,6 +228,7 @@ Player.prototype._update = function (dt, overflow) {
 };
 
 // Overridable methods
+// Player.prototype._onPlayableAdded   = function (/* playable */) {};
 Player.prototype._onPlayableChanged = function (/* playable */) {};
 Player.prototype._onPlayableRemoved = function (/* playable */) {};
 Player.prototype._onAllPlayablesRemoved = function () {};
