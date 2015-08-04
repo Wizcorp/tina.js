@@ -169,14 +169,14 @@ AbstractTween.prototype.to = function (toObject, duration, easing, easingParam, 
 	);
 
 	this._transitions.push(transition);
-	this._duration += duration;
+	this._extendDuration(duration);
 	return this;
 };
 
 AbstractTween.prototype.wait = function (duration) {
 	var toObject = this._getLastTransitionEnding();
 	this._transitions.push(new Temporisation(this._duration, duration, toObject, this._properties));
-	this._duration += duration;
+	this._extendDuration(duration);
 	return this;
 };
 

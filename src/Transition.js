@@ -120,11 +120,13 @@ function Transition(properties, from, to, start, duration, easing, easingParam, 
 	// 1 => Several properties
 	var propsFlag;
 	if (properties.length === 1) {
-		propsFlag = 0;
-		this.prop = properties[0];
+		propsFlag  = 0;
+		this.prop  = properties[0]; // string
+		this.props = null;
 	} else {
 		propsFlag  = 1;
-		this.props = properties;
+		this.prop  = null;
+		this.props = properties; // array
 	}
 
 	this.update = updateMethods[easingFlag][interpFlag][propsFlag];

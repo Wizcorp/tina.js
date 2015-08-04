@@ -7,21 +7,21 @@ function Playable() {
 	this._handle = null;
 
 	// Starting time, is global (relative to its player time)
-	this._startTime  = 0;
+	this._startTime = 0;
 
 	// Current time, is local (relative to starting time)
 	// i.e this._time === 0 implies this._player._time === this._startTime
-	this._time       = 0;
+	this._time  = 0;
 
 	// Playing speed of the playable
-	this._speed      = 1;
+	this._speed = 1;
 
 	// Callbacks
-	this._onStart    = null;
-	this._onPause    = null;
-	this._onResume   = null;
-	this._onUpdate   = null;
-	this._onStop     = null;
+	this._onStart  = null;
+	this._onPause  = null;
+	this._onResume = null;
+	this._onUpdate = null;
+	this._onStop   = null;
 }
 
 module.exports = Playable;
@@ -102,6 +102,37 @@ Playable.prototype.goTo = function (timePosition, iteration) {
 	return this;
 };
 
+Playable.prototype.getDuration = function () {
+	return Infinity;
+};
+
+Playable.prototype._getEndTime = function () {
+	if (this._speed >= 0) {
+		return Infinity;
+	} else {
+		return this._startTime;
+	}
+};
+
+Playable.prototype._getStartTime = function () {
+	if (this._speed > 0) {
+		return this._startTime;
+	} else {
+		return -Infinity;
+	}
+};
+
+Playable.prototype._isWithin = function (time) {
+	if (this._speed > 0) {
+		return this._startTime < time;
+	} else if (this._speed < 0) {
+		return time < this._startTime;
+	} else {
+		// speed is 0
+		return true;
+	}
+};
+
 Playable.prototype.rewind = function () {
 	this.goTo(0, 0);
 	return this;
@@ -174,6 +205,7 @@ Playable.prototype.pause = function () {
 	if (this._onPause !== null) {
 		this._onPause();
 	}
+
 	return this;
 };
 

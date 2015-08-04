@@ -24,6 +24,60 @@ BriefExtension.prototype.getDuration = function () {
 	return this._duration * this._iterations / this._speed;
 };
 
+BriefExtension.prototype._setDuration = function (duration) {
+	this._duration = duration;
+	if (this._player !== null) {
+		this._player._onPlayableChanged(this);
+	}
+};
+
+BriefExtension.prototype._extendDuration = function (durationExtension) {
+	this._duration += durationExtension;
+	if (this._player !== null) {
+		this._player._onPlayableChanged(this);
+	}
+};
+
+BriefExtension.prototype._getEndTime = function () {
+	if (this._speed > 0) {
+		return this._startTime + this.getDuration();
+	} else if (this._speed < 0) {
+		return this._startTime;
+	} else {
+		return Infinity;
+	}
+};
+
+BriefExtension.prototype._setStartTime = function (startTime) {
+	if (this._speed > 0) {
+		this._startTime = startTime;
+	} else if (this._speed < 0) {
+		this._startTime = startTime - this.getDuration();
+	} else {
+		this._startTime = Infinity;
+	}
+};
+
+BriefExtension.prototype._getStartTime = function () {
+	if (this._speed > 0) {
+		return this._startTime;
+	} else if (this._speed < 0) {
+		return this._startTime + this.getDuration();
+	} else {
+		return -Infinity;
+	}
+};
+
+BriefExtension.prototype._isTimeWithin = function (time) {
+	if (this._speed > 0) {
+		return (this._startTime < time) && (time < this._startTime + this.getDuration());
+	} else if (this._speed < 0) {
+		return (this._startTime + this.getDuration() < time) && (time < this._startTime);
+	} else {
+		return true;
+	}
+};
+
 BriefExtension.prototype.goToEnd = function () {
 	this.goTo(this.getDuration(), this._iterations - 1);
 	return this;
@@ -48,9 +102,6 @@ BriefExtension.prototype.iterations = function (iterations) {
 
 BriefExtension.prototype.persist = function (persist) {
 	this._persist = persist;
-	if (this._player !== null) {
-		this._player._onPlayableChanged(this);
-	}
 	return this;
 };
 
@@ -83,73 +134,95 @@ BriefExtension.prototype._complete = function (overflow) {
 	}
 };
 
-BriefExtension.prototype._moveTo = function (time, dt) {
+
+BriefExtension.prototype._moveTo = function (time, dt, overflow) {
 	dt *= this._speed;
 
-	// Computing overflow and clamping time
-	var overflow;
-	if (dt !== 0) {
-		if (this._iterations === 1) {
-			// Converting into local time (relative to speed and starting time)
-			this._time = (time - this._startTime) * this._speed;
-			if (dt > 0) {
-				if (this._time >= this._duration) {
-					overflow = this._time - this._duration;
-					dt -= overflow;
-					this._time = this._duration;
+	// So many conditions!!
+	// That is why this extension exists
+	if (overflow === undefined) {
+		// Computing overflow and clamping time
+		if (dt !== 0) {
+			if (this._iterations === 1) {
+				// Converting into local time (relative to speed and starting time)
+				this._time = (time - this._startTime) * this._speed;
+				if (dt > 0) {
+					if (this._time >= this._duration) {
+						overflow = this._time - this._duration;
+						dt -= overflow;
+						this._time = this._duration;
+					}
+				} else if (dt < 0) {
+					if (this._time <= 0) {
+						overflow = this._time;
+						dt -= overflow;
+						this._time = 0;
+					}
 				}
-			} else if (dt < 0) {
-				if (this._time <= 0) {
-					overflow = this._time;
-					dt -= overflow;
-					this._time = 0;
-				}
-			}
-		} else {
-			time = (time - this._startTime) * this._speed;
+			} else {
+				time = (time - this._startTime) * this._speed;
 
-			// Iteration at current update
-			var iteration = time / this._duration;
+				// Iteration at current update
+				var iteration = time / this._duration;
 
-			if (dt > 0) {
-				if (iteration < this._iterations) {
-					this._time = time % this._duration;
-				} else {
-					overflow = (iteration - this._iterations) * this._duration;
-					dt -= overflow;
-					this._time = this._duration * (1 - (Math.ceil(this._iterations) - this._iterations));
+				if (dt > 0) {
+					if (iteration < this._iterations) {
+						// if (this._time !== 0 && Math.ceil(iteration) !== Math.ceil(this._time / this._duration)) {
+						// }
+						this._time = time % this._duration;
+					} else {
+						overflow = (iteration - this._iterations) * this._duration;
+						dt -= overflow;
+						this._time = this._duration * (1 - (Math.ceil(this._iterations) - this._iterations));
+					}
+				} else if (dt < 0) {
+					if (0 < iteration) {
+						// if (this._time !== this._duration && Math.ceil(iteration) !== Math.ceil(this._time / this._duration)) {
+						// }
+						this._time = time % this._duration;
+					} else {
+						overflow = iteration * this._duration;
+						dt -= overflow;
+						this._time = 0;
+					}
 				}
-			} else if (dt < 0) {
-				if (0 < iteration) {
-					this._time = time % this._duration;
-				} else {
-					overflow = iteration * this._duration;
-					dt -= overflow;
-					this._time = 0;
-				}
-			}
 
-			if ((this._pingpong === true)) {
-				if (Math.ceil(this._iterations) === this._iterations) {
-					if (overflow === undefined) {
+				if ((this._pingpong === true)) {
+					if (Math.ceil(this._iterations) === this._iterations) {
+						if (overflow === undefined) {
+							if ((Math.ceil(iteration) & 1) === 0) {
+								this._time = this._duration - this._time;
+							}
+						} else {
+							if ((Math.ceil(iteration) & 1) === 1) {
+								this._time = this._duration - this._time;
+							}
+						}
+					} else {
 						if ((Math.ceil(iteration) & 1) === 0) {
 							this._time = this._duration - this._time;
 						}
-					} else {
-						if ((Math.ceil(iteration) & 1) === 1) {
-							this._time = this._duration - this._time;
-						}
-					}
-				} else {
-					if ((Math.ceil(iteration) & 1) === 0) {
-						this._time = this._duration - this._time;
 					}
 				}
 			}
 		}
+	} else {
+		// Ensuring that the playable overflows when its player overflows
+		// This conditional is to deal with Murphy's law:
+		// There is one in a billion chance that a player completes while one of his playable
+		// does not complete due to stupid rounding errors
+		if (dt > 0) {
+			overflow = Math.max((time - this._startTime) * this._speed - this._duration * this.iterations, 0);
+			this._time = this._duration;
+		} else {
+			overflow = Math.min((time - this._startTime) * this._speed, 0);
+			this._time = 0;
+		}
+
+		dt -= overflow;
 	}
 
-	this._update(dt);
+	this._update(dt, overflow);
 
 	if (this._onUpdate !== null) {
 		this._onUpdate(this._time, dt);

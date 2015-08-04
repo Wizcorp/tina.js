@@ -164,7 +164,7 @@ NestedTween.prototype.to = function (toObject, duration, easing, easingParam, in
 		this._tweensPerObject[propertyChainString].to(object, duration, easing, easingParam, objectInterpolationParams);
 	}
 
-	this._duration += duration;
+	this._extendDuration(duration);
 	return this;
 };
 
@@ -174,7 +174,7 @@ NestedTween.prototype.wait = function (duration) {
 		this._tweens[t].wait(duration);
 	}
 
-	this._duration += duration;
+	this._extendDuration(duration);
 	return this;
 };
 

@@ -170,14 +170,14 @@ AbstractTween.prototype.to = function (toObject, duration, easing, easingParam, 
 	);
 
 	this._transitions.push(transition);
-	this._duration += duration;
+	this._extendDuration(duration);
 	return this;
 };
 
 AbstractTween.prototype.wait = function (duration) {
 	var toObject = this._getLastTransitionEnding();
 	this._transitions.push(new Temporisation(this._duration, duration, toObject, this._properties));
-	this._duration += duration;
+	this._extendDuration(duration);
 	return this;
 };
 
@@ -242,6 +242,60 @@ BriefExtension.prototype.getDuration = function () {
 	return this._duration * this._iterations / this._speed;
 };
 
+BriefExtension.prototype._setDuration = function (duration) {
+	this._duration = duration;
+	if (this._player !== null) {
+		this._player._onPlayableChanged(this);
+	}
+};
+
+BriefExtension.prototype._extendDuration = function (durationExtension) {
+	this._duration += durationExtension;
+	if (this._player !== null) {
+		this._player._onPlayableChanged(this);
+	}
+};
+
+BriefExtension.prototype._getEndTime = function () {
+	if (this._speed > 0) {
+		return this._startTime + this.getDuration();
+	} else if (this._speed < 0) {
+		return this._startTime;
+	} else {
+		return Infinity;
+	}
+};
+
+BriefExtension.prototype._setStartTime = function (startTime) {
+	if (this._speed > 0) {
+		this._startTime = startTime;
+	} else if (this._speed < 0) {
+		this._startTime = startTime - this.getDuration();
+	} else {
+		this._startTime = Infinity;
+	}
+};
+
+BriefExtension.prototype._getStartTime = function () {
+	if (this._speed > 0) {
+		return this._startTime;
+	} else if (this._speed < 0) {
+		return this._startTime + this.getDuration();
+	} else {
+		return -Infinity;
+	}
+};
+
+BriefExtension.prototype._isTimeWithin = function (time) {
+	if (this._speed > 0) {
+		return (this._startTime < time) && (time < this._startTime + this.getDuration());
+	} else if (this._speed < 0) {
+		return (this._startTime + this.getDuration() < time) && (time < this._startTime);
+	} else {
+		return true;
+	}
+};
+
 BriefExtension.prototype.goToEnd = function () {
 	this.goTo(this.getDuration(), this._iterations - 1);
 	return this;
@@ -266,9 +320,6 @@ BriefExtension.prototype.iterations = function (iterations) {
 
 BriefExtension.prototype.persist = function (persist) {
 	this._persist = persist;
-	if (this._player !== null) {
-		this._player._onPlayableChanged(this);
-	}
 	return this;
 };
 
@@ -301,73 +352,95 @@ BriefExtension.prototype._complete = function (overflow) {
 	}
 };
 
-BriefExtension.prototype._moveTo = function (time, dt) {
+
+BriefExtension.prototype._moveTo = function (time, dt, overflow) {
 	dt *= this._speed;
 
-	// Computing overflow and clamping time
-	var overflow;
-	if (dt !== 0) {
-		if (this._iterations === 1) {
-			// Converting into local time (relative to speed and starting time)
-			this._time = (time - this._startTime) * this._speed;
-			if (dt > 0) {
-				if (this._time >= this._duration) {
-					overflow = this._time - this._duration;
-					dt -= overflow;
-					this._time = this._duration;
+	// So many conditions!!
+	// That is why this extension exists
+	if (overflow === undefined) {
+		// Computing overflow and clamping time
+		if (dt !== 0) {
+			if (this._iterations === 1) {
+				// Converting into local time (relative to speed and starting time)
+				this._time = (time - this._startTime) * this._speed;
+				if (dt > 0) {
+					if (this._time >= this._duration) {
+						overflow = this._time - this._duration;
+						dt -= overflow;
+						this._time = this._duration;
+					}
+				} else if (dt < 0) {
+					if (this._time <= 0) {
+						overflow = this._time;
+						dt -= overflow;
+						this._time = 0;
+					}
 				}
-			} else if (dt < 0) {
-				if (this._time <= 0) {
-					overflow = this._time;
-					dt -= overflow;
-					this._time = 0;
-				}
-			}
-		} else {
-			time = (time - this._startTime) * this._speed;
+			} else {
+				time = (time - this._startTime) * this._speed;
 
-			// Iteration at current update
-			var iteration = time / this._duration;
+				// Iteration at current update
+				var iteration = time / this._duration;
 
-			if (dt > 0) {
-				if (iteration < this._iterations) {
-					this._time = time % this._duration;
-				} else {
-					overflow = (iteration - this._iterations) * this._duration;
-					dt -= overflow;
-					this._time = this._duration * (1 - (Math.ceil(this._iterations) - this._iterations));
+				if (dt > 0) {
+					if (iteration < this._iterations) {
+						// if (this._time !== 0 && Math.ceil(iteration) !== Math.ceil(this._time / this._duration)) {
+						// }
+						this._time = time % this._duration;
+					} else {
+						overflow = (iteration - this._iterations) * this._duration;
+						dt -= overflow;
+						this._time = this._duration * (1 - (Math.ceil(this._iterations) - this._iterations));
+					}
+				} else if (dt < 0) {
+					if (0 < iteration) {
+						// if (this._time !== this._duration && Math.ceil(iteration) !== Math.ceil(this._time / this._duration)) {
+						// }
+						this._time = time % this._duration;
+					} else {
+						overflow = iteration * this._duration;
+						dt -= overflow;
+						this._time = 0;
+					}
 				}
-			} else if (dt < 0) {
-				if (0 < iteration) {
-					this._time = time % this._duration;
-				} else {
-					overflow = iteration * this._duration;
-					dt -= overflow;
-					this._time = 0;
-				}
-			}
 
-			if ((this._pingpong === true)) {
-				if (Math.ceil(this._iterations) === this._iterations) {
-					if (overflow === undefined) {
+				if ((this._pingpong === true)) {
+					if (Math.ceil(this._iterations) === this._iterations) {
+						if (overflow === undefined) {
+							if ((Math.ceil(iteration) & 1) === 0) {
+								this._time = this._duration - this._time;
+							}
+						} else {
+							if ((Math.ceil(iteration) & 1) === 1) {
+								this._time = this._duration - this._time;
+							}
+						}
+					} else {
 						if ((Math.ceil(iteration) & 1) === 0) {
 							this._time = this._duration - this._time;
 						}
-					} else {
-						if ((Math.ceil(iteration) & 1) === 1) {
-							this._time = this._duration - this._time;
-						}
-					}
-				} else {
-					if ((Math.ceil(iteration) & 1) === 0) {
-						this._time = this._duration - this._time;
 					}
 				}
 			}
 		}
+	} else {
+		// Ensuring that the playable overflows when its player overflows
+		// This conditional is to deal with Murphy's law:
+		// There is one in a billion chance that a player completes while one of his playable
+		// does not complete due to stupid rounding errors
+		if (dt > 0) {
+			overflow = Math.max((time - this._startTime) * this._speed - this._duration * this.iterations, 0);
+			this._time = this._duration;
+		} else {
+			overflow = Math.min((time - this._startTime) * this._speed, 0);
+			this._time = 0;
+		}
+
+		dt -= overflow;
 	}
 
-	this._update(dt);
+	this._update(dt, overflow);
 
 	if (this._onUpdate !== null) {
 		this._onUpdate(this._time, dt);
@@ -397,10 +470,6 @@ var inherit        = require('./inherit');
 var Player         = require('./Player');
 var BriefExtension = require('./BriefExtension');
 
-/**
- * @classdesc
- * Manages the update of a list of playable with respect to a given elapsed time.
- */
 function BriefPlayer() {
 	Player.call(this);
 	BriefExtension.call(this);
@@ -411,10 +480,52 @@ inherit(BriefPlayer, BriefExtension);
 
 module.exports = BriefPlayer;
 
-// BriefPlayer.prototype._onPlayableChanged = function (/* playable */) {};
-// BriefPlayer.prototype._onPlayableRemoved = function (/* playable */) {};
 BriefPlayer.prototype._onAllPlayablesRemoved = function () {
-	
+	this._duration = 0;
+};
+
+BriefPlayer.prototype._updateDuration = function () {
+	var durationExtension = 0;
+
+	var handle, playable, overflow;
+	for (handle = this._activePlayables.first; handle !== null; handle = handle.next) {
+		playable = handle.object;
+		overflow = playable._getEndTime() - this._duration;
+		if (overflow > durationExtension) {
+			durationExtension = overflow;
+		}
+	}
+
+	for (handle = this._inactivePlayables.first; handle !== null; handle = handle.next) {
+		playable = handle.object;
+		overflow = playable._getEndTime() - this._duration;
+		if (overflow > durationExtension) {
+			durationExtension = overflow;
+		}
+	}
+
+	if (durationExtension > 0) {
+		this._extendDuration(durationExtension);
+	}
+};
+
+BriefPlayer.prototype._onPlayableRemoved = function () {
+	this._updateDuration();
+};
+
+BriefPlayer.prototype._onPlayableChanged = function (changedPlayable) {
+	this._warn('[BriefPlayer._onPlayableChanged] Changing a playable\'s property after attaching it to a player may have unwanted side effects',
+		'playable:', changedPlayable, 'player:', this);
+
+	// N.B The following code should work
+	// // Updating timeline duration
+	// var endTime = changedPlayable._startTime + changedPlayable.getDuration();
+	// if (endTime > this._duration) {
+	// 	this._duration = endTime;
+	// } else {
+	// 	// Making sure the duration is correct
+	// 	this._updateDuration();
+	// }
 };
 },{"./BriefExtension":2,"./Player":9,"./inherit":21}],5:[function(require,module,exports){
 var BriefPlayable = require('./BriefPlayable');
@@ -776,7 +887,7 @@ NestedTween.prototype.to = function (toObject, duration, easing, easingParam, in
 		this._tweensPerObject[propertyChainString].to(object, duration, easing, easingParam, objectInterpolationParams);
 	}
 
-	this._duration += duration;
+	this._extendDuration(duration);
 	return this;
 };
 
@@ -786,7 +897,7 @@ NestedTween.prototype.wait = function (duration) {
 		this._tweens[t].wait(duration);
 	}
 
-	this._duration += duration;
+	this._extendDuration(duration);
 	return this;
 };
 
@@ -807,21 +918,21 @@ function Playable() {
 	this._handle = null;
 
 	// Starting time, is global (relative to its player time)
-	this._startTime  = 0;
+	this._startTime = 0;
 
 	// Current time, is local (relative to starting time)
 	// i.e this._time === 0 implies this._player._time === this._startTime
-	this._time       = 0;
+	this._time  = 0;
 
 	// Playing speed of the playable
-	this._speed      = 1;
+	this._speed = 1;
 
 	// Callbacks
-	this._onStart    = null;
-	this._onPause    = null;
-	this._onResume   = null;
-	this._onUpdate   = null;
-	this._onStop     = null;
+	this._onStart  = null;
+	this._onPause  = null;
+	this._onResume = null;
+	this._onUpdate = null;
+	this._onStop   = null;
 }
 
 module.exports = Playable;
@@ -902,6 +1013,37 @@ Playable.prototype.goTo = function (timePosition, iteration) {
 	return this;
 };
 
+Playable.prototype.getDuration = function () {
+	return Infinity;
+};
+
+Playable.prototype._getEndTime = function () {
+	if (this._speed >= 0) {
+		return Infinity;
+	} else {
+		return this._startTime;
+	}
+};
+
+Playable.prototype._getStartTime = function () {
+	if (this._speed > 0) {
+		return this._startTime;
+	} else {
+		return -Infinity;
+	}
+};
+
+Playable.prototype._isWithin = function (time) {
+	if (this._speed > 0) {
+		return this._startTime < time;
+	} else if (this._speed < 0) {
+		return time < this._startTime;
+	} else {
+		// speed is 0
+		return true;
+	}
+};
+
 Playable.prototype.rewind = function () {
 	this.goTo(0, 0);
 	return this;
@@ -974,6 +1116,7 @@ Playable.prototype.pause = function () {
 	if (this._onPause !== null) {
 		this._onPause();
 	}
+
 	return this;
 };
 
@@ -1195,29 +1338,25 @@ Player.prototype._updatePlayableList = function (dt) {
 	this._handlePlayablesToRemove();
 
 	// Activating playables
-	var handle = this._inactivePlayables.first; 
+	var handle = this._inactivePlayables.first;
 	while (handle !== null) {
 		var playable = handle.object;
 
 		// Fetching handle of next playable
 		handle = handle.next;
 
-		var startTime = playable._startTime;
-		var endTime   = startTime + playable.getDuration();
-		if (startTime <= this._time && this._time <= endTime) {
-			// O(1)
-			this._inactivePlayables.removeByReference(playable._handle);
-			playable._handle = this._activePlayables.addBack(playable);
-
+		// Starting if player time within playable bounds
+		if (playable._isTimeWithin(this._time)) {
+			this._activate(playable);
 			playable._start();
 		}
 	}
 };
 
-Player.prototype._update = function (dt) {
+Player.prototype._update = function (dt, overflow) {
 	this._updatePlayableList(dt);
 	for (var handle = this._activePlayables.first; handle !== null; handle = handle.next) {
-		handle.object._moveTo(this._time, dt);
+		handle.object._moveTo(this._time, dt, overflow);
 	}
 };
 
@@ -1227,6 +1366,7 @@ Player.prototype._onPlayableRemoved = function (/* playable */) {};
 Player.prototype._onAllPlayablesRemoved = function () {};
 },{"./DoublyList":6,"./Playable":8}],10:[function(require,module,exports){
 var Timeline = require('./Timeline');
+var Delay    = require('./Delay');
 
 /**
  *
@@ -1256,10 +1396,53 @@ Sequence.prototype.add = function (playable) {
 };
 
 Sequence.prototype.addDelay = function (duration) {
-	this._duration += duration;
-	return this;
+	return this.add(new Delay(duration));
 };
-},{"./Timeline":13}],11:[function(require,module,exports){
+
+Sequence.prototype._onPlayableRemoved = function (removedPlayable) {
+	var handle, playable;
+
+	var startTime = removedPlayable._startTime;
+	var endTime   = startTime + removedPlayable.getDuration();
+	if (startTime > endTime) {
+		var tmp = startTime;
+		startTime = endTime;
+		endTime = tmp;
+	}
+
+	if (this._time < endTime) { // Playing head is before the end of the removed playable
+		// Shifting all the playables that come after the removed playable
+		var leftShit = endTime - this._time;
+		for (handle = this._activePlayables.first; handle !== null; handle = handle.next) {
+			playable = handle.object;
+			if (removedPlayable._startTime < playable._startTime) {
+				playable._startTime -= leftShit;
+			}
+		}
+
+		for (handle = this._inactivePlayables.first; handle !== null; handle = handle.next) {
+			playable = handle.object;
+			if (removedPlayable._startTime < playable._startTime) {
+				playable._startTime -= leftShit;
+			}
+		}
+	}
+
+	if (this._time > startTime) { // Playing head is after the start of the removed playable
+		// Shifting the starting time of the sequence
+		var rightShift = this._time - startTime;
+		this._startTime += rightShift;
+	}
+
+	this._updateDuration();
+};
+
+// TODO:
+// Sequence.prototype.substitute = function (playableA, playableB) {
+// };
+
+
+},{"./Delay":5,"./Timeline":13}],11:[function(require,module,exports){
 (function (global){
 
 /**
@@ -1683,11 +1866,17 @@ Timeline.prototype.add = function (playable, startTime) {
 		startTime = 0;
 	}
 
-	playable._startTime = startTime;
+	playable._setStartTime(startTime);
 	this._add(playable);
-	this._duration = Math.max(this._duration, startTime + playable.getDuration());
+
+	var endTime = playable._getEndTime();
+	if (endTime > this._duration) {
+		this._setDuration(endTime);
+	}
+
 	return this;
 };
+
 },{"./BriefPlayer":4}],14:[function(require,module,exports){
 var Tweener = require('./Tweener');
 
@@ -1848,11 +2037,13 @@ function Transition(properties, from, to, start, duration, easing, easingParam, 
 	// 1 => Several properties
 	var propsFlag;
 	if (properties.length === 1) {
-		propsFlag = 0;
-		this.prop = properties[0];
+		propsFlag  = 0;
+		this.prop  = properties[0]; // string
+		this.props = null;
 	} else {
 		propsFlag  = 1;
-		this.props = properties;
+		this.prop  = null;
+		this.props = properties; // array
 	}
 
 	this.update = updateMethods[easingFlag][interpFlag][propsFlag];
@@ -1875,8 +2066,8 @@ function updateP(object, t) {
 	for (var i = 0; i < this.props.length; i += 1) {
 		var p = q[i];
 		var now = this.from[p] * (1 - t) + this.to[p] * t;
-		object[p] = object[p] + (now - this.prev[p]);
-		this.prev[p] = now;
+		object[p] = object[p] + (now - this.prevs[p]);
+		this.prevs[p] = now;
 	}
 }
 
@@ -1891,12 +2082,12 @@ function updateI(object, t) {
 // Interpolation
 // Several Properties
 function updatePI(object, t) {
-	var q = this.properties;
+	var q = this.props;
 	for (var i = 0; i < q.length; i += 1) {
 		var p = q[i];
 		var now = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);
-		object[p] = object[p] + (now - this.prev[p]);
-		this.prev[p] = now;
+		object[p] = object[p] + (now - this.prevs[p]);
+		this.prevs[p] = now;
 	}
 }
 
@@ -1912,13 +2103,13 @@ function updateE(object, t) {
 // Easing
 // Several Properties
 function updatePE(object, t) {
-	var q = this.properties;
+	var q = this.props;
 	t = this.easing(t, this.easingParams);
 	for (var i = 0; i < q.length; i += 1) {
 		var p = q[i];
 		var now = this.from[p] * (1 - t) + this.to[p] * t;
-		object[p] = object[p] + (now - this.prev[p]);
-		this.prev[p] = now;
+		object[p] = object[p] + (now - this.prevs[p]);
+		this.prevs[p] = now;
 	}
 }
 
@@ -1935,13 +2126,13 @@ function updateIE(object, t) {
 // Interpolation
 // Several Properties
 function updatePIE(object, t) {
-	var q = this.properties;
+	var q = this.props;
 	t = this.easing(t, this.easingParams);
 	for (var i = 0; i < q.length; i += 1) {
 		var p = q[i];
 		var now = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);
-		object[p] = object[p] + (now - this.prev[p]);
-		this.prev[p] = now;
+		object[p] = object[p] + (now - this.prevs[p]);
+		this.prevs[p] = now;
 	}
 }
 
@@ -1992,15 +2183,19 @@ function Transition(properties, from, to, start, duration, easing, easingParam, 
 	// 1 => Several properties
 	var propsFlag;
 	if (properties.length === 1) {
-		propsFlag = 0;
-		this.prop = properties[0];
-		this.prev = 0;
+		propsFlag  = 0;
+		this.prop  = properties[0]; // string
+		this.props = null;
+		this.prev  = 0;
+		this.prevs = null;
 	} else {
 		propsFlag  = 1;
-		this.props = properties;
-		this.prev  = {};
+		this.prop  = null;
+		this.props = properties; // array
+		this.prev  = null;
+		this.prevs = {};
 		for (var p = 0; p < properties.length; p += 1) {
-			this.prev[properties[p]] = 0;
+			this.prevs[properties[p]] = 0;
 		}
 	}
 
