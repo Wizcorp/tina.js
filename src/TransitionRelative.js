@@ -142,7 +142,7 @@ function Transition(properties, from, to, start, duration, easing, easingParam, 
 		this.prev  = null;
 		this.prevs = {};
 		for (var p = 0; p < properties.length; p += 1) {
-			this.prev[properties[p]] = 0;
+			this.prevs[properties[p]] = 0;
 		}
 	}
 

@@ -116,12 +116,8 @@ ObjectRecorder.prototype.play = function (time, dt, smooth) {
 
 	if (isIn !== this.isIn) {
 		this.isIn = !this.isIn;
-		if (isIn === true) {
-			if (this.onIn !== null) {
-				this.onIn();
-			}
-		} else {
-			isOut = true;
+		if (isIn === true && this.onIn !== null) {
+			this.onIn();
 		}
 	} else if (this.isIn === false) {
 		return;
@@ -196,7 +192,6 @@ function Recorder(recordingDuration) {
 	BriefPlayable.call(this);
 
 	// Can end only in playing mode
-	// TODO: set starting time and duration when switching to playing mode
 	this._duration = Infinity;
 
 	// Maximum recording duration
@@ -308,6 +303,9 @@ Recorder.prototype.recording = function (recording) {
 				this._playing = false;
 			}
 
+			// Setting duration to Infinity, so that the recording never completes
+			this._duration = Infinity;
+
 			if (this._onStartRecording !== null) {
 				this._onStartRecording();
 			}
@@ -329,6 +327,15 @@ Recorder.prototype.playing = function (playing) {
 					this._onStopRecording();
 				}
 				this._recording = false;
+			}
+
+			// Setting playing head to the beginning of the recordings
+			// and setting duration to the total recording duration
+			if (this._time > this._recordingDuration) {
+				this._startTime += this._time - this._recordingDuration;
+				this._duration = this._recordingDuration;
+			} else {
+				this._duration = this._time;
 			}
 
 			if (this._onStartPlaying !== null) {
@@ -373,5 +380,4 @@ Recorder.prototype.update = function (dt) {
 			this._recordedObjects[r].play(this._time, dt, this._smooth);
 		}
 	}
-
 };

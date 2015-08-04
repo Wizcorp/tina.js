@@ -28,8 +28,13 @@ Timeline.prototype.add = function (playable, startTime) {
 		startTime = 0;
 	}
 
-	playable._startTime = startTime;
+	playable._setStartTime(startTime);
 	this._add(playable);
-	this._duration = Math.max(this._duration, startTime + playable.getDuration());
+
+	var endTime = playable._getEndTime();
+	if (endTime > this._duration) {
+		this._setDuration(endTime);
+	}
+
 	return this;
 };

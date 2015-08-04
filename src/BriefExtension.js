@@ -24,6 +24,60 @@ BriefExtension.prototype.getDuration = function () {
 	return this._duration * this._iterations / this._speed;
 };
 
+BriefExtension.prototype._setDuration = function (duration) {
+	this._duration = duration;
+	if (this._player !== null) {
+		this._player._onPlayableChanged(this);
+	}
+};
+
+BriefExtension.prototype._extendDuration = function (durationExtension) {
+	this._duration += durationExtension;
+	if (this._player !== null) {
+		this._player._onPlayableChanged(this);
+	}
+};
+
+BriefExtension.prototype._getEndTime = function () {
+	if (this._speed > 0) {
+		return this._startTime + this.getDuration();
+	} else if (this._speed < 0) {
+		return this._startTime;
+	} else {
+		return Infinity;
+	}
+};
+
+BriefExtension.prototype._setStartTime = function (startTime) {
+	if (this._speed > 0) {
+		this._startTime = startTime;
+	} else if (this._speed < 0) {
+		this._startTime = startTime - this.getDuration();
+	} else {
+		this._startTime = Infinity;
+	}
+};
+
+BriefExtension.prototype._getStartTime = function () {
+	if (this._speed > 0) {
+		return this._startTime;
+	} else if (this._speed < 0) {
+		return this._startTime + this.getDuration();
+	} else {
+		return -Infinity;
+	}
+};
+
+BriefExtension.prototype._isTimeWithin = function (time) {
+	if (this._speed > 0) {
+		return (this._startTime < time) && (time < this._startTime + this.getDuration());
+	} else if (this._speed < 0) {
+		return (this._startTime + this.getDuration() < time) && (time < this._startTime);
+	} else {
+		return true;
+	}
+};
+
 BriefExtension.prototype.goToEnd = function () {
 	this.goTo(this.getDuration(), this._iterations - 1);
 	return this;
@@ -48,9 +102,6 @@ BriefExtension.prototype.iterations = function (iterations) {
 
 BriefExtension.prototype.persist = function (persist) {
 	this._persist = persist;
-	if (this._player !== null) {
-		this._player._onPlayableChanged(this);
-	}
 	return this;
 };
 
@@ -116,12 +167,8 @@ BriefExtension.prototype._moveTo = function (time, dt, overflow) {
 
 				if (dt > 0) {
 					if (iteration < this._iterations) {
-						if (Math.ceil(iteration) !== Math.ceil(this._time / this._duration)) {
-							// Current iteration is different from previous iteration
-							// Forcing an update with overflowing time
-							this._time = time;
-							this._update(dt);
-						}
+						// if (this._time !== 0 && Math.ceil(iteration) !== Math.ceil(this._time / this._duration)) {
+						// }
 						this._time = time % this._duration;
 					} else {
 						overflow = (iteration - this._iterations) * this._duration;
@@ -130,12 +177,8 @@ BriefExtension.prototype._moveTo = function (time, dt, overflow) {
 					}
 				} else if (dt < 0) {
 					if (0 < iteration) {
-						if (Math.ceil(iteration) !== Math.ceil(this._time / this._duration)) {
-							// Current iteration is different from previous iteration
-							// Forcing an update with overflowing time
-							this._time = time;
-							this._update(dt);
-						}
+						// if (this._time !== this._duration && Math.ceil(iteration) !== Math.ceil(this._time / this._duration)) {
+						// }
 						this._time = time % this._duration;
 					} else {
 						overflow = iteration * this._duration;
@@ -167,7 +210,7 @@ BriefExtension.prototype._moveTo = function (time, dt, overflow) {
 		// Ensuring that the playable overflows when its player overflows
 		// This conditional is to deal with Murphy's law:
 		// There is one in a billion chance that a player completes while one of his playable
-		// does not complete due to a stupid rounding error
+		// does not complete due to stupid rounding errors
 		if (dt > 0) {
 			overflow = Math.max((time - this._startTime) * this._speed - this._duration * this.iterations, 0);
 			this._time = this._duration;

@@ -201,16 +201,15 @@ Player.prototype._updatePlayableList = function (dt) {
 	this._handlePlayablesToRemove();
 
 	// Activating playables
-	var handle = this._inactivePlayables.first; 
+	var handle = this._inactivePlayables.first;
 	while (handle !== null) {
 		var playable = handle.object;
 
 		// Fetching handle of next playable
 		handle = handle.next;
 
-		var startTime = playable._startTime;
-		var endTime   = startTime + playable.getDuration();
-		if (startTime <= this._time && this._time <= endTime) {
+		// Starting if player time within playable bounds
+		if (playable._isTimeWithin(this._time)) {
 			this._activate(playable);
 			playable._start();
 		}
