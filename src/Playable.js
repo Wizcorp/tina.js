@@ -29,26 +29,7 @@ module.exports = Playable;
 Object.defineProperty(Playable.prototype, 'speed', {
 	get: function () { return this._speed; },
 	set: function (speed) {
-		if (speed === 0) {
-			if (this._speed !== 0) {
-				// Setting timeStart as if new speed was 1
-				this._startTime += this._time / this._speed - this._time;
-			}
-		} else {
-			if (this._speed === 0) {
-				// If current speed is 0,
-				// it corresponds to a virtual speed of 1
-				// when it comes to determing where the starting time is
-				this._startTime += this._time - this._time / speed;
-			} else {
-				this._startTime += this._time / this._speed - this._time / speed;
-			}
-		}
-
-		this._speed = speed;
-		if (this._player !== null) {
-			this._player._onPlayableChanged(this);
-		}
+		this.setSpeed(speed);
 	}
 });
 
@@ -73,6 +54,34 @@ Playable.prototype.tweener = function (tweener) {
 
 	this._player = tweener;
 	return this;
+};
+
+Playable.prototype.setSpeed = function (speed) {
+	if (speed < 0) {
+		console.warn('[Playable.speed] This playable cannot have negative speed');
+		return;
+	}
+
+	if (speed === 0) {
+		if (this._speed !== 0) {
+			// Setting timeStart as if new speed was 1
+			this._startTime += this._time / this._speed - this._time;
+		}
+	} else {
+		if (this._speed === 0) {
+			// If current speed is 0,
+			// it corresponds to a virtual speed of 1
+			// when it comes to determing where the starting time is
+			this._startTime += this._time - this._time / speed;
+		} else {
+			this._startTime += this._time / this._speed - this._time / speed;
+		}
+	}
+
+	this._speed = speed;
+	if (this._player !== null) {
+		this._player._onPlayableChanged(this);
+	}
 };
 
 Playable.prototype.goTo = function (timePosition, iteration) {
@@ -107,30 +116,15 @@ Playable.prototype.getDuration = function () {
 };
 
 Playable.prototype._getEndTime = function () {
-	if (this._speed >= 0) {
-		return Infinity;
-	} else {
-		return this._startTime;
-	}
+	return Infinity;
 };
 
 Playable.prototype._getStartTime = function () {
-	if (this._speed > 0) {
-		return this._startTime;
-	} else {
-		return -Infinity;
-	}
+	return this._startTime;
 };
 
 Playable.prototype._isWithin = function (time) {
-	if (this._speed > 0) {
-		return this._startTime < time;
-	} else if (this._speed < 0) {
-		return time < this._startTime;
-	} else {
-		// speed is 0
-		return true;
-	}
+	return this._startTime < time;
 };
 
 Playable.prototype.rewind = function () {
@@ -172,6 +166,11 @@ Playable.prototype._start = function () {
 };
 
 Playable.prototype.stop = function () {
+	if (this._player === null) {
+		console.warn('[Playable.stop] Cannot stop a playable that is not running');
+		return;
+	}
+
 	// Stopping playable without performing any additional update nor completing
 	if (this._player._inactivate(this) === false) {
 		// Could not be removed

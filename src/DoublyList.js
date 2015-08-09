@@ -146,6 +146,16 @@ DoublyList.prototype.remove = function (object) {
 	return false;
 };
 
+DoublyList.prototype.getNode = function (object) {
+	for (var node = this.first; node !== null; node = node.next) {
+		if (node.object === object) {
+			return node;
+		}
+	}
+
+	return null;
+};
+
 DoublyList.prototype.clear = function () {
 	// Making sure that nodes containers are being resetted
 	for (var node = this.first; node !== null; node = node.next) {

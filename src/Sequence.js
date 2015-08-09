@@ -1,5 +1,6 @@
-var Timeline = require('./Timeline');
-var Delay    = require('./Delay');
+var Timeline   = require('./Timeline');
+var Delay      = require('./Delay');
+var DoublyList = require('./DoublyList');
 
 /**
  *
@@ -18,6 +19,8 @@ function Sequence() {
 		return new Sequence();
 	}
 
+	this._sequencedPlayables = new DoublyList();
+
 	Timeline.call(this);
 }
 Sequence.prototype = Object.create(Timeline.prototype);
@@ -25,6 +28,7 @@ Sequence.prototype.constructor = Sequence;
 module.exports = Sequence;
 
 Sequence.prototype.add = function (playable) {
+	this._sequencedPlayables.addBack(playable);
 	return Timeline.prototype.add.call(this, playable, this._duration);
 };
 
@@ -32,45 +36,74 @@ Sequence.prototype.addDelay = function (duration) {
 	return this.add(new Delay(duration));
 };
 
-Sequence.prototype._onPlayableRemoved = function (removedPlayable) {
-	var handle, playable;
+Sequence.prototype._reconstruct = function () {
+	// O(n)
+	var activePlayable, timeInActiveBefore;
+	var activePlayableHandle = this._activePlayables.first;
 
-	var startTime = removedPlayable._startTime;
-	var endTime   = startTime + removedPlayable.getDuration();
-	if (startTime > endTime) {
-		var tmp = startTime;
-		startTime = endTime;
-		endTime = tmp;
+	if (activePlayableHandle !== null) {
+		// How far is the sequence within the active playable?
+		activePlayable = activePlayableHandle.object; // only one active playable
+		timeInActiveBefore = this._time - activePlayable._getStartTime();
 	}
 
-	if (this._time < endTime) { // Playing head is before the end of the removed playable
-		// Shifting all the playables that come after the removed playable
-		var leftShit = endTime - this._time;
-		for (handle = this._activePlayables.first; handle !== null; handle = handle.next) {
-			playable = handle.object;
-			if (removedPlayable._startTime < playable._startTime) {
-				playable._startTime -= leftShit;
-			}
-		}
-
-		for (handle = this._inactivePlayables.first; handle !== null; handle = handle.next) {
-			playable = handle.object;
-			if (removedPlayable._startTime < playable._startTime) {
-				playable._startTime -= leftShit;
-			}
-		}
+	// Reconstructing the sequence of playables
+	var duration = 0;
+	for (var handle = this._sequencedPlayables.first; handle !== null; handle = handle.next) {
+		var playable = handle.object;
+		playable._setStartTime(duration);
+		duration = playable._getEndTime();
 	}
 
-	if (this._time > startTime) { // Playing head is after the start of the removed playable
-		// Shifting the starting time of the sequence
-		var rightShift = this._time - startTime;
-		this._startTime += rightShift;
+	if (activePlayableHandle !== null) {
+		// Determining where to set the sequence's starting time so that the local time within
+		// the active playable remains the same
+		var currentStartTime = this._getStartTime();
+		var timeInActiveAfter = this._time - activePlayable._getStartTime();
+		var shift = timeInActiveBefore - timeInActiveAfter;
+		this._startTime += shift;
 	}
 
-	this._updateDuration();
+	// Updating duration
+	this._duration = duration;
+
+	if (this._player !== null) {
+		this._player._onPlayableChanged(this);
+	}
 };
 
-// TODO:
-// Sequence.prototype.substitute = function (playableA, playableB) {
-// };
+Sequence.prototype.substitute = function (playableA, playableB) {
+	// O(n)
+	if (this._sequencedPlayables.length === 0) {
+		this._warn('[Sequence.substitute] The sequence is empty!');
+		return;
+	}
 
+	// Fetching handle for playable A
+	var handleA = this._sequencedPlayables.getNode(playableA);
+
+	// Adding playable B right after playable A in this._sequencedPlayables
+	this._sequencedPlayables.addAfter(handleA, playableB);
+
+	// Adding playable B in this player
+	this._add(playableB);
+
+	// Removing playable A
+	// Will have the effect of:
+	// - Stopping playable A (with correct callback)
+	// - Removing playable A from the sequence
+	// - Reconstructing the sequence
+	this.remove(playableA);
+};
+
+Sequence.prototype._onPlayableRemoved = function (removedPlayable) {
+	// O(n)
+	this._sequencedPlayables.remove(removedPlayable);
+	if (this._sequencedPlayables.length === 0) {
+		return;
+	}
+
+	this._reconstruct();
+};
+
+Sequence.prototype._onPlayableChanged = Sequence.prototype._reconstruct;

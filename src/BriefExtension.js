@@ -14,6 +14,29 @@ function BriefExtension() {
 
 module.exports = BriefExtension;
 
+BriefExtension.prototype.setSpeed = function (speed) {
+	if (speed === 0) {
+		if (this._speed !== 0) {
+			// Setting timeStart as if new speed was 1
+			this._startTime += this._time / this._speed - this._time;
+		}
+	} else {
+		if (this._speed === 0) {
+			// If current speed is 0,
+			// it corresponds to a virtual speed of 1
+			// when it comes to determing where the starting time is
+			this._startTime += this._time - this._time / speed;
+		} else {
+			this._startTime += this._time / this._speed - this._time / speed;
+		}
+	}
+
+	this._speed = speed;
+	if (this._player !== null) {
+		this._player._onPlayableChanged(this);
+	}
+};
+
 BriefExtension.prototype.onComplete = function (onComplete) {
 	this._onComplete = onComplete;
 	return this;

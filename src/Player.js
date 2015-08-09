@@ -35,7 +35,7 @@ Player.prototype = Object.create(Playable.prototype);
 Player.prototype.constructor = Player;
 module.exports = Player;
 
-Player.prototype._add = function (playable, delay) {
+Player.prototype._add = function (playable) {
 	if (playable._handle === null) {
 		// Playable can be added
 		playable._handle = this._inactivePlayables.add(playable);
@@ -98,10 +98,7 @@ Player.prototype.remove = function (playable) {
 		playable.stop();
 	}
 
-	if (playable._handle.container !== this._playablesToRemove) {
-		this._remove(playable);
-	}
-
+	this._remove(playable);
 	this._onPlayableRemoved(playable);
 	return this;
 };
@@ -175,6 +172,11 @@ Player.prototype.debug = function (debug) {
 };
 
 Player.prototype.stop = function () {
+	if (this._player === null) {
+		this._warn('[Player.stop] Cannot stop a player that is not running');
+		return;
+	}
+
 	// Stopping all active playables
 	var handle = this._activePlayables.first; 
 	while (handle !== null) {
