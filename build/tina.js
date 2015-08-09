@@ -232,6 +232,29 @@ function BriefExtension() {
 
 module.exports = BriefExtension;
 
+BriefExtension.prototype.setSpeed = function (speed) {
+	if (speed === 0) {
+		if (this._speed !== 0) {
+			// Setting timeStart as if new speed was 1
+			this._startTime += this._time / this._speed - this._time;
+		}
+	} else {
+		if (this._speed === 0) {
+			// If current speed is 0,
+			// it corresponds to a virtual speed of 1
+			// when it comes to determing where the starting time is
+			this._startTime += this._time - this._time / speed;
+		} else {
+			this._startTime += this._time / this._speed - this._time / speed;
+		}
+	}
+
+	this._speed = speed;
+	if (this._player !== null) {
+		this._player._onPlayableChanged(this);
+	}
+};
+
 BriefExtension.prototype.onComplete = function (onComplete) {
 	this._onComplete = onComplete;
 	return this;
@@ -485,48 +508,35 @@ BriefPlayer.prototype._onAllPlayablesRemoved = function () {
 };
 
 BriefPlayer.prototype._updateDuration = function () {
-	var durationExtension = 0;
+	var totalDuration = 0;
 
-	var handle, playable, overflow;
+	var handle, playable, playableDuration;
 	for (handle = this._activePlayables.first; handle !== null; handle = handle.next) {
 		playable = handle.object;
-		overflow = playable._getEndTime() - this._duration;
-		if (overflow > durationExtension) {
-			durationExtension = overflow;
+		playableDuration = playable._getStartTime() + playable.getDuration();
+		if (playableDuration > totalDuration) {
+			totalDuration = playableDuration;
 		}
 	}
 
 	for (handle = this._inactivePlayables.first; handle !== null; handle = handle.next) {
 		playable = handle.object;
-		overflow = playable._getEndTime() - this._duration;
-		if (overflow > durationExtension) {
-			durationExtension = overflow;
+		playableDuration = playable._getStartTime() + playable.getDuration();
+		if (playableDuration > totalDuration) {
+			totalDuration = playableDuration;
 		}
 	}
 
-	if (durationExtension > 0) {
-		this._extendDuration(durationExtension);
-	}
+	this._setDuration(totalDuration);
 };
 
-BriefPlayer.prototype._onPlayableRemoved = function () {
-	this._updateDuration();
-};
+BriefPlayer.prototype._onPlayableChanged = BriefPlayer.prototype._updateDuration;
+BriefPlayer.prototype._onPlayableRemoved = BriefPlayer.prototype._updateDuration;
 
-BriefPlayer.prototype._onPlayableChanged = function (changedPlayable) {
-	this._warn('[BriefPlayer._onPlayableChanged] Changing a playable\'s property after attaching it to a player may have unwanted side effects',
-		'playable:', changedPlayable, 'player:', this);
-
-	// N.B The following code should work
-	// // Updating timeline duration
-	// var endTime = changedPlayable._startTime + changedPlayable.getDuration();
-	// if (endTime > this._duration) {
-	// 	this._duration = endTime;
-	// } else {
-	// 	// Making sure the duration is correct
-	// 	this._updateDuration();
-	// }
-};
+// BriefPlayer.prototype._onPlayableChanged = function (changedPlayable) {
+// 	this._warn('[BriefPlayer._onPlayableChanged] Changing a playable\'s property after attaching it to a player may have unwanted side effects',
+// 		'playable:', changedPlayable, 'player:', this);
+// };
 },{"./BriefExtension":2,"./Player":9,"./inherit":21}],5:[function(require,module,exports){
 var BriefPlayable = require('./BriefPlayable');
 
@@ -693,6 +703,16 @@ DoublyList.prototype.remove = function (object) {
 	}
 
 	return false;
+};
+
+DoublyList.prototype.getNode = function (object) {
+	for (var node = this.first; node !== null; node = node.next) {
+		if (node.object === object) {
+			return node;
+		}
+	}
+
+	return null;
 };
 
 DoublyList.prototype.clear = function () {
@@ -940,26 +960,7 @@ module.exports = Playable;
 Object.defineProperty(Playable.prototype, 'speed', {
 	get: function () { return this._speed; },
 	set: function (speed) {
-		if (speed === 0) {
-			if (this._speed !== 0) {
-				// Setting timeStart as if new speed was 1
-				this._startTime += this._time / this._speed - this._time;
-			}
-		} else {
-			if (this._speed === 0) {
-				// If current speed is 0,
-				// it corresponds to a virtual speed of 1
-				// when it comes to determing where the starting time is
-				this._startTime += this._time - this._time / speed;
-			} else {
-				this._startTime += this._time / this._speed - this._time / speed;
-			}
-		}
-
-		this._speed = speed;
-		if (this._player !== null) {
-			this._player._onPlayableChanged(this);
-		}
+		this.setSpeed(speed);
 	}
 });
 
@@ -970,11 +971,11 @@ Object.defineProperty(Playable.prototype, 'time', {
 	}
 });
 
-Playable.prototype.onStart    = function (onStart)    { this._onStart    = onStart;    return this; };
-Playable.prototype.onUpdate   = function (onUpdate)   { this._onUpdate   = onUpdate;   return this; };
-Playable.prototype.onStop     = function (onStop)     { this._onStop     = onStop;     return this; };
-Playable.prototype.onPause    = function (onPause)    { this._onPause    = onPause;    return this; };
-Playable.prototype.onResume   = function (onResume)   { this._onResume   = onResume;   return this; };
+Playable.prototype.onStart  = function (onStart)  { this._onStart  = onStart;  return this; };
+Playable.prototype.onUpdate = function (onUpdate) { this._onUpdate = onUpdate; return this; };
+Playable.prototype.onStop   = function (onStop)   { this._onStop   = onStop;   return this; };
+Playable.prototype.onPause  = function (onPause)  { this._onPause  = onPause;  return this; };
+Playable.prototype.onResume = function (onResume) { this._onResume = onResume; return this; };
 
 Playable.prototype.tweener = function (tweener) {
 	if (tweener === null || tweener === undefined) {
@@ -984,6 +985,34 @@ Playable.prototype.tweener = function (tweener) {
 
 	this._player = tweener;
 	return this;
+};
+
+Playable.prototype.setSpeed = function (speed) {
+	if (speed < 0) {
+		console.warn('[Playable.speed] This playable cannot have negative speed');
+		return;
+	}
+
+	if (speed === 0) {
+		if (this._speed !== 0) {
+			// Setting timeStart as if new speed was 1
+			this._startTime += this._time / this._speed - this._time;
+		}
+	} else {
+		if (this._speed === 0) {
+			// If current speed is 0,
+			// it corresponds to a virtual speed of 1
+			// when it comes to determing where the starting time is
+			this._startTime += this._time - this._time / speed;
+		} else {
+			this._startTime += this._time / this._speed - this._time / speed;
+		}
+	}
+
+	this._speed = speed;
+	if (this._player !== null) {
+		this._player._onPlayableChanged(this);
+	}
 };
 
 Playable.prototype.goTo = function (timePosition, iteration) {
@@ -1018,30 +1047,15 @@ Playable.prototype.getDuration = function () {
 };
 
 Playable.prototype._getEndTime = function () {
-	if (this._speed >= 0) {
-		return Infinity;
-	} else {
-		return this._startTime;
-	}
+	return Infinity;
 };
 
 Playable.prototype._getStartTime = function () {
-	if (this._speed > 0) {
-		return this._startTime;
-	} else {
-		return -Infinity;
-	}
+	return this._startTime;
 };
 
 Playable.prototype._isWithin = function (time) {
-	if (this._speed > 0) {
-		return this._startTime < time;
-	} else if (this._speed < 0) {
-		return time < this._startTime;
-	} else {
-		// speed is 0
-		return true;
-	}
+	return this._startTime < time;
 };
 
 Playable.prototype.rewind = function () {
@@ -1083,6 +1097,11 @@ Playable.prototype._start = function () {
 };
 
 Playable.prototype.stop = function () {
+	if (this._player === null) {
+		console.warn('[Playable.stop] Cannot stop a playable that is not running');
+		return;
+	}
+
 	// Stopping playable without performing any additional update nor completing
 	if (this._player._inactivate(this) === false) {
 		// Could not be removed
@@ -1172,11 +1191,12 @@ Player.prototype = Object.create(Playable.prototype);
 Player.prototype.constructor = Player;
 module.exports = Player;
 
-Player.prototype._add = function (playable, delay) {
+Player.prototype._add = function (playable) {
 	if (playable._handle === null) {
 		// Playable can be added
 		playable._handle = this._inactivePlayables.add(playable);
 		playable._player = this;
+		// this._onPlayableAdded(playable);
 		return true;
 	}
 
@@ -1234,10 +1254,7 @@ Player.prototype.remove = function (playable) {
 		playable.stop();
 	}
 
-	if (playable._handle.container !== this._playablesToRemove) {
-		this._remove(playable);
-	}
-
+	this._remove(playable);
 	this._onPlayableRemoved(playable);
 	return this;
 };
@@ -1252,7 +1269,6 @@ Player.prototype.removeAll = function () {
 	}
 
 	this._handlePlayablesToRemove();
-	this._onAllPlayablesRemoved();
 	return this;
 };
 
@@ -1275,6 +1291,10 @@ Player.prototype._handlePlayablesToRemove = function () {
 		var playable = handle.object;
 		playable._handle = this._activePlayables.removeByReference(handle);
 		playable._player = null;
+	}
+
+	if ((this._activePlayables.length === 0) && (this._inactivePlayables.length === 0)) {
+		this._onAllPlayablesRemoved();
 	}
 };
 
@@ -1308,6 +1328,11 @@ Player.prototype.debug = function (debug) {
 };
 
 Player.prototype.stop = function () {
+	if (this._player === null) {
+		this._warn('[Player.stop] Cannot stop a player that is not running');
+		return;
+	}
+
 	// Stopping all active playables
 	var handle = this._activePlayables.first; 
 	while (handle !== null) {
@@ -1361,12 +1386,14 @@ Player.prototype._update = function (dt, overflow) {
 };
 
 // Overridable methods
+// Player.prototype._onPlayableAdded   = function (/* playable */) {};
 Player.prototype._onPlayableChanged = function (/* playable */) {};
 Player.prototype._onPlayableRemoved = function (/* playable */) {};
 Player.prototype._onAllPlayablesRemoved = function () {};
 },{"./DoublyList":6,"./Playable":8}],10:[function(require,module,exports){
-var Timeline = require('./Timeline');
-var Delay    = require('./Delay');
+var Timeline   = require('./Timeline');
+var Delay      = require('./Delay');
+var DoublyList = require('./DoublyList');
 
 /**
  *
@@ -1385,6 +1412,8 @@ function Sequence() {
 		return new Sequence();
 	}
 
+	this._sequencedPlayables = new DoublyList();
+
 	Timeline.call(this);
 }
 Sequence.prototype = Object.create(Timeline.prototype);
@@ -1392,6 +1421,7 @@ Sequence.prototype.constructor = Sequence;
 module.exports = Sequence;
 
 Sequence.prototype.add = function (playable) {
+	this._sequencedPlayables.addBack(playable);
 	return Timeline.prototype.add.call(this, playable, this._duration);
 };
 
@@ -1399,50 +1429,79 @@ Sequence.prototype.addDelay = function (duration) {
 	return this.add(new Delay(duration));
 };
 
-Sequence.prototype._onPlayableRemoved = function (removedPlayable) {
-	var handle, playable;
+Sequence.prototype._reconstruct = function () {
+	// O(n)
+	var activePlayable, timeInActiveBefore;
+	var activePlayableHandle = this._activePlayables.first;
 
-	var startTime = removedPlayable._startTime;
-	var endTime   = startTime + removedPlayable.getDuration();
-	if (startTime > endTime) {
-		var tmp = startTime;
-		startTime = endTime;
-		endTime = tmp;
+	if (activePlayableHandle !== null) {
+		// How far is the sequence within the active playable?
+		activePlayable = activePlayableHandle.object; // only one active playable
+		timeInActiveBefore = this._time - activePlayable._getStartTime();
 	}
 
-	if (this._time < endTime) { // Playing head is before the end of the removed playable
-		// Shifting all the playables that come after the removed playable
-		var leftShit = endTime - this._time;
-		for (handle = this._activePlayables.first; handle !== null; handle = handle.next) {
-			playable = handle.object;
-			if (removedPlayable._startTime < playable._startTime) {
-				playable._startTime -= leftShit;
-			}
-		}
-
-		for (handle = this._inactivePlayables.first; handle !== null; handle = handle.next) {
-			playable = handle.object;
-			if (removedPlayable._startTime < playable._startTime) {
-				playable._startTime -= leftShit;
-			}
-		}
+	// Reconstructing the sequence of playables
+	var duration = 0;
+	for (var handle = this._sequencedPlayables.first; handle !== null; handle = handle.next) {
+		var playable = handle.object;
+		playable._setStartTime(duration);
+		duration = playable._getEndTime();
 	}
 
-	if (this._time > startTime) { // Playing head is after the start of the removed playable
-		// Shifting the starting time of the sequence
-		var rightShift = this._time - startTime;
-		this._startTime += rightShift;
+	if (activePlayableHandle !== null) {
+		// Determining where to set the sequence's starting time so that the local time within
+		// the active playable remains the same
+		var currentStartTime = this._getStartTime();
+		var timeInActiveAfter = this._time - activePlayable._getStartTime();
+		var shift = timeInActiveBefore - timeInActiveAfter;
+		this._startTime += shift;
 	}
 
-	this._updateDuration();
+	// Updating duration
+	this._duration = duration;
+
+	if (this._player !== null) {
+		this._player._onPlayableChanged(this);
+	}
 };
 
-// TODO:
-// Sequence.prototype.substitute = function (playableA, playableB) {
-// };
+Sequence.prototype.substitute = function (playableA, playableB) {
+	// O(n)
+	if (this._sequencedPlayables.length === 0) {
+		this._warn('[Sequence.substitute] The sequence is empty!');
+		return;
+	}
 
+	// Fetching handle for playable A
+	var handleA = this._sequencedPlayables.getNode(playableA);
 
-},{"./Delay":5,"./Timeline":13}],11:[function(require,module,exports){
+	// Adding playable B right after playable A in this._sequencedPlayables
+	this._sequencedPlayables.addAfter(handleA, playableB);
+
+	// Adding playable B in this player
+	this._add(playableB);
+
+	// Removing playable A
+	// Will have the effect of:
+	// - Stopping playable A (with correct callback)
+	// - Removing playable A from the sequence
+	// - Reconstructing the sequence
+	this.remove(playableA);
+};
+
+Sequence.prototype._onPlayableRemoved = function (removedPlayable) {
+	// O(n)
+	this._sequencedPlayables.remove(removedPlayable);
+	if (this._sequencedPlayables.length === 0) {
+		return;
+	}
+
+	this._reconstruct();
+};
+
+Sequence.prototype._onPlayableChanged = Sequence.prototype._reconstruct;
+
+},{"./Delay":5,"./DoublyList":6,"./Timeline":13}],11:[function(require,module,exports){
 (function (global){
 
 /**

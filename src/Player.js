@@ -35,11 +35,12 @@ Player.prototype = Object.create(Playable.prototype);
 Player.prototype.constructor = Player;
 module.exports = Player;
 
-Player.prototype._add = function (playable, delay) {
+Player.prototype._add = function (playable) {
 	if (playable._handle === null) {
 		// Playable can be added
 		playable._handle = this._inactivePlayables.add(playable);
 		playable._player = this;
+		// this._onPlayableAdded(playable);
 		return true;
 	}
 
@@ -97,10 +98,7 @@ Player.prototype.remove = function (playable) {
 		playable.stop();
 	}
 
-	if (playable._handle.container !== this._playablesToRemove) {
-		this._remove(playable);
-	}
-
+	this._remove(playable);
 	this._onPlayableRemoved(playable);
 	return this;
 };
@@ -115,7 +113,6 @@ Player.prototype.removeAll = function () {
 	}
 
 	this._handlePlayablesToRemove();
-	this._onAllPlayablesRemoved();
 	return this;
 };
 
@@ -138,6 +135,10 @@ Player.prototype._handlePlayablesToRemove = function () {
 		var playable = handle.object;
 		playable._handle = this._activePlayables.removeByReference(handle);
 		playable._player = null;
+	}
+
+	if ((this._activePlayables.length === 0) && (this._inactivePlayables.length === 0)) {
+		this._onAllPlayablesRemoved();
 	}
 };
 
@@ -171,6 +172,11 @@ Player.prototype.debug = function (debug) {
 };
 
 Player.prototype.stop = function () {
+	if (this._player === null) {
+		this._warn('[Player.stop] Cannot stop a player that is not running');
+		return;
+	}
+
 	// Stopping all active playables
 	var handle = this._activePlayables.first; 
 	while (handle !== null) {
@@ -224,6 +230,7 @@ Player.prototype._update = function (dt, overflow) {
 };
 
 // Overridable methods
+// Player.prototype._onPlayableAdded   = function (/* playable */) {};
 Player.prototype._onPlayableChanged = function (/* playable */) {};
 Player.prototype._onPlayableRemoved = function (/* playable */) {};
 Player.prototype._onAllPlayablesRemoved = function () {};

@@ -17,45 +17,32 @@ BriefPlayer.prototype._onAllPlayablesRemoved = function () {
 };
 
 BriefPlayer.prototype._updateDuration = function () {
-	var durationExtension = 0;
+	var totalDuration = 0;
 
-	var handle, playable, overflow;
+	var handle, playable, playableDuration;
 	for (handle = this._activePlayables.first; handle !== null; handle = handle.next) {
 		playable = handle.object;
-		overflow = playable._getEndTime() - this._duration;
-		if (overflow > durationExtension) {
-			durationExtension = overflow;
+		playableDuration = playable._getStartTime() + playable.getDuration();
+		if (playableDuration > totalDuration) {
+			totalDuration = playableDuration;
 		}
 	}
 
 	for (handle = this._inactivePlayables.first; handle !== null; handle = handle.next) {
 		playable = handle.object;
-		overflow = playable._getEndTime() - this._duration;
-		if (overflow > durationExtension) {
-			durationExtension = overflow;
+		playableDuration = playable._getStartTime() + playable.getDuration();
+		if (playableDuration > totalDuration) {
+			totalDuration = playableDuration;
 		}
 	}
 
-	if (durationExtension > 0) {
-		this._extendDuration(durationExtension);
-	}
+	this._setDuration(totalDuration);
 };
 
-BriefPlayer.prototype._onPlayableRemoved = function () {
-	this._updateDuration();
-};
+BriefPlayer.prototype._onPlayableChanged = BriefPlayer.prototype._updateDuration;
+BriefPlayer.prototype._onPlayableRemoved = BriefPlayer.prototype._updateDuration;
 
-BriefPlayer.prototype._onPlayableChanged = function (changedPlayable) {
-	this._warn('[BriefPlayer._onPlayableChanged] Changing a playable\'s property after attaching it to a player may have unwanted side effects',
-		'playable:', changedPlayable, 'player:', this);
-
-	// N.B The following code should work
-	// // Updating timeline duration
-	// var endTime = changedPlayable._startTime + changedPlayable.getDuration();
-	// if (endTime > this._duration) {
-	// 	this._duration = endTime;
-	// } else {
-	// 	// Making sure the duration is correct
-	// 	this._updateDuration();
-	// }
-};
+// BriefPlayer.prototype._onPlayableChanged = function (changedPlayable) {
+// 	this._warn('[BriefPlayer._onPlayableChanged] Changing a playable\'s property after attaching it to a player may have unwanted side effects',
+// 		'playable:', changedPlayable, 'player:', this);
+// };
