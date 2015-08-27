@@ -19,7 +19,24 @@ function Tween(object, properties) {
 	BriefPlayable.call(this);
 	AbstractTween.call(this, object, properties);
 }
-Tween.prototype = Object.create(AbstractTween.prototype);
+Tween.prototype = Object.create(BriefPlayable.prototype);
 Tween.prototype.constructor = Tween;
-inherit(Tween, BriefPlayable);
+inherit(Tween, AbstractTween);
 module.exports = Tween;
+
+
+Tween.prototype.to = function (toObject, duration, easing, easingParam, interpolationParams) {
+	AbstractTween.prototype.to.call(this, toObject, duration, easing, easingParam, interpolationParams);
+	if (this._player !== null) {
+		this._player._onPlayableChanged(this);
+	}
+	return this;
+};
+
+Tween.prototype.wait = function (duration) {
+	AbstractTween.prototype.to.wait(this, duration);
+	if (this._player !== null) {
+		this._player._onPlayableChanged(this);
+	}
+	return this;
+};

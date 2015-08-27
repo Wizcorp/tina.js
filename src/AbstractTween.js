@@ -77,10 +77,6 @@ AbstractTween.prototype.relative = function (relative) {
 	return this;
 };
 
-AbstractTween.prototype._extendDuration = function (durationExtension) {
-	this._duration += durationExtension;
-};
-
 AbstractTween.prototype.reset = function () {
 	this._index       = 0;
 	this._duration    = 0;
@@ -173,14 +169,14 @@ AbstractTween.prototype.to = function (toObject, duration, easing, easingParam, 
 	);
 
 	this._transitions.push(transition);
-	this._extendDuration(duration);
+	this._duration += duration;
 	return this;
 };
 
 AbstractTween.prototype.wait = function (duration) {
 	var toObject = this._getLastTransitionEnding();
 	this._transitions.push(new Temporisation(this._duration, duration, toObject, this._properties));
-	this._extendDuration(duration);
+	this._duration += duration;
 	return this;
 };
 
