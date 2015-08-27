@@ -102,8 +102,7 @@ BriefExtension.prototype._isTimeWithin = function (time) {
 };
 
 BriefExtension.prototype.goToEnd = function () {
-	this.goTo(this.getDuration(), this._iterations - 1);
-	return this;
+	return this.goTo(this.getDuration(), this._iterations - 1);
 };
 
 BriefExtension.prototype.loop = function () {

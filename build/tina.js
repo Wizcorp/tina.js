@@ -78,6 +78,10 @@ AbstractTween.prototype.relative = function (relative) {
 	return this;
 };
 
+AbstractTween.prototype._extendDuration = function (durationExtension) {
+	this._duration += durationExtension;
+};
+
 AbstractTween.prototype.reset = function () {
 	this._index       = 0;
 	this._duration    = 0;
@@ -215,7 +219,7 @@ AbstractTween.prototype._validate = function () {
 
 	return true;
 };
-},{"./Transition":15,"./TransitionRelative":16,"./easing":19,"./interpolation":22}],2:[function(require,module,exports){
+},{"./Transition":16,"./TransitionRelative":17,"./easing":20,"./interpolation":23}],2:[function(require,module,exports){
 
 function BriefExtension() {
 	// Local duration of the playable, independent from speed and iterations
@@ -320,8 +324,7 @@ BriefExtension.prototype._isTimeWithin = function (time) {
 };
 
 BriefExtension.prototype.goToEnd = function () {
-	this.goTo(this.getDuration(), this._iterations - 1);
-	return this;
+	return this.goTo(this.getDuration(), this._iterations - 1);
 };
 
 BriefExtension.prototype.loop = function () {
@@ -488,7 +491,7 @@ BriefPlayable.prototype.constructor = BriefPlayable;
 inherit(BriefPlayable, BriefExtension);
 
 module.exports = BriefPlayable;
-},{"./BriefExtension":2,"./Playable":8,"./inherit":21}],4:[function(require,module,exports){
+},{"./BriefExtension":2,"./Playable":8,"./inherit":22}],4:[function(require,module,exports){
 var inherit        = require('./inherit');
 var Player         = require('./Player');
 var BriefExtension = require('./BriefExtension');
@@ -537,7 +540,7 @@ BriefPlayer.prototype._onPlayableRemoved = BriefPlayer.prototype._updateDuration
 // 	this._warn('[BriefPlayer._onPlayableChanged] Changing a playable\'s property after attaching it to a player may have unwanted side effects',
 // 		'playable:', changedPlayable, 'player:', this);
 // };
-},{"./BriefExtension":2,"./Player":9,"./inherit":21}],5:[function(require,module,exports){
+},{"./BriefExtension":2,"./Player":9,"./inherit":22}],5:[function(require,module,exports){
 var BriefPlayable = require('./BriefPlayable');
 
 /**
@@ -631,13 +634,13 @@ DoublyList.prototype.popBack = function (obj) {
 };
 
 DoublyList.prototype.addBefore = function (node, obj) {
-	var newNode = new ListNode(obj, node, node.next, this);
+	var newNode = new ListNode(obj, node.previous, node, this);
 
-	if (node.next !== null) {
-		node.next.previous = newNode;
+	if (node.previous !== null) {
+		node.previous.next = newNode;
 	}
 
-	node.next = newNode;
+	node.previous = newNode;
 
 	if (this.first === node) {
 		this.first = newNode;
@@ -648,13 +651,13 @@ DoublyList.prototype.addBefore = function (node, obj) {
 };
 
 DoublyList.prototype.addAfter = function (node, obj) {
-	var newNode = new ListNode(obj, node.previous, node, this);
+	var newNode = new ListNode(obj, node, node.next, this);
 
-	if (node.previous !== null) {
-		node.previous.next = newNode;
+	if (node.next !== null) {
+		node.next.previous = newNode;
 	}
 
-	node.previous = newNode;
+	node.next = newNode;
 
 	if (this.last === node) {
 		this.last = newNode;
@@ -662,6 +665,62 @@ DoublyList.prototype.addAfter = function (node, obj) {
 
 	this.length += 1;
 	return newNode;
+};
+
+DoublyList.prototype.moveToTheBeginning = function (node) {
+	if (!node || node.container !== this) {
+		return false;
+	}
+
+	if (node.previous === null) {
+		// node is already the first one
+		return true;
+	}
+
+	// Connecting previous node to next node
+	node.previous.next = node.next;
+
+	if (this.last === node) {
+		this.last = node.previous;
+	} else {
+		// Connecting next node to previous node
+		node.next.previous = node.previous;
+	}
+
+	// Adding at the beginning
+	node.previous = null;
+	node.next = this.first;
+	node.next.previous = node;
+	this.first = node;
+	return true;
+};
+
+DoublyList.prototype.moveToTheEnd = function (node) {
+	if (!node || node.container !== this) {
+		return false;
+	}
+
+	if (node.next === null) {
+		// node is already the last one
+		return true;
+	}
+
+	// Connecting next node to previous node
+	node.next.previous = node.previous;
+
+	if (this.first === node) {
+		this.first = node.next;
+	} else {
+		// Connecting previous node to next node
+		node.previous.next = node.next;
+	}
+
+	// Adding at the end
+	node.next = null;
+	node.previous = this.last;
+	node.previous.next = node;
+	this.last = node;
+	return true;
 };
 
 DoublyList.prototype.removeByReference = function (node) {
@@ -1042,12 +1101,20 @@ Playable.prototype.goTo = function (timePosition, iteration) {
 	return this;
 };
 
+Playable.prototype.goToBeginning = function () {
+	return this.goTo(0, 0);
+};
+
 Playable.prototype.getDuration = function () {
 	return Infinity;
 };
 
 Playable.prototype._getEndTime = function () {
 	return Infinity;
+};
+
+Playable.prototype._setStartTime = function (startTime) {
+	this._startTime = startTime;
 };
 
 Playable.prototype._getStartTime = function () {
@@ -1391,6 +1458,417 @@ Player.prototype._onPlayableChanged = function (/* playable */) {};
 Player.prototype._onPlayableRemoved = function (/* playable */) {};
 Player.prototype._onAllPlayablesRemoved = function () {};
 },{"./DoublyList":6,"./Playable":8}],10:[function(require,module,exports){
+var BriefPlayable = require('./BriefPlayable');
+var DoublyList    = require('./DoublyList');
+
+function Record(time, values) {
+	this.time   = time;
+	this.values = values;
+}
+
+function ObjectRecorder(object, properties, onIn, onOut) {
+	this.object      = object;
+	this.properties  = properties;
+
+	this.records = new DoublyList();
+	this.currentRecord = null;
+
+	// Whether or not the playing head is within the recording duration
+	this.isIn = false;
+
+	this.onIn  = onIn  || null;
+	this.onOut = onOut || null;
+}
+
+ObjectRecorder.prototype.erase = function (t0, t1) {
+	// Removing every record between t0 and t1
+	if (t1 < t0) {
+		var t2 = t0;
+		t0 = t1;
+		t1 = t2;
+	}
+
+	// Heuristic: removing records from the end if last object concerned by the removal
+	var last = this.records.last;
+	if (last.object.time <= t1) {
+		// Removing from the end
+		while (last !== null && last.object.time >= t0) {
+			var previous = last.previous;
+			this.records.removeBeReference(last);
+			last = previous;
+		}
+
+		if (this.currentRecord.container === null) {
+			// current record was removed from the list
+			this.currentRecord = last;
+		}
+		return;
+	}
+
+	// Removing from the beginning
+	var recordRef = this.records.first;
+	while (recordRef !== null && recordRef.object.time <= t1) {
+		var next = recordRef.next;
+		if (recordRef.object.time >= t0) {
+			this.records.removeBeReference(recordRef);
+		}
+		recordRef = next;
+	}
+
+	if (this.currentRecord.container === null) {
+		// current record was removed from the list
+		this.currentRecord = recordRef;
+	}
+};
+
+ObjectRecorder.prototype.record = function (time, dt) {
+	if (dt === 0 && this.currentRecord !== null && this.currentRecord.time === time) {
+		return;
+	}
+
+	// Creating the record
+	var recordValues = [];
+	for (var p = 0; p < this.properties.length; p += 1) {
+		recordValues.push(this.object[this.properties[p]]);
+	}
+	var record = new Record(time, recordValues);
+
+	// Saving the record
+	if (this.records.length === 0) {
+		// First record, ever
+		this.currentRecord = this.records.add(record);
+		return;
+	}
+
+	if (this.currentRecord.object.time < time) {
+		this.currentRecord = this.records.addAfter(this.currentRecord, record);
+	} else {
+		this.currentRecord = this.records.addBefore(this.currentRecord, record);
+	}
+};
+
+ObjectRecorder.prototype.goTo = function (time) {
+	// Selecting record that corresponds to the record closest to time
+	while (this.currentRecord.object.time < time) {
+		this.currentRecord = this.currentRecord.next;
+	}
+
+	while (time < this.currentRecord.object.time) {
+		this.currentRecord = this.currentRecord.previous;
+	}
+};
+
+ObjectRecorder.prototype.play = function (time, dt, smooth) {
+	var nbProperties = this.properties.length;
+	var firstRecord  = this.records.first;
+	var lastRecord   = this.records.last;
+
+	var isIn;
+	if (dt === 0) {
+		isIn = this.isIn;
+	} else {
+		if (this.isIn === true) {
+			isIn = (firstRecord.object.time < time) && (time < lastRecord.object.time);
+		} else {
+			isIn = (firstRecord.object.time <= time) && (time <= lastRecord.object.time);
+		}
+	}
+
+	if (isIn !== this.isIn) {
+		this.isIn = !this.isIn;
+		if (isIn === true && this.onIn !== null) {
+			this.onIn();
+		}
+	} else if (this.isIn === false) {
+		return;
+	}
+
+	var previousRecord = (this.currentRecord.previous === null) ? this.currentRecord : this.currentRecord.previous;
+
+	while (this.currentRecord.object.time <= time) {
+		previousRecord = this.currentRecord;
+		var next = this.currentRecord.next;
+		if (next === null) {
+			break;
+		} else {
+			this.currentRecord = next;
+		}
+	}
+
+	while (time <= previousRecord.object.time) {
+		this.currentRecord = previousRecord;
+		var previous = previousRecord.previous;
+		if (previous === null) {
+			break;
+		} else {
+			previousRecord = previous;
+		}
+	}
+
+	var p;
+	if (smooth) {
+		var t0 = previousRecord.object.time;
+		var t1 = this.currentRecord.object.time;
+		var record0 = previousRecord.object.values;
+		var record1 = this.currentRecord.object.values;
+
+		var timeInterval = t1 - t0;
+
+		var delta0 = (t - t0) / timeInterval;
+		var delta1 = (t1 - t) / timeInterval;
+
+		for (p = 0; p < nbProperties; p += 1) {
+			this.object[this.properties[p]] = record0[p] * delta0 + record1[p] * delta1;
+		}
+	} else {
+		var record = this.currentRecord.object.values;
+		for (p = 0; p < nbProperties; p += 1) {
+			this.object[this.properties[p]] = record[p];
+		}
+	}
+
+	// Triggering onOut callback
+	if (isIn === false && this.onOut !== null) {
+		this.onOut();
+	}
+};
+
+/**
+ *
+ * @classdesc
+ * Manages transition of properties of an object
+ *
+ * @param {object} object     - Object to tween
+ * @param {array}  properties - Properties of the object to tween
+ *
+ */
+
+function Recorder(maxRecordingDuration) {
+	if ((this instanceof Recorder) === false) {
+		return new Recorder();
+	}
+
+	BriefPlayable.call(this);
+
+	// Can end only in playing mode
+	this._duration = Infinity;
+
+	// Time difference between this._time and recorded times
+	this._slackTime = 0;
+
+	// Maximum recording duration
+	this._maxRecordingDuration = maxRecordingDuration || Infinity;
+
+	// List of objects and properties recorded
+	this._recordedObjects = [];
+
+	// List of objects and properties recording
+	this._recordingObjects = {};
+
+	// List of object labels
+	this._recordingObjectLabels = [];
+
+	// Whether the recorder is in recording mode
+	this._recording = true;
+
+	// Whether the recorder is in playing mode
+	this._playing = false;
+
+	// Whether the recorder enables interpolating at play time
+	this._smooth = false;
+
+	this._onStartRecording = null;
+	this._onStopRecording  = null;
+
+	this._onStartPlaying = null;
+	this._onStopPlaying  = null;
+}
+Recorder.prototype = Object.create(BriefPlayable.prototype);
+Recorder.prototype.constructor = Recorder;
+module.exports = Recorder;
+
+Recorder.prototype.getDuration = function () {
+	// Duration from outside the playable
+	var duration;
+	if (this._playing === true) {
+		duration = (this._time > this._maxRecordingDuration) ? this._maxRecordingDuration : this._time;
+	} else {
+		duration = Infinity;
+	}
+	return duration * this._iterations / this._speed;
+};
+
+Recorder.prototype.smooth = function (smooth) {
+	this._smooth = smooth;
+	return this;
+};
+
+Recorder.prototype.onStartRecording = function (onStartRecording) {
+	this._onStartRecording = onStartRecording;
+	return this;
+};
+
+Recorder.prototype.onStopRecording = function (onStopRecording) {
+	this._onStopRecording = onStopRecording;
+	return this;
+};
+
+Recorder.prototype.onStartPlaying = function (onStartPlaying) {
+	this._onStartPlaying = onStartPlaying;
+	return this;
+};
+
+Recorder.prototype.onStopPlaying = function (onStopPlaying) {
+	this._onStopPlaying = onStopPlaying;
+	return this;
+};
+
+Recorder.prototype.reset = function () {
+	this._recordedObjects       = [];
+	this._recordingObjects      = {};
+	this._recordingObjectLabels = [];
+	return this;
+};
+
+Recorder.prototype.record = function (label, object, properties, onIn, onOut) {
+	var objectRecorder = new ObjectRecorder(object, properties, onIn, onOut);
+	this._recordingObjects[label] = objectRecorder;
+	this._recordedObjects.push(objectRecorder);
+	this._recordingObjectLabels.push(label);
+	return this;
+};
+
+Recorder.prototype.stopRecordingObject = function (label) {
+	delete this._recordingObjects[label];
+
+	var labelIdx = this._recordingObjectLabels.indexOf(label);
+	if (labelIdx === -1) {
+		console.warn('[Recorder.stopRecordingObject] Trying to stop recording an object that is not being recording:', label);
+		return this;
+	}
+
+	this._recordingObjectLabels.splice(labelIdx, 1);
+	return this;
+};
+
+Recorder.prototype.removeRecordedObject = function (label) {
+	var recorder = this._recordingObjects[label];
+	delete this._recordingObjects[label];
+
+	var labelIdx = this._recordingObjectLabels.indexOf(label);
+	if (labelIdx !== -1) {
+		this._recordingObjectLabels.splice(labelIdx, 1);
+	}
+
+	var recorderIdx = this._recordedObjects.indexOf(recorder);
+	if (recorderIdx === -1) {
+		console.warn('[Recorder.removeRecordedObject] Trying to remove an object that was not recorded:', label);
+		return this;
+	}
+
+	this._recordingObjectLabels.splice(recorderIdx, 1);
+	return this;
+};
+
+Recorder.prototype.recording = function (recording) {
+	if (this._recording !== recording) {
+		this._recording = recording;
+		if (this._recording === true) {
+			if (this._playing === true) {
+				if (this._onStopPlaying !== null) {
+					this._onStopPlaying();
+				}
+				this._playing = false;
+			}
+
+			// Not resetting starting time
+			// and setting duration to Infinity
+			this._duration = Infinity;
+			if (this._player !== null) {
+				this._player._onPlayableChanged(this);
+			}
+
+			if (this._onStartRecording !== null) {
+				this._onStartRecording();
+			}
+		} else {
+			if (this._onStopRecording !== null) {
+				this._onStopRecording();
+			}
+		}
+	}
+	return this;
+};
+
+Recorder.prototype.playing = function (playing) {
+	if (this._playing !== playing) {
+		this._playing = playing;
+		if (this._playing === true) {
+			if (this._recording === true) {
+				if (this._onStopRecording !== null) {
+					this._onStopRecording();
+				}
+				this._recording = false;
+			}
+
+			// Setting duration to current position of the playing head
+			this._duration = this._time;
+			this.goToBeginning(this._startTime + this.getDuration());
+
+			if (this._onStartPlaying !== null) {
+				this._onStartPlaying();
+			}
+		} else {
+			if (this._onStopPlaying !== null) {
+				this._onStopPlaying();
+			}
+		}
+	}
+	return this;
+};
+
+Recorder.prototype._update = function (dt) {
+	var time = this._slackTime + this._time;
+
+	var r;
+	if (this._recording === true) {
+		var overflow, isOverflowing;
+		if (dt > 0) {
+			overflow = this._time - this._maxRecordingDuration;
+			isOverflowing = (overflow > 0);
+		} else {
+			overflow = this._time;
+			isOverflowing = (overflow < 0);
+		}
+
+		var nbRecordingObjects = this._recordingObjectLabels.length;
+		for (r = 0; r < nbRecordingObjects; r += 1) {
+			var label = this._recordingObjectLabels[r];
+			var recordingObject = this._recordingObjects[label];
+
+			// Recording object at current time
+			recordingObject.record(time, dt);
+
+			// Clearing the records that overflow from the maximum recording duration
+			if (isOverflowing === true) {
+				recordingObject.erase(0, overflow);
+			}
+		}
+
+		if (overflow > 0) {
+			this._slackTime += overflow;
+			this._setStartTime(this._startTime + overflow);
+			this._player._onPlayableChanged(this);
+		}
+	} else if (this._playing === true) {
+		var nbObjectRecorded = this._recordedObjects.length;
+		for (r = 0; r < nbObjectRecorded; r += 1) {
+			this._recordedObjects[r].play(time, dt, this._smooth);
+		}
+	}
+};
+
+},{"./BriefPlayable":3,"./DoublyList":6}],11:[function(require,module,exports){
 var Timeline   = require('./Timeline');
 var Delay      = require('./Delay');
 var DoublyList = require('./DoublyList');
@@ -1501,7 +1979,7 @@ Sequence.prototype._onPlayableRemoved = function (removedPlayable) {
 
 Sequence.prototype._onPlayableChanged = Sequence.prototype._reconstruct;
 
-},{"./Delay":5,"./DoublyList":6,"./Timeline":13}],11:[function(require,module,exports){
+},{"./Delay":5,"./DoublyList":6,"./Timeline":14}],12:[function(require,module,exports){
 (function (global){
 
 /**
@@ -1801,6 +2279,7 @@ var TINA = {
 	setDefaultTweener: function (tweener) {
 		this._defaultTweener = tweener;
 		this._tweeners.push(this._defaultTweener);
+		return this;
 	},
 
 	getDefaultTweener: function () {
@@ -1846,10 +2325,10 @@ var TINA = {
 	}
 };
 
-module.exports = global.TINA = TINA;
+module.exports = root.TINA = TINA;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],12:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 var Tweener = require('./Tweener');
 
 /**
@@ -1894,7 +2373,7 @@ Ticker.prototype.convertToTimeUnits = function(nbTicks) {
 	return nbTicks * this.tupt;
 };
 
-},{"./Tweener":18}],13:[function(require,module,exports){
+},{"./Tweener":19}],14:[function(require,module,exports){
 var BriefPlayer = require('./BriefPlayer');
 
 /**
@@ -1936,7 +2415,7 @@ Timeline.prototype.add = function (playable, startTime) {
 	return this;
 };
 
-},{"./BriefPlayer":4}],14:[function(require,module,exports){
+},{"./BriefPlayer":4}],15:[function(require,module,exports){
 var Tweener = require('./Tweener');
 
 /**
@@ -1973,7 +2452,7 @@ Timer.prototype.convertToSeconds = function(timeUnits) {
 Timer.prototype.convertToTimeUnits = function(seconds) {
 	return seconds * this._speed * 1000;
 };
-},{"./Tweener":18}],15:[function(require,module,exports){
+},{"./Tweener":19}],16:[function(require,module,exports){
 // The file is a good representation of the constant fight between maintainability and performance
 // For performance reasons several update methods are created
 // The appropriate method should be used for tweening. The selection depends on:
@@ -2109,7 +2588,7 @@ function Transition(properties, from, to, start, duration, easing, easingParam, 
 }
 
 module.exports = Transition;
-},{}],16:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 
 // One property
 function update(object, t) {
@@ -2262,7 +2741,7 @@ function Transition(properties, from, to, start, duration, easing, easingParam, 
 }
 
 module.exports = Transition;
-},{}],17:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 var BriefPlayable = require('./BriefPlayable');
 var AbstractTween = require('./AbstractTween');
 
@@ -2284,11 +2763,11 @@ function Tween(object, properties) {
 	BriefPlayable.call(this);
 	AbstractTween.call(this, object, properties);
 }
-Tween.prototype = Object.create(BriefPlayable.prototype);
+Tween.prototype = Object.create(AbstractTween.prototype);
 Tween.prototype.constructor = Tween;
-inherit(Tween, AbstractTween);
+inherit(Tween, BriefPlayable);
 module.exports = Tween;
-},{"./AbstractTween":1,"./BriefPlayable":3,"./inherit":21}],18:[function(require,module,exports){
+},{"./AbstractTween":1,"./BriefPlayable":3,"./inherit":22}],19:[function(require,module,exports){
 var Player = require('./Player');
 var TINA   = require('./TINA');
 
@@ -2315,7 +2794,7 @@ Tweener.prototype.useAsDefault = function () {
 	TINA.setDefaultTweener(this);
 	return this;
 };
-},{"./Player":9,"./TINA":11}],19:[function(require,module,exports){
+},{"./Player":9,"./TINA":12}],20:[function(require,module,exports){
 /**
  *
  * @file A set of ease functions
@@ -2578,7 +3057,7 @@ exports.backInOut = function (t, e) {
 	return 0.5 * (t * t * ((e + 1) * t + e)) + 1;
 };
 
-},{}],20:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 var TINA = require('./TINA.js');
 
 // TINA.CSSTween        = require('./CSSTween');
@@ -2592,7 +3071,7 @@ TINA.NestedTween     = require('./NestedTween');
 TINA.PixiTween       = require('./NestedTween');
 TINA.Playable        = require('./Playable');
 TINA.Player          = require('./Player');
-// TINA.Recorder        = require('./Recorder');
+TINA.Recorder        = require('./Recorder');
 TINA.Sequence        = require('./Sequence');
 TINA.Ticker          = require('./Ticker');
 TINA.Timeline        = require('./Timeline');
@@ -2602,7 +3081,7 @@ TINA.Tweener         = require('./Tweener');
 
 module.exports = TINA;
 
-},{"./BriefExtension":2,"./BriefPlayable":3,"./BriefPlayer":4,"./Delay":5,"./NestedTween":7,"./Playable":8,"./Player":9,"./Sequence":10,"./TINA.js":11,"./Ticker":12,"./Timeline":13,"./Timer":14,"./Tween":17,"./Tweener":18,"./easing":19,"./interpolation":22}],21:[function(require,module,exports){
+},{"./BriefExtension":2,"./BriefPlayable":3,"./BriefPlayer":4,"./Delay":5,"./NestedTween":7,"./Playable":8,"./Player":9,"./Recorder":10,"./Sequence":11,"./TINA.js":12,"./Ticker":13,"./Timeline":14,"./Timer":15,"./Tween":18,"./Tweener":19,"./easing":20,"./interpolation":23}],22:[function(require,module,exports){
 module.exports = function (subobject, superobject) {
 	var prototypes = Object.keys(superobject.prototype);
 	for (var p = 0; p < prototypes.length; p += 1) {
@@ -2610,7 +3089,7 @@ module.exports = function (subobject, superobject) {
 		subobject.prototype[prototypeName] = superobject.prototype[prototypeName];
 	}
 };
-},{}],22:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 /**
  *
  * @file A set of interpolation functions
@@ -3102,4 +3581,4 @@ exports.simplex2d = (function () {
 		return a * (1 - t) + b * t;
 	};
 })();
-},{}]},{},[20]);
+},{}]},{},[21]);

@@ -77,6 +77,10 @@ AbstractTween.prototype.relative = function (relative) {
 	return this;
 };
 
+AbstractTween.prototype._extendDuration = function (durationExtension) {
+	this._duration += durationExtension;
+};
+
 AbstractTween.prototype.reset = function () {
 	this._index       = 0;
 	this._duration    = 0;

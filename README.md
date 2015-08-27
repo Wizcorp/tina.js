@@ -14,7 +14,7 @@ A comprehensive, high performance, easy to use, open source animation library in
 * **Running options** (delay, iterations, pingpong, persist and speed)
 * **Open source** and MIT License (use it as you please)
 * A consequent library of **easing and interpolation methods**
-* A variety of components such as **Timeline** and **Sequence** (**Recorder** and **CSSTween** coming soon)
+* A variety of components such as **Timeline**, **Sequence** and **Recorder** (**CSSTween** coming soon)
 * **Good synchronisation** between tweens
 * **Relative tweening** enables the possibility to alter objects while they are tweening
 * **Nested object tweening** enables the possibility to alter nested objects using a single tween
@@ -42,7 +42,7 @@ var TINA = require('tina');
 
 ## API
 
-Existing playable components are: **Tween, NestedTween, Timeline, Sequence, Delay, Timer, Ticker** (Recorder and CSSTween coming soon).
+Existing playable components are: **Tween, NestedTween, Timeline, Sequence, Delay, Timer, Ticker, Recorder** (CSSTween coming soon).
 The following is a non-exhaustive list of possibilities offered by TINA.
 
 ### Tween

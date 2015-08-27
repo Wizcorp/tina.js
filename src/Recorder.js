@@ -33,9 +33,9 @@ ObjectRecorder.prototype.erase = function (t0, t1) {
 	if (last.object.time <= t1) {
 		// Removing from the end
 		while (last !== null && last.object.time >= t0) {
-			var prev = last.prev;
+			var previous = last.previous;
 			this.records.removeBeReference(last);
-			last = prev;
+			last = previous;
 		}
 
 		if (this.currentRecord.container === null) {
@@ -80,7 +80,7 @@ ObjectRecorder.prototype.record = function (time, dt) {
 		return;
 	}
 
-	if (this.currentRecord.time < time) {
+	if (this.currentRecord.object.time < time) {
 		this.currentRecord = this.records.addAfter(this.currentRecord, record);
 	} else {
 		this.currentRecord = this.records.addBefore(this.currentRecord, record);
@@ -94,7 +94,7 @@ ObjectRecorder.prototype.goTo = function (time) {
 	}
 
 	while (time < this.currentRecord.object.time) {
-		this.currentRecord = this.currentRecord.prev;
+		this.currentRecord = this.currentRecord.previous;
 	}
 };
 
@@ -123,26 +123,25 @@ ObjectRecorder.prototype.play = function (time, dt, smooth) {
 		return;
 	}
 
-	var previousRecord = (this.currentRecord.prev === null) ? this.currentRecord : this.currentRecord.prev;
-	if (dt > 0) {
-		while (this.currentRecord.object.time <= time) {
-			previousRecord = this.currentRecord;
-			var next = this.currentRecord.next;
-			if (next === null) {
-				break;
-			} else {
-				this.currentRecord = next;
-			}
+	var previousRecord = (this.currentRecord.previous === null) ? this.currentRecord : this.currentRecord.previous;
+
+	while (this.currentRecord.object.time <= time) {
+		previousRecord = this.currentRecord;
+		var next = this.currentRecord.next;
+		if (next === null) {
+			break;
+		} else {
+			this.currentRecord = next;
 		}
-	} else {
-		while (time <= previousRecord.object.time) {
-			this.currentRecord = previousRecord;
-			var prev = previousRecord.prev;
-			if (prev === null) {
-				break;
-			} else {
-				previousRecord = prev;
-			}
+	}
+
+	while (time <= previousRecord.object.time) {
+		this.currentRecord = previousRecord;
+		var previous = previousRecord.previous;
+		if (previous === null) {
+			break;
+		} else {
+			previousRecord = previous;
 		}
 	}
 
@@ -184,7 +183,7 @@ ObjectRecorder.prototype.play = function (time, dt, smooth) {
  *
  */
 
-function Recorder(recordingDuration) {
+function Recorder(maxRecordingDuration) {
 	if ((this instanceof Recorder) === false) {
 		return new Recorder();
 	}
@@ -194,8 +193,11 @@ function Recorder(recordingDuration) {
 	// Can end only in playing mode
 	this._duration = Infinity;
 
+	// Time difference between this._time and recorded times
+	this._slackTime = 0;
+
 	// Maximum recording duration
-	this._recordingDuration = recordingDuration || Infinity;
+	this._maxRecordingDuration = maxRecordingDuration || Infinity;
 
 	// List of objects and properties recorded
 	this._recordedObjects = [];
@@ -224,6 +226,22 @@ function Recorder(recordingDuration) {
 Recorder.prototype = Object.create(BriefPlayable.prototype);
 Recorder.prototype.constructor = Recorder;
 module.exports = Recorder;
+
+Recorder.prototype.getDuration = function () {
+	// Duration from outside the playable
+	var duration;
+	if (this._playing === true) {
+		duration = (this._time > this._maxRecordingDuration) ? this._maxRecordingDuration : this._time;
+	} else {
+		duration = Infinity;
+	}
+	return duration * this._iterations / this._speed;
+};
+
+Recorder.prototype.smooth = function (smooth) {
+	this._smooth = smooth;
+	return this;
+};
 
 Recorder.prototype.onStartRecording = function (onStartRecording) {
 	this._onStartRecording = onStartRecording;
@@ -303,8 +321,12 @@ Recorder.prototype.recording = function (recording) {
 				this._playing = false;
 			}
 
-			// Setting duration to Infinity, so that the recording never completes
+			// Not resetting starting time
+			// and setting duration to Infinity
 			this._duration = Infinity;
+			if (this._player !== null) {
+				this._player._onPlayableChanged(this);
+			}
 
 			if (this._onStartRecording !== null) {
 				this._onStartRecording();
@@ -329,14 +351,9 @@ Recorder.prototype.playing = function (playing) {
 				this._recording = false;
 			}
 
-			// Setting playing head to the beginning of the recordings
-			// and setting duration to the total recording duration
-			if (this._time > this._recordingDuration) {
-				this._startTime += this._time - this._recordingDuration;
-				this._duration = this._recordingDuration;
-			} else {
-				this._duration = this._time;
-			}
+			// Setting duration to current position of the playing head
+			this._duration = this._time;
+			this.goToBeginning(this._startTime + this.getDuration());
 
 			if (this._onStartPlaying !== null) {
 				this._onStartPlaying();
@@ -350,34 +367,43 @@ Recorder.prototype.playing = function (playing) {
 	return this;
 };
 
-Recorder.prototype.smooth = function (smooth) {
-	this._smooth = smooth;
-	return this;
-};
+Recorder.prototype._update = function (dt) {
+	var time = this._slackTime + this._time;
 
-Recorder.prototype.update = function (dt) {
 	var r;
-	if (this._recording) {
-		var recordingTimeBound = this._time - this._recordingDuration;
+	if (this._recording === true) {
+		var overflow, isOverflowing;
+		if (dt > 0) {
+			overflow = this._time - this._maxRecordingDuration;
+			isOverflowing = (overflow > 0);
+		} else {
+			overflow = this._time;
+			isOverflowing = (overflow < 0);
+		}
+
 		var nbRecordingObjects = this._recordingObjectLabels.length;
 		for (r = 0; r < nbRecordingObjects; r += 1) {
 			var label = this._recordingObjectLabels[r];
 			var recordingObject = this._recordingObjects[label];
 
 			// Recording object at current time
-			recordingObject.record(this._time, dt);
+			recordingObject.record(time, dt);
 
 			// Clearing the records that overflow from the maximum recording duration
-			if (recordingTimeBound > 0) {
-				recordingObject.erase(0, recordingTimeBound);
+			if (isOverflowing === true) {
+				recordingObject.erase(0, overflow);
 			}
 		}
-	}
 
-	if (this._playing) {
+		if (overflow > 0) {
+			this._slackTime += overflow;
+			this._setStartTime(this._startTime + overflow);
+			this._player._onPlayableChanged(this);
+		}
+	} else if (this._playing === true) {
 		var nbObjectRecorded = this._recordedObjects.length;
 		for (r = 0; r < nbObjectRecorded; r += 1) {
-			this._recordedObjects[r].play(this._time, dt, this._smooth);
+			this._recordedObjects[r].play(time, dt, this._smooth);
 		}
 	}
 };
