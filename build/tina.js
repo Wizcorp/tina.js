@@ -78,10 +78,6 @@ AbstractTween.prototype.relative = function (relative) {
 	return this;
 };
 
-AbstractTween.prototype._extendDuration = function (durationExtension) {
-	this._duration += durationExtension;
-};
-
 AbstractTween.prototype.reset = function () {
 	this._index       = 0;
 	this._duration    = 0;
@@ -174,14 +170,14 @@ AbstractTween.prototype.to = function (toObject, duration, easing, easingParam, 
 	);
 
 	this._transitions.push(transition);
-	this._extendDuration(duration);
+	this._duration += duration;
 	return this;
 };
 
 AbstractTween.prototype.wait = function (duration) {
 	var toObject = this._getLastTransitionEnding();
 	this._transitions.push(new Temporisation(this._duration, duration, toObject, this._properties));
-	this._extendDuration(duration);
+	this._duration += duration;
 	return this;
 };
 
@@ -2763,10 +2759,27 @@ function Tween(object, properties) {
 	BriefPlayable.call(this);
 	AbstractTween.call(this, object, properties);
 }
-Tween.prototype = Object.create(AbstractTween.prototype);
+Tween.prototype = Object.create(BriefPlayable.prototype);
 Tween.prototype.constructor = Tween;
-inherit(Tween, BriefPlayable);
+inherit(Tween, AbstractTween);
 module.exports = Tween;
+
+
+Tween.prototype.to = function (toObject, duration, easing, easingParam, interpolationParams) {
+	AbstractTween.prototype.to.call(this, toObject, duration, easing, easingParam, interpolationParams);
+	if (this._player !== null) {
+		this._player._onPlayableChanged(this);
+	}
+	return this;
+};
+
+Tween.prototype.wait = function (duration) {
+	AbstractTween.prototype.to.wait(this, duration);
+	if (this._player !== null) {
+		this._player._onPlayableChanged(this);
+	}
+	return this;
+};
 },{"./AbstractTween":1,"./BriefPlayable":3,"./inherit":22}],19:[function(require,module,exports){
 var Player = require('./Player');
 var TINA   = require('./TINA');
