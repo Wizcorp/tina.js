@@ -72,13 +72,13 @@ DoublyList.prototype.popBack = function (obj) {
 };
 
 DoublyList.prototype.addBefore = function (node, obj) {
-	var newNode = new ListNode(obj, node, node.next, this);
+	var newNode = new ListNode(obj, node.previous, node, this);
 
-	if (node.next !== null) {
-		node.next.previous = newNode;
+	if (node.previous !== null) {
+		node.previous.next = newNode;
 	}
 
-	node.next = newNode;
+	node.previous = newNode;
 
 	if (this.first === node) {
 		this.first = newNode;
@@ -89,13 +89,13 @@ DoublyList.prototype.addBefore = function (node, obj) {
 };
 
 DoublyList.prototype.addAfter = function (node, obj) {
-	var newNode = new ListNode(obj, node.previous, node, this);
+	var newNode = new ListNode(obj, node, node.next, this);
 
-	if (node.previous !== null) {
-		node.previous.next = newNode;
+	if (node.next !== null) {
+		node.next.previous = newNode;
 	}
 
-	node.previous = newNode;
+	node.next = newNode;
 
 	if (this.last === node) {
 		this.last = newNode;
@@ -103,6 +103,62 @@ DoublyList.prototype.addAfter = function (node, obj) {
 
 	this.length += 1;
 	return newNode;
+};
+
+DoublyList.prototype.moveToTheBeginning = function (node) {
+	if (!node || node.container !== this) {
+		return false;
+	}
+
+	if (node.previous === null) {
+		// node is already the first one
+		return true;
+	}
+
+	// Connecting previous node to next node
+	node.previous.next = node.next;
+
+	if (this.last === node) {
+		this.last = node.previous;
+	} else {
+		// Connecting next node to previous node
+		node.next.previous = node.previous;
+	}
+
+	// Adding at the beginning
+	node.previous = null;
+	node.next = this.first;
+	node.next.previous = node;
+	this.first = node;
+	return true;
+};
+
+DoublyList.prototype.moveToTheEnd = function (node) {
+	if (!node || node.container !== this) {
+		return false;
+	}
+
+	if (node.next === null) {
+		// node is already the last one
+		return true;
+	}
+
+	// Connecting next node to previous node
+	node.next.previous = node.previous;
+
+	if (this.first === node) {
+		this.first = node.next;
+	} else {
+		// Connecting previous node to next node
+		node.previous.next = node.next;
+	}
+
+	// Adding at the end
+	node.next = null;
+	node.previous = this.last;
+	node.previous.next = node;
+	this.last = node;
+	return true;
 };
 
 DoublyList.prototype.removeByReference = function (node) {

@@ -296,6 +296,7 @@ var TINA = {
 	setDefaultTweener: function (tweener) {
 		this._defaultTweener = tweener;
 		this._tweeners.push(this._defaultTweener);
+		return this;
 	},
 
 	getDefaultTweener: function () {
@@ -341,4 +342,4 @@ var TINA = {
 	}
 };
 
-module.exports = global.TINA = TINA;
+module.exports = root.TINA = TINA;

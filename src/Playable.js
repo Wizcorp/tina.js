@@ -111,12 +111,20 @@ Playable.prototype.goTo = function (timePosition, iteration) {
 	return this;
 };
 
+Playable.prototype.goToBeginning = function () {
+	return this.goTo(0, 0);
+};
+
 Playable.prototype.getDuration = function () {
 	return Infinity;
 };
 
 Playable.prototype._getEndTime = function () {
 	return Infinity;
+};
+
+Playable.prototype._setStartTime = function (startTime) {
+	this._startTime = startTime;
 };
 
 Playable.prototype._getStartTime = function () {

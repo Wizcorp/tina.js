@@ -19,7 +19,7 @@ function Tween(object, properties) {
 	BriefPlayable.call(this);
 	AbstractTween.call(this, object, properties);
 }
-Tween.prototype = Object.create(BriefPlayable.prototype);
+Tween.prototype = Object.create(AbstractTween.prototype);
 Tween.prototype.constructor = Tween;
-inherit(Tween, AbstractTween);
+inherit(Tween, BriefPlayable);
 module.exports = Tween;
