@@ -134,7 +134,7 @@ AbstractTween.prototype._setFrom = function () {
 
 AbstractTween.prototype._getLastTransitionEnding = function () {
 	if (this._transitions.length > 0) {
-		return this._transitions[this._transitions.length - 1].to;
+		return (this._relative === true) ? this._setFrom() : this._transitions[this._transitions.length - 1].to;
 	} else {
 		return (this._from === null) ? this._setFrom() : this._from;
 	}
@@ -184,11 +184,14 @@ AbstractTween.prototype.wait = function (duration) {
 AbstractTween.prototype._update = function () {
 	// Finding transition corresponding to current time
 	var transition = this._transitions[this._index];
-
 	while (transition.end <= this._time) {
 		if (this._index === (this._transitions.length - 1)) {
 			transition.update(this._object, 1);
 			return;
+		}
+
+		if (this._relative === true ) {
+			transition.update(this._object, 1);
 		}
 
 		transition = this._transitions[++this._index];
@@ -198,6 +201,10 @@ AbstractTween.prototype._update = function () {
 		if (this._index === 0) {
 			transition.update(this._object, 0);
 			return;
+		}
+
+		if (this._relative === true ) {
+			transition.update(this._object, 0);
 		}
 
 		transition = this._transitions[--this._index];
@@ -2914,7 +2921,7 @@ exports.quarticOut = function (t) {
 	return 4 * t - 6 * t2 + 4 * t2 * t - t2 * t2;
 };
 
-exports.quarticOut = function (t) {
+exports.quarticInOut = function (t) {
 	if (t < 0.5) {
 		return 8 * t * t * t * t;
 	} else {
