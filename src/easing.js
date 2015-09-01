@@ -104,7 +104,7 @@ exports.quarticOut = function (t) {
 	return 4 * t - 6 * t2 + 4 * t2 * t - t2 * t2;
 };
 
-exports.quarticOut = function (t) {
+exports.quarticInOut = function (t) {
 	if (t < 0.5) {
 		return 8 * t * t * t * t;
 	} else {
