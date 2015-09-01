@@ -135,6 +135,10 @@ Playable.prototype._isWithin = function (time) {
 	return this._startTime < time;
 };
 
+Playable.prototype._overlaps = function (time0, time1) {
+	return (time0 - this._startTime) * (time1 - this._startTime) <= 0;
+};
+
 Playable.prototype.rewind = function () {
 	this.goTo(0, 0);
 	return this;

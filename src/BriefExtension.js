@@ -101,6 +101,16 @@ BriefExtension.prototype._isTimeWithin = function (time) {
 	}
 };
 
+BriefExtension.prototype._overlaps = function (time0, time1) {
+	if (this._speed > 0) {
+		return (this._startTime - time1) * (this._startTime + this.getDuration() - time0) <= 0;
+	} else if (this._speed < 0) {
+		return (this._startTime + this.getDuration() - time1) * (this._startTime - time0) <= 0;
+	} else {
+		return true;
+	}
+};
+
 BriefExtension.prototype.goToEnd = function () {
 	return this.goTo(this.getDuration(), this._iterations - 1);
 };
