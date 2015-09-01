@@ -206,6 +206,15 @@ Player.prototype._inactivate = function (playable) {
 Player.prototype._updatePlayableList = function (dt) {
 	this._handlePlayablesToRemove();
 
+	var time0, time1;
+	if (dt > 0) {
+		time0 = this._time - dt;
+		time1 = this._time;
+	} else {
+		time0 = this._time;
+		time1 = this._time - dt;
+	}
+
 	// Activating playables
 	var handle = this._inactivePlayables.first;
 	while (handle !== null) {
@@ -215,7 +224,8 @@ Player.prototype._updatePlayableList = function (dt) {
 		handle = handle.next;
 
 		// Starting if player time within playable bounds
-		if (playable._isTimeWithin(this._time)) {
+		// if (playable._isTimeWithin(this._time)) {
+		if (playable._overlaps(time0, time1)) {
 			this._activate(playable);
 			playable._start();
 		}

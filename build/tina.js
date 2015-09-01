@@ -326,6 +326,16 @@ BriefExtension.prototype._isTimeWithin = function (time) {
 	}
 };
 
+BriefExtension.prototype._overlaps = function (time0, time1) {
+	if (this._speed > 0) {
+		return (this._startTime - time1) * (this._startTime + this.getDuration() - time0) <= 0;
+	} else if (this._speed < 0) {
+		return (this._startTime + this.getDuration() - time1) * (this._startTime - time0) <= 0;
+	} else {
+		return true;
+	}
+};
+
 BriefExtension.prototype.goToEnd = function () {
 	return this.goTo(this.getDuration(), this._iterations - 1);
 };
@@ -1128,6 +1138,10 @@ Playable.prototype._isWithin = function (time) {
 	return this._startTime < time;
 };
 
+Playable.prototype._overlaps = function (time0, time1) {
+	return (time0 - this._startTime) * (time1 - this._startTime) <= 0;
+};
+
 Playable.prototype.rewind = function () {
 	this.goTo(0, 0);
 	return this;
@@ -1432,6 +1446,15 @@ Player.prototype._inactivate = function (playable) {
 Player.prototype._updatePlayableList = function (dt) {
 	this._handlePlayablesToRemove();
 
+	var time0, time1;
+	if (dt > 0) {
+		time0 = this._time - dt;
+		time1 = this._time;
+	} else {
+		time0 = this._time;
+		time1 = this._time - dt;
+	}
+
 	// Activating playables
 	var handle = this._inactivePlayables.first;
 	while (handle !== null) {
@@ -1441,7 +1464,8 @@ Player.prototype._updatePlayableList = function (dt) {
 		handle = handle.next;
 
 		// Starting if player time within playable bounds
-		if (playable._isTimeWithin(this._time)) {
+		// if (playable._isTimeWithin(this._time)) {
+		if (playable._overlaps(time0, time1)) {
 			this._activate(playable);
 			playable._start();
 		}
