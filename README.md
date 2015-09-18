@@ -28,7 +28,7 @@ Warning: Still in beta version! Do not be shy, [report issues](https://github.co
 ## How to use
 
 ### In a browser
-Include TINA's build in your html using either the [minified library](https://raw.githubusercontent.com/Wizcorp/tina/master/build/tina.min.js) or the [unminified version](https://raw.githubusercontent.com/Wizcorp/tina/master/build/tina.js).
+Include TINA's build in your html using either the [minified library](https://raw.githubusercontent.com/Wizcorp/tina/master/build/tina.min.js)((rawgit version)[https://rawgit.com/Wizcorp/tina/master/build/tina.min.js]) or the [unminified version](https://raw.githubusercontent.com/Wizcorp/tina/master/build/tina.js).
 
 ```html
 <script src="tina.min.js"></script>
