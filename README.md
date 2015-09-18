@@ -40,6 +40,10 @@ Install TINA using ```npm install tina```, then require it:
 var TINA = require('tina');
 ```
 
+## Jsfiddle examples
+- [bounce](http://jsfiddle.net/cstoquer/k8dghonL/)
+- [particules](http://jsfiddle.net/cstoquer/eo5ex47b/)
+
 ## API
 
 Existing playable components are: **Tween, NestedTween, Timeline, Sequence, Delay, Timer, Ticker, Recorder** (CSSTween coming soon).
