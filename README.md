@@ -40,7 +40,7 @@ Install TINA using ```npm install tina```, then require it:
 var TINA = require('tina');
 ```
 
-## Jsfiddle examples
+## JSFiddle examples
 - [bounce](http://jsfiddle.net/cstoquer/k8dghonL/)
 - [particules](http://jsfiddle.net/cstoquer/eo5ex47b/)
 
