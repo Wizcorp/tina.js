@@ -1,0 +1,23 @@
+body {
+	background-color: #7F7F7F;
+	text-align: center;
+	font-family: verdana;
+}
+
+canvas {
+	margin: 20px auto;
+	border-radius: 5px;
+	box-shadow: 1px 1px 10px #333;
+	display: block;
+}
+
+.title {
+	font-weight: bolder;
+	font-size: 30px;
+	text-shadow: 2px 2px 10px #000;
+	color: #AAA;
+}
+
+.hidden {
+	display: none;
+}
