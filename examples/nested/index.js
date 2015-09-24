@@ -1,6 +1,5 @@
-var image   = document.getElementById('image');
-var canvas  = document.getElementById('canvas');
-var ctx     = canvas.getContext('2d');
+var image = document.getElementById('image');
+var ctx   = document.getElementById('canvas').getContext('2d');
 
 var nestedObject = {
 	a: new Sprite(image, { x: 100, y: 200 }),
