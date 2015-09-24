@@ -42,6 +42,8 @@ var TINA = require('tina');
 
 ## Jsfiddle examples
 - [bounce](http://jsfiddle.net/cstoquer/k8dghonL/)
+- [sequences](http://jsfiddle.net/cstoquer/afLahz78/)
+- [relative tween](http://jsfiddle.net/cstoquer/d7sagr58/)
 - [particules](http://jsfiddle.net/cstoquer/eo5ex47b/)
 
 ## API
