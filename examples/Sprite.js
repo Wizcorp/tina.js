@@ -1,27 +1,14 @@
-function Sprite(image) {
+function Sprite(image, params) {
+	params = params || {};
+
 	this.image    = image;
-	this.x        = 0;
-	this.y        = 0;
-	this.pivotX   = 0;
-	this.pivotY   = 0;
-	this.scale    = 1;
-	this.rotation = 0;
-	this.alpha    = 1;
-
-	if (image.width) {
-		this.pivotX = image.width  / 2;
-		this.pivotY = image.height / 2;
-	} else {
-		var self = this;
-
-		function onImageLoad() {
-			self.pivotX = this.width / 2;
-			self.pivotY = this.height / 2;
-			this.removeEventListener('load', onImageLoad);
-		}
-		
-		image.addEventListener('load', onImageLoad);
-	}
+	this.x        = params.x        || 0;
+	this.y        = params.y        || 0;
+	this.pivotX   = params.pivotX   || 0;
+	this.pivotY   = params.pivotY   || 0;
+	this.rotation = params.rotation || 0;
+	this.scale    = params.scale    || 1;
+	this.alpha    = params.alpha !== undefined ? params.alpha : 1;
 }
 
 Sprite.prototype.draw = function (ctx) {
@@ -30,7 +17,7 @@ Sprite.prototype.draw = function (ctx) {
 	ctx.translate(this.x , this.y);
 	ctx.rotate(this.rotation);
 	ctx.scale(this.scale, this.scale);
-	ctx.translate(-this.pivotX, -this.pivotY);
+	ctx.translate(-this.pivotX - this.image.width / 2, -this.pivotY - this.image.height / 2);
 	ctx.drawImage(this.image, 0, 0);
 	ctx.restore();
 };
