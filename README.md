@@ -304,7 +304,7 @@ var myTicker = new TINA.Ticker().useAsDefault().start();
 To create a ticker and update it manually:
 ``` javascript
 var myTicker = new TINA.Ticker().useAsDefault();
-TINA.add(new TINA.Ticker());
+TINA.add(myTicker);
 
 function update() {
 	TINA.update();
