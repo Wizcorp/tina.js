@@ -17,6 +17,7 @@ function Ticker(tupt) {
 	// Time units per tick (tupt)
 	// Every second, 'tupt' time units elapse
 	this.tupt = tupt || 1;
+	this._nbTicks = 0;
 
 }
 Ticker.prototype = Object.create(Tweener.prototype);
