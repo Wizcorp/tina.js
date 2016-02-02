@@ -184,8 +184,6 @@ AbstractTween.prototype.wait = function (duration) {
 AbstractTween.prototype._update = function () {
 	// Finding transition corresponding to current time
 	var transition = this._transitions[this._index];
-	// console.log('this._time', this._time);
-	// console.log('this._index', this._index);
 	while (transition.end <= this._time) {
 		if (this._index === (this._transitions.length - 1)) {
 			transition.update(this._object, 1);
@@ -211,9 +209,6 @@ AbstractTween.prototype._update = function () {
 
 		transition = this._transitions[--this._index];
 	}
-	// console.log('this._index', this._index);
-	// console.log('t', (this._time - transition.start));
-	// console.log('t relative', (this._time - transition.start) / transition.duration);
 
 	// Updating the object with respect to the current transition and time
 	transition.update(this._object, (this._time - transition.start) / transition.duration);
@@ -472,8 +467,8 @@ BriefExtension.prototype._moveTo = function (time, dt, playerOverflow) {
 			overflow = playerOverflow;
 			this._time = this._duration;
 		} else if (dt < 0 && this._time < epsilon) {
-			overflow = playerOverflow;
 			// overflow = Math.min((time - this._startTime) * this._speed, overflow);
+			overflow = playerOverflow;
 			this._time = 0;
 		}
 	}
