@@ -1,4 +1,6 @@
 
+var DoublyList = require('./DoublyList');
+
 /**
  *
  * @module TINA
@@ -24,7 +26,7 @@ if (typeof(window) !== 'undefined') {
 	root = this;
 }
 
-// Method to trigger automatic update of TINA
+// Method to trigger automatic updates
 var requestAnimFrame = (function(){
 	return root.requestAnimationFrame    || 
 		root.webkitRequestAnimationFrame || 
@@ -40,7 +42,16 @@ var requestAnimFrame = (function(){
 var clock = root.performance || Date;
 
 var TINA = {
-	_tweeners: [],
+	// List of active tweeners handled by TINA
+	_activeTweeners: new DoublyList(),
+
+	// List of inactive tweeners handled by TINA
+	_inactiveTweeners: new DoublyList(),
+
+	// List of tweeners that are not handled by this player anymore and are waiting to be removed
+	_tweenersToRemove: new DoublyList(),
+
+	// _tweeners: [],
 
 	_defaultTweener: null,
 
@@ -100,13 +111,27 @@ var TINA = {
 			this._time = now;
 		}
 
-		// Making a copy of the tweener array
-		// to avoid funky stuff happening
-		// due to addition or removal of tweeners
-		// while iterating them
-		var runningTweeners = this._tweeners.slice(0);
-		for (var t = 0; t < runningTweeners.length; t += 1) {
-			runningTweeners[t]._moveTo(this._time, dt);
+		// Removing any tweener that is requested to be removed
+		while (this._tweenersToRemove.length > 0) {
+			// Removing from list of tweeners to remove
+			var tweenerToRemove = this._tweenersToRemove.pop();
+
+			// Removing from list of active tweeners
+			tweenerToRemove._handle = this._activeTweeners.removeByReference(tweenerToRemove._handle);
+		}
+
+		// Activating any inactive tweener
+		while (this._inactiveTweeners.length > 0) {
+			// Removing from list of inactive tweeners
+			var tweenerToActivate = this._inactiveTweeners.pop();
+
+			// Adding to list of active tweeners
+			tweenerToActivate._handle = this._activeTweeners.addBack(tweenerToActivate);
+			tweenerToActivate._start();
+		}
+
+		for (var handle = this._activeTweeners.first; handle !== null; handle = handle.next) {
+			handle.object._moveTo(this._time, dt);
 		}
 
 		if (this._onUpdate !== null) {
@@ -135,8 +160,9 @@ var TINA = {
 			this._onStart();
 		}
 
-		for (var t = 0; t < this._tweeners.length; t += 1) {
-			this._tweeners[t]._start();
+		while (this._inactiveTweeners.length > 0) {
+			var handle = this._inactiveTweeners.first;
+			this._activate(handle.object);
 		}
 
 		return this;
@@ -147,14 +173,10 @@ var TINA = {
 			return;
 		}
 
-		var runningTweeners = this._tweeners.slice(0);
-		for (var t = 0; t < runningTweeners.length; t += 1) {
-			runningTweeners[t].stop();
+		while (this._activePlayables.length > 0) {
+			var handle = this._activePlayables.first;
+			handle.object.stop();
 		}
-
-		// Stopping the tweeners have the effect of automatically removing them from TINA
-		// In this case we want to keep them attached to TINA
-		this._tweeners = runningTweeners;
 
 		if (this._onStop !== null) {
 			this._onStop();
@@ -163,7 +185,7 @@ var TINA = {
 		return this;
 	},
 
-	// internal start method, called by start and resume
+	// Internal start method, called by start and resume
 	_startAutomaticUpdate: function () {
 		if (this._running === true) {
 			console.warn('[TINA.start] TINA is already running');
@@ -202,8 +224,8 @@ var TINA = {
 			return;
 		}
 
-		for (var t = 0; t < this._tweeners.length; t += 1) {
-			this._tweeners[t]._pause();
+		for (var handle = this._activeTweeners.first; handle !== null; handle = handle.next) {
+			handle.object._pause();
 		}
 
 		if (this._onPause !== null) {
@@ -221,8 +243,8 @@ var TINA = {
 			this._onResume();
 		}
 
-		for (var t = 0; t < this._tweeners.length; t += 1) {
-			this._tweeners[t]._resume();
+		for (var handle = this._activeTweeners.first; handle !== null; handle = handle.next) {
+			handle.object._resume();
 		}
 
 		return this;
@@ -293,16 +315,6 @@ var TINA = {
 		return this;
 	},
 
-	setDefaultTweener: function (tweener) {
-		this._defaultTweener = tweener;
-		this._tweeners.push(this._defaultTweener);
-		return this;
-	},
-
-	getDefaultTweener: function () {
-		return this._defaultTweener;
-	},
-
 	_add: function (tweener) {
 		// A tweener is starting
 		if (this._running === false) {
@@ -310,35 +322,78 @@ var TINA = {
 			this.start();
 		}
 
-		this._tweeners.push(tweener);
+		if (tweener._handle === null) {
+			// Tweener can be added
+			tweener._handle = this._inactiveTweeners.add(tweener);
+			tweener._player = this;
+			return;
+		}
+
+		// Tweener is already handled
+		if (tweener._handle.container === this._tweenersToRemove) {
+			// Playable was being removed, removing from playables to remove
+			tweener._handle = this._tweenersToRemove.removeByReference(tweener._handle);
+			return;
+		}
 	},
 
 	add: function (tweener) {
-		this._tweeners.push(tweener);
+		this._add(tweener);
 		return this;
 	},
 
 	_inactivate: function (tweener) {
-		var tweenerIdx = this._tweeners.indexOf(tweener);
-		if (tweenerIdx !== -1) {
-			this._tweeners.splice(tweenerIdx, 1);
+		if (tweener._handle !== null) {
+			this._activePlayables.removeByReference(tweener._handle);
+		}
+
+		tweener._handle = this._inactivePlayables.addBack(tweener);
+	},
+
+	_remove: function (tweener) {
+		if (tweener._handle === null) {
+			return;
+		}
+
+		// Playable is handled, either by this player or by another one
+		if (tweener._handle.container === this._activeTweeners) {
+			// Tweener was active, adding to remove list
+			tweener._handle = this._tweenersToRemove.add(tweener._handle);
+			return;
+		}
+
+		if (tweener._handle.container === this._inactiveTweeners) {
+			// Tweener was inactive, removing from inactive tweeners
+			tweener._handle = this._inactiveTweeners.removeByReference(tweener._handle);
+			return;
 		}
 	},
 
 	remove: function (tweener) {
-		this._inactivate(tweener);
+		this._remove(tweener);
 		return this;
 	},
 
-	_getDefaultTweener: function () {
+	setDefaultTweener: function (tweener) {
+		this._defaultTweener = tweener;
+		return this;
+	},
+
+	getDefaultTweener: function () {
 		if (this._defaultTweener === null) {
-			// If a default tweener is required but non exist
-			// Then it is started in addition to being created
+			// If a default tweener is required but none exist
+			// Then we create one
 			var DefaultTweener = this.Timer;
-			this._defaultTweener = new DefaultTweener().start();
+			this._defaultTweener = new DefaultTweener();
 		}
 
 		return this._defaultTweener;
+	},
+
+	_startDefaultTweener: function () {
+		var defaultTweener = this.getDefaultTweener();
+		this._add(defaultTweener);
+		return defaultTweener;
 	}
 };
 
