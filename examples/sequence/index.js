@@ -42,8 +42,7 @@ var sequence = new TINA.Sequence()
 			.iterations(2)
 			.pingpong(true)
 	)
-	// .addDelay(100)
-	.iterations(2)
-	// .pingpong(true)
+	.addDelay(100)
+	.iterations(Infinity)
 	.start();
 
