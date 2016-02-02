@@ -154,7 +154,7 @@ BriefExtension.prototype._complete = function (overflow) {
 		return;
 	}
 
-	// Removing playable before it completes
+	// Inactivating playable before it completes
 	// So that the playable can be reactivated again within _onComplete callback
 	if (this._player._inactivate(this) === false) {
 		// Could not be completed
