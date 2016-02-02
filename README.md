@@ -11,7 +11,7 @@ A comprehensive, high performance, easy to use, open source animation library in
 * **High performance** (Competitive with Tweenjs and GSAP, benchmark coming soon)
 * **High flexibility** (tween transitions can easily be modified after creation)
 * **High customizability** (possibility to use custom easings, interpolations and components)
-* **Play options** (delay, iterations, pingpong, persist and speed)
+* **Playing options** (delay, iterations, pingpong, persist and speed)
 * **Open source** and MIT License (use it as you please)
 * A consequent library of **easing and interpolation methods**
 * A variety of components such as **Timeline**, **Sequence** and **Recorder** (**CSSTween** coming soon)

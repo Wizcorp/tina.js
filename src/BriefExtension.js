@@ -242,8 +242,8 @@ BriefExtension.prototype._moveTo = function (time, dt, playerOverflow) {
 			overflow = playerOverflow;
 			this._time = this._duration;
 		} else if (dt < 0 && this._time < epsilon) {
-			overflow = playerOverflow;
 			// overflow = Math.min((time - this._startTime) * this._speed, overflow);
+			overflow = playerOverflow;
 			this._time = 0;
 		}
 	}
