@@ -40,13 +40,24 @@ function createAnimation(x, y) {
 	}
 }
 
-canvas.addEventListener('mousedown', function onTap(e) {
-	e.preventDefault();
-	createAnimation(e.layerX, e.layerY);
-}, false);
-
 //▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
-
 for (var i = 0; i < 100; i++) {
 	sprites.push(new Sprite(image));
 }
+
+function triggerParticles() {
+	var x = Math.random() * 400;
+	var y = Math.random() * 400;
+	createAnimation(x, y);
+
+	TINA.Delay(500)
+		.onComplete(triggerParticles)
+		.start();
+}
+
+triggerParticles();
+
+// canvas.addEventListener('mousedown', function onTap(e) {
+// 	e.preventDefault();
+// 	createAnimation(e.layerX, e.layerY);
+// }, false);

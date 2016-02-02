@@ -1,5 +1,5 @@
-var Playable     = require('./Playable');
-var DoublyList   = require('./DoublyList');
+var Playable   = require('./Playable');
+var DoublyList = require('./DoublyList');
 
 /**
  * @classdesc
@@ -26,7 +26,7 @@ function Player() {
 	this._playablesToRemove = new DoublyList();
 
 	// Whether to silence warnings
-	this._silent = false;
+	this._silent = true;
 
 	// Whether to trigger the debugger on warnings
 	this._debug = false;
@@ -134,7 +134,6 @@ Player.prototype._handlePlayablesToRemove = function () {
 		// Removing from list of active playables
 		var playable = handle.object;
 		playable._handle = this._activePlayables.removeByReference(handle);
-		playable._player = null;
 	}
 
 	if ((this._activePlayables.length === 0) && (this._inactivePlayables.length === 0)) {
@@ -162,21 +161,16 @@ Player.prototype._warn = function (warning) {
 };
 
 Player.prototype.silent = function (silent) {
-	this._silent = silent;
+	this._silent = silent || false;
 	return this;
 };
 
 Player.prototype.debug = function (debug) {
-	this._debug = debug;
+	this._debug = debug || false;
 	return this;
 };
 
 Player.prototype.stop = function () {
-	if (this._player === null) {
-		this._warn('[Player.stop] Cannot stop a player that is not running');
-		return;
-	}
-
 	// Stopping all active playables
 	var handle = this._activePlayables.first; 
 	while (handle !== null) {
@@ -187,7 +181,6 @@ Player.prototype.stop = function () {
 	}
 
 	this._handlePlayablesToRemove();
-
 	Playable.prototype.stop.call(this);
 };
 
@@ -198,6 +191,11 @@ Player.prototype._activate = function (playable) {
 };
 
 Player.prototype._inactivate = function (playable) {
+	if (playable._handle === null) {
+		this._warn('[Playable.stop] Cannot stop a playable that is not running');
+		return;
+	}
+
 	// O(1)
 	this._activePlayables.removeByReference(playable._handle);
 	playable._handle = this._inactivePlayables.addBack(playable);
@@ -224,7 +222,7 @@ Player.prototype._updatePlayableList = function (dt) {
 		handle = handle.next;
 
 		// Starting if player time within playable bounds
-		// if (playable._isTimeWithin(this._time)) {
+		// console.log('Should playable be playing?', playable._startTime, time0, time1, dt)
 		if (playable._overlaps(time0, time1)) {
 			this._activate(playable);
 			playable._start();
@@ -235,7 +233,11 @@ Player.prototype._updatePlayableList = function (dt) {
 Player.prototype._update = function (dt, overflow) {
 	this._updatePlayableList(dt);
 	for (var handle = this._activePlayables.first; handle !== null; handle = handle.next) {
-		handle.object._moveTo(this._time, dt, overflow);
+		if (overflow === undefined) {
+			handle.object._moveTo(this._time, dt);
+		} else {
+			handle.object._moveTo(this._time, dt, overflow);
+		}
 	}
 };
 

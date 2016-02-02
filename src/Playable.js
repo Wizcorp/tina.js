@@ -150,7 +150,7 @@ Playable.prototype.delay = function (delay) {
 
 Playable.prototype.start = function (timeOffset) {
 	if (this._player === null) {
-		this._player = TINA._getDefaultTweener();
+		this._player = TINA._startDefaultTweener();
 	}
 
 	if (this._validate() === false) {
@@ -179,12 +179,12 @@ Playable.prototype._start = function () {
 
 Playable.prototype.stop = function () {
 	if (this._player === null) {
-		console.warn('[Playable.stop] Cannot stop a playable that is not running');
+		console.warn('[Playable.stop] Trying to stop a playable that was never started.');
 		return;
 	}
 
 	// Stopping playable without performing any additional update nor completing
-	if (this._player._inactivate(this) === false) {
+	if (this._player._remove(this) === false) {
 		// Could not be removed
 		return this;
 	}
@@ -208,7 +208,7 @@ Playable.prototype.resume = function () {
 };
 
 Playable.prototype.pause = function () {
-	if (this._player._inactivate(this) === false) {
+	if (this._player._remove(this) === false) {
 		// Could not be paused
 		return this;
 	}

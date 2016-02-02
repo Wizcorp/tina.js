@@ -233,8 +233,8 @@ function BriefExtension() {
 
 	// Playing options
 	this._iterations = 1; // Number of times to iterate the playable
-	this._pingpong   = false; // To make the playable go backward on even iterations
-	this._persist    = false; // To keep the playable running instead of completing
+	this._pingpong = false; // To make the playable go backward on even iterations
+	this._persist  = false; // To keep the playable running instead of completing
 }
 
 module.exports = BriefExtension;
@@ -379,7 +379,7 @@ BriefExtension.prototype._complete = function (overflow) {
 		return;
 	}
 
-	// Inactivating playable before it completes
+	// Removing playable before it completes
 	// So that the playable can be reactivated again within _onComplete callback
 	if (this._player._inactivate(this) === false) {
 		// Could not be completed
@@ -391,98 +391,96 @@ BriefExtension.prototype._complete = function (overflow) {
 	}
 };
 
-
-BriefExtension.prototype._moveTo = function (time, dt, overflow) {
+var epsilon = 1e-6;
+BriefExtension.prototype._moveTo = function (time, dt, playerOverflow) {
 	dt *= this._speed;
 
 	// So many conditions!!
 	// That is why this extension exists
-	if (overflow === undefined) {
-		// Computing overflow and clamping time
-		if (dt !== 0) {
-			if (this._iterations === 1) {
-				// Converting into local time (relative to speed and starting time)
-				this._time = (time - this._startTime) * this._speed;
-				if (dt > 0) {
-					if (this._time >= this._duration) {
-						overflow = this._time - this._duration;
-						dt -= overflow;
-						this._time = this._duration;
-					}
-				} else if (dt < 0) {
-					if (this._time <= 0) {
-						overflow = this._time;
-						dt -= overflow;
-						this._time = 0;
-					}
+	// i.e playables without durations do not need all those options
+
+	// Computing overflow and clamping time
+	var overflow;
+	if (dt !== 0) {
+		if (this._iterations === 1) {
+			// Converting into local time (relative to speed and starting time)
+			this._time = (time - this._startTime) * this._speed;
+			if (dt > 0) {
+				if (this._time >= this._duration) {
+					overflow = this._time - this._duration;
+					// dt -= overflow;
+					this._time = this._duration;
+				} else if (this._time < 0) {
+
 				}
-			} else {
-				time = (time - this._startTime) * this._speed;
-
-				// Iteration at current update
-				var iteration = time / this._duration;
-
-				if (dt > 0) {
-					if (iteration < this._iterations) {
-						// if (this._time !== 0 && Math.ceil(iteration) !== Math.ceil(this._time / this._duration)) {
-						// }
-						this._time = time % this._duration;
-					} else {
-						overflow = (iteration - this._iterations) * this._duration;
-						dt -= overflow;
-						this._time = this._duration * (1 - (Math.ceil(this._iterations) - this._iterations));
-					}
-				} else if (dt < 0) {
-					if (0 < iteration) {
-						// if (this._time !== this._duration && Math.ceil(iteration) !== Math.ceil(this._time / this._duration)) {
-						// }
-						this._time = time % this._duration;
-					} else {
-						overflow = iteration * this._duration;
-						dt -= overflow;
-						this._time = 0;
-					}
+			} else if (dt < 0) {
+				if (this._time <= 0) {
+					overflow = this._time;
+					// dt -= overflow;
+					this._time = 0;
 				}
+			}
+		} else {
+			time = (time - this._startTime) * this._speed;
 
-				if ((this._pingpong === true)) {
+			// Iteration at current update
+			var iteration = time / this._duration;
+			if (dt > 0) {
+				if (0 < iteration && iteration < this._iterations) {
+					this._time = time % this._duration;
+				} else {
+					overflow = (iteration - this._iterations) * this._duration;
+					this._time = this._duration * (1 - (Math.ceil(this._iterations) - this._iterations));
+				}
+			} else if (dt < 0) {
+				if (0 < iteration && iteration < this._iterations) {
+					this._time = time % this._duration;
+				} else {
+					overflow = iteration * this._duration;
+					this._time = 0;
+				}
+			}
+
+			if ((this._pingpong === true)) {
+				if (overflow === undefined) {
+					if ((Math.ceil(iteration) & 1) === 0) {
+						this._time = this._duration - this._time;
+					}
+				} else {
 					if (Math.ceil(this._iterations) === this._iterations) {
-						if (overflow === undefined) {
-							if ((Math.ceil(iteration) & 1) === 0) {
-								this._time = this._duration - this._time;
-							}
-						} else {
-							if ((Math.ceil(iteration) & 1) === 1) {
-								this._time = this._duration - this._time;
-							}
-						}
-					} else {
-						if ((Math.ceil(iteration) & 1) === 0) {
+						if ((Math.ceil(this._iterations) & 1) === 0) {
 							this._time = this._duration - this._time;
 						}
 					}
 				}
 			}
 		}
-	} else {
+	}
+
+	if (playerOverflow !== undefined && overflow === undefined) {
 		// Ensuring that the playable overflows when its player overflows
 		// This conditional is to deal with Murphy's law:
 		// There is one in a billion chance that a player completes while one of his playable
 		// does not complete due to stupid rounding errors
-		if (dt > 0) {
-			overflow = Math.max((time - this._startTime) * this._speed - this._duration * this.iterations, 0);
+		if (dt > 0 && this.duration - this._time < epsilon) {
+			// overflow = Math.max((time - this._startTime) * this._speed - this._duration * this._iterations, overflow);
+			overflow = playerOverflow;
 			this._time = this._duration;
-		} else {
-			overflow = Math.min((time - this._startTime) * this._speed, 0);
+		} else if (dt < 0 && this._time < epsilon) {
+			// overflow = Math.min((time - this._startTime) * this._speed, overflow);
+			overflow = playerOverflow;
 			this._time = 0;
 		}
-
-		dt -= overflow;
 	}
 
 	this._update(dt, overflow);
 
 	if (this._onUpdate !== null) {
-		this._onUpdate(this._time, dt);
+		if (overflow === undefined) {
+			this._onUpdate(this._time, dt);
+		} else {
+			this._onUpdate(this._time, dt - overflow);
+		}
 	}
 
 	if (overflow !== undefined) {
@@ -1153,7 +1151,7 @@ Playable.prototype.delay = function (delay) {
 
 Playable.prototype.start = function (timeOffset) {
 	if (this._player === null) {
-		this._player = TINA._getDefaultTweener();
+		this._player = TINA._startDefaultTweener();
 	}
 
 	if (this._validate() === false) {
@@ -1182,12 +1180,12 @@ Playable.prototype._start = function () {
 
 Playable.prototype.stop = function () {
 	if (this._player === null) {
-		console.warn('[Playable.stop] Cannot stop a playable that is not running');
+		console.warn('[Playable.stop] Trying to stop a playable that was never started.');
 		return;
 	}
 
 	// Stopping playable without performing any additional update nor completing
-	if (this._player._inactivate(this) === false) {
+	if (this._player._remove(this) === false) {
 		// Could not be removed
 		return this;
 	}
@@ -1211,7 +1209,7 @@ Playable.prototype.resume = function () {
 };
 
 Playable.prototype.pause = function () {
-	if (this._player._inactivate(this) === false) {
+	if (this._player._remove(this) === false) {
 		// Could not be paused
 		return this;
 	}
@@ -1238,8 +1236,8 @@ Playable.prototype._moveTo = function (time, dt) {
 Playable.prototype._update   = function () {};
 Playable.prototype._validate = function () {};
 },{}],9:[function(require,module,exports){
-var Playable     = require('./Playable');
-var DoublyList   = require('./DoublyList');
+var Playable   = require('./Playable');
+var DoublyList = require('./DoublyList');
 
 /**
  * @classdesc
@@ -1266,7 +1264,7 @@ function Player() {
 	this._playablesToRemove = new DoublyList();
 
 	// Whether to silence warnings
-	this._silent = false;
+	this._silent = true;
 
 	// Whether to trigger the debugger on warnings
 	this._debug = false;
@@ -1374,7 +1372,6 @@ Player.prototype._handlePlayablesToRemove = function () {
 		// Removing from list of active playables
 		var playable = handle.object;
 		playable._handle = this._activePlayables.removeByReference(handle);
-		playable._player = null;
 	}
 
 	if ((this._activePlayables.length === 0) && (this._inactivePlayables.length === 0)) {
@@ -1402,21 +1399,16 @@ Player.prototype._warn = function (warning) {
 };
 
 Player.prototype.silent = function (silent) {
-	this._silent = silent;
+	this._silent = silent || false;
 	return this;
 };
 
 Player.prototype.debug = function (debug) {
-	this._debug = debug;
+	this._debug = debug || false;
 	return this;
 };
 
 Player.prototype.stop = function () {
-	if (this._player === null) {
-		this._warn('[Player.stop] Cannot stop a player that is not running');
-		return;
-	}
-
 	// Stopping all active playables
 	var handle = this._activePlayables.first; 
 	while (handle !== null) {
@@ -1427,7 +1419,6 @@ Player.prototype.stop = function () {
 	}
 
 	this._handlePlayablesToRemove();
-
 	Playable.prototype.stop.call(this);
 };
 
@@ -1438,6 +1429,11 @@ Player.prototype._activate = function (playable) {
 };
 
 Player.prototype._inactivate = function (playable) {
+	if (playable._handle === null) {
+		this._warn('[Playable.stop] Cannot stop a playable that is not running');
+		return;
+	}
+
 	// O(1)
 	this._activePlayables.removeByReference(playable._handle);
 	playable._handle = this._inactivePlayables.addBack(playable);
@@ -1464,7 +1460,7 @@ Player.prototype._updatePlayableList = function (dt) {
 		handle = handle.next;
 
 		// Starting if player time within playable bounds
-		// if (playable._isTimeWithin(this._time)) {
+		// console.log('Should playable be playing?', playable._startTime, time0, time1, dt)
 		if (playable._overlaps(time0, time1)) {
 			this._activate(playable);
 			playable._start();
@@ -1475,7 +1471,11 @@ Player.prototype._updatePlayableList = function (dt) {
 Player.prototype._update = function (dt, overflow) {
 	this._updatePlayableList(dt);
 	for (var handle = this._activePlayables.first; handle !== null; handle = handle.next) {
-		handle.object._moveTo(this._time, dt, overflow);
+		if (overflow === undefined) {
+			handle.object._moveTo(this._time, dt);
+		} else {
+			handle.object._moveTo(this._time, dt, overflow);
+		}
 	}
 };
 
@@ -2009,6 +2009,8 @@ Sequence.prototype._onPlayableChanged = Sequence.prototype._reconstruct;
 },{"./Delay":5,"./DoublyList":6,"./Timeline":14}],12:[function(require,module,exports){
 (function (global){
 
+var DoublyList = require('./DoublyList');
+
 /**
  *
  * @module TINA
@@ -2034,7 +2036,7 @@ if (typeof(window) !== 'undefined') {
 	root = this;
 }
 
-// Method to trigger automatic update of TINA
+// Method to trigger automatic updates
 var requestAnimFrame = (function(){
 	return root.requestAnimationFrame    || 
 		root.webkitRequestAnimationFrame || 
@@ -2050,7 +2052,16 @@ var requestAnimFrame = (function(){
 var clock = root.performance || Date;
 
 var TINA = {
-	_tweeners: [],
+	// List of active tweeners handled by TINA
+	_activeTweeners: new DoublyList(),
+
+	// List of inactive tweeners handled by TINA
+	_inactiveTweeners: new DoublyList(),
+
+	// List of tweeners that are not handled by this player anymore and are waiting to be removed
+	_tweenersToRemove: new DoublyList(),
+
+	// _tweeners: [],
 
 	_defaultTweener: null,
 
@@ -2110,13 +2121,27 @@ var TINA = {
 			this._time = now;
 		}
 
-		// Making a copy of the tweener array
-		// to avoid funky stuff happening
-		// due to addition or removal of tweeners
-		// while iterating them
-		var runningTweeners = this._tweeners.slice(0);
-		for (var t = 0; t < runningTweeners.length; t += 1) {
-			runningTweeners[t]._moveTo(this._time, dt);
+		// Removing any tweener that is requested to be removed
+		while (this._tweenersToRemove.length > 0) {
+			// Removing from list of tweeners to remove
+			var tweenerToRemove = this._tweenersToRemove.pop();
+
+			// Removing from list of active tweeners
+			tweenerToRemove._handle = this._activeTweeners.removeByReference(tweenerToRemove._handle);
+		}
+
+		// Activating any inactive tweener
+		while (this._inactiveTweeners.length > 0) {
+			// Removing from list of inactive tweeners
+			var tweenerToActivate = this._inactiveTweeners.pop();
+
+			// Adding to list of active tweeners
+			tweenerToActivate._handle = this._activeTweeners.addBack(tweenerToActivate);
+			tweenerToActivate._start();
+		}
+
+		for (var handle = this._activeTweeners.first; handle !== null; handle = handle.next) {
+			handle.object._moveTo(this._time, dt);
 		}
 
 		if (this._onUpdate !== null) {
@@ -2145,8 +2170,9 @@ var TINA = {
 			this._onStart();
 		}
 
-		for (var t = 0; t < this._tweeners.length; t += 1) {
-			this._tweeners[t]._start();
+		while (this._inactiveTweeners.length > 0) {
+			var handle = this._inactiveTweeners.first;
+			this._activate(handle.object);
 		}
 
 		return this;
@@ -2157,14 +2183,10 @@ var TINA = {
 			return;
 		}
 
-		var runningTweeners = this._tweeners.slice(0);
-		for (var t = 0; t < runningTweeners.length; t += 1) {
-			runningTweeners[t].stop();
+		while (this._activePlayables.length > 0) {
+			var handle = this._activePlayables.first;
+			handle.object.stop();
 		}
-
-		// Stopping the tweeners have the effect of automatically removing them from TINA
-		// In this case we want to keep them attached to TINA
-		this._tweeners = runningTweeners;
 
 		if (this._onStop !== null) {
 			this._onStop();
@@ -2173,7 +2195,7 @@ var TINA = {
 		return this;
 	},
 
-	// internal start method, called by start and resume
+	// Internal start method, called by start and resume
 	_startAutomaticUpdate: function () {
 		if (this._running === true) {
 			console.warn('[TINA.start] TINA is already running');
@@ -2212,8 +2234,8 @@ var TINA = {
 			return;
 		}
 
-		for (var t = 0; t < this._tweeners.length; t += 1) {
-			this._tweeners[t]._pause();
+		for (var handle = this._activeTweeners.first; handle !== null; handle = handle.next) {
+			handle.object._pause();
 		}
 
 		if (this._onPause !== null) {
@@ -2231,8 +2253,8 @@ var TINA = {
 			this._onResume();
 		}
 
-		for (var t = 0; t < this._tweeners.length; t += 1) {
-			this._tweeners[t]._resume();
+		for (var handle = this._activeTweeners.first; handle !== null; handle = handle.next) {
+			handle.object._resume();
 		}
 
 		return this;
@@ -2303,16 +2325,6 @@ var TINA = {
 		return this;
 	},
 
-	setDefaultTweener: function (tweener) {
-		this._defaultTweener = tweener;
-		this._tweeners.push(this._defaultTweener);
-		return this;
-	},
-
-	getDefaultTweener: function () {
-		return this._defaultTweener;
-	},
-
 	_add: function (tweener) {
 		// A tweener is starting
 		if (this._running === false) {
@@ -2320,42 +2332,85 @@ var TINA = {
 			this.start();
 		}
 
-		this._tweeners.push(tweener);
+		if (tweener._handle === null) {
+			// Tweener can be added
+			tweener._handle = this._inactiveTweeners.add(tweener);
+			tweener._player = this;
+			return;
+		}
+
+		// Tweener is already handled
+		if (tweener._handle.container === this._tweenersToRemove) {
+			// Playable was being removed, removing from playables to remove
+			tweener._handle = this._tweenersToRemove.removeByReference(tweener._handle);
+			return;
+		}
 	},
 
 	add: function (tweener) {
-		this._tweeners.push(tweener);
+		this._add(tweener);
 		return this;
 	},
 
 	_inactivate: function (tweener) {
-		var tweenerIdx = this._tweeners.indexOf(tweener);
-		if (tweenerIdx !== -1) {
-			this._tweeners.splice(tweenerIdx, 1);
+		if (tweener._handle !== null) {
+			this._activePlayables.removeByReference(tweener._handle);
+		}
+
+		tweener._handle = this._inactivePlayables.addBack(tweener);
+	},
+
+	_remove: function (tweener) {
+		if (tweener._handle === null) {
+			return;
+		}
+
+		// Playable is handled, either by this player or by another one
+		if (tweener._handle.container === this._activeTweeners) {
+			// Tweener was active, adding to remove list
+			tweener._handle = this._tweenersToRemove.add(tweener._handle);
+			return;
+		}
+
+		if (tweener._handle.container === this._inactiveTweeners) {
+			// Tweener was inactive, removing from inactive tweeners
+			tweener._handle = this._inactiveTweeners.removeByReference(tweener._handle);
+			return;
 		}
 	},
 
 	remove: function (tweener) {
-		this._inactivate(tweener);
+		this._remove(tweener);
 		return this;
 	},
 
-	_getDefaultTweener: function () {
+	setDefaultTweener: function (tweener) {
+		this._defaultTweener = tweener;
+		return this;
+	},
+
+	getDefaultTweener: function () {
 		if (this._defaultTweener === null) {
-			// If a default tweener is required but non exist
-			// Then it is started in addition to being created
+			// If a default tweener is required but none exist
+			// Then we create one
 			var DefaultTweener = this.Timer;
-			this._defaultTweener = new DefaultTweener().start();
+			this._defaultTweener = new DefaultTweener();
 		}
 
 		return this._defaultTweener;
+	},
+
+	_startDefaultTweener: function () {
+		var defaultTweener = this.getDefaultTweener();
+		this._add(defaultTweener);
+		return defaultTweener;
 	}
 };
 
 module.exports = root.TINA = TINA;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],13:[function(require,module,exports){
+},{"./DoublyList":6}],13:[function(require,module,exports){
 var Tweener = require('./Tweener');
 
 /**
@@ -2382,8 +2437,10 @@ Ticker.prototype.constructor = Ticker;
 module.exports = Ticker;
 
 Ticker.prototype._moveTo = function (time, dt) {
+	this._time += this.tupt;
+
+	// overwriting elapsed time since previous iteration
 	dt = this.tupt;
-	this._time = this.tupt * (this._nbTicks++);
 
 	this._update(dt);
 
@@ -2441,7 +2498,6 @@ Timeline.prototype.add = function (playable, startTime) {
 
 	return this;
 };
-
 },{"./BriefPlayer":4}],15:[function(require,module,exports){
 var Tweener = require('./Tweener');
 

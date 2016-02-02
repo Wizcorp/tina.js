@@ -19,28 +19,30 @@ sprites.push(new Sprite(image, { x: 100, y: 300 }));
 sprites.push(new Sprite(image, { x: 200, y: 300 }));
 sprites.push(new Sprite(image, { x: 300, y: 300 }));
 
+var motionDuration = 400;
 var sequence = new TINA.Sequence()
 	.add(
-		new TINA.Tween(sprites[0], ['x', 'y'])
-			.from({ x: 100, y: 300 })
-			.to({   x: 100, y: 100 }, 500)
+		new TINA.Tween(sprites[0], ['y'])
+			.from({ y: 300 })
+			.to({ y: 100 }, motionDuration)
 			.iterations(2)
 			.pingpong(true)
 	)
 	.add(
-		new TINA.Tween(sprites[1], ['x', 'y'])
-			.from({ x: 200, y: 300 })
-			.to({   x: 200, y: 100 }, 500)
+		new TINA.Tween(sprites[1], ['y'])
+			.from({ y: 300 })
+			.to({ y: 100 }, motionDuration)
 			.iterations(2)
 			.pingpong(true)
 	)
 	.add(
-		new TINA.Tween(sprites[2], ['x', 'y'])
-			.from({ x: 300, y: 300 })
-			.to({   x: 300, y: 100 }, 500)
+		new TINA.Tween(sprites[2], ['y'])
+			.from({ y: 300 })
+			.to({ y: 100 }, motionDuration)
 			.iterations(2)
 			.pingpong(true)
 	)
 	.addDelay(100)
 	.iterations(Infinity)
 	.start();
+
