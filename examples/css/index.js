@@ -16,16 +16,16 @@ var bouncing = 4;
 //       top, bottom, left, right, width, height and opacity
 var csstween = new TINA.CSSTween(demodiv, ['top', 'width', 'opacity', 'height'])
 .from({
-    top: 50,
-    width: 100,
-    height: 100,
-    opacity: 1
+    	top: 50,
+    	width: 100,
+    	height: 100,
+    	opacity: 1
 })
 .to({
-    top: 200,
-    width: 200,
-    height: 200,
-    opacity: 0
+    	top: 200,
+    	width: 200,
+    	height: 200,
+    	opacity: 0
 }, 2000)
 .iterations(Infinity)
 .pingpong(true)
