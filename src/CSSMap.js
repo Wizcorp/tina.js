@@ -13,15 +13,15 @@
  */
 module.exports = function (properties) {
     
-    var cssMap = { height: 'px', width: 'px', top: 'px', left: 'px', bottom: 'px', right: 'px', opacity: '' };
-    var mapping = {};
+        var cssMap = { height: 'px', width: 'px', top: 'px', left: 'px', bottom: 'px', right: 'px', opacity: '' };
+        var mapping = {};
     
-    for (var i = 0; i < properties.length; i++) {
-        if (properties[i] in cssMap) {
-            var property = properties[i];
-            mapping[property] = cssMap[property];
+        for (var i = 0; i < properties.length; i++) {
+                if (properties[i] in cssMap) {
+                        var property = properties[i];
+                        mapping[property] = cssMap[property];
+                }
         }
-    }
     
-    return mapping;
+        return mapping;
 };
