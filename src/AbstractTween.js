@@ -49,8 +49,8 @@ function AbstractTween(object, properties) {
 	// Properties to tween
 	this._properties = properties;
 
-    // If we are dealing with a CSS style object, detetermine which suffixes to use
-    this._suffixMap = (object instanceof CSSStyleDeclaration) ? CSSMap(this._properties) : {};
+    	// If we are dealing with a CSS style object, detetermine which suffixes to use
+    	this._suffixMap = (object instanceof CSSStyleDeclaration) ? CSSMap(this._properties) : {};
     
 	// Starting property values
 	// By default is a copy of given object property values
@@ -170,7 +170,7 @@ AbstractTween.prototype.to = function (toObject, duration, easing, easingParam, 
 		easingParam,
 		this._interpolations,
 		interpolationParams,
-        this._suffixMap
+        	this._suffixMap
 	);
 
 	this._transitions.push(transition);
