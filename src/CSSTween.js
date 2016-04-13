@@ -1,4 +1,4 @@
-var Tween = require('./Tween');
+var NestedTween = require('./NestedTween');
 
 /**
  *
@@ -17,10 +17,10 @@ function CSSTween(object, properties) {
 
 	var tweenedObject = (typeof object === 'string') ? document.querySelector(object) : object;
 
-	// TODO: change inheritance to NestedTween for support of css transform properties
-	// and add an internal method for replacing unprefixed properties by prefixed properties when necessary
-	Tween.call(this, tweenedObject.style, properties);
+	// DONE: Changed inheritance to NestedTween for support of css transform properties
+    // TODO: Add an internal method for replacing unprefixed properties by prefixed properties when necessary
+	NestedTween.call(this, tweenedObject.style, properties);
 }
-CSSTween.prototype = Object.create(Tween.prototype);
+CSSTween.prototype = Object.create(NestedTween.prototype);
 CSSTween.prototype.constructor = CSSTween;
 module.exports = CSSTween;

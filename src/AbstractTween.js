@@ -1,5 +1,6 @@
 var Transition         = require('./Transition');
 var TransitionRelative = require('./TransitionRelative');
+var CSSMap             = require('./CSSMap');
 
 var easingFunctions        = require('./easing');
 var interpolationFunctions = require('./interpolation');
@@ -44,10 +45,13 @@ function AbstractTween(object, properties) {
 			properties[p] = p;
 		}
 	}
-
+    
 	// Properties to tween
 	this._properties = properties;
 
+    // If we are dealing with a CSS style object, detetermine which suffixes to use
+    this._suffixMap = (object instanceof CSSStyleDeclaration) ? CSSMap(this._properties) : {};
+    
 	// Starting property values
 	// By default is a copy of given object property values
 	this._from = null;
@@ -165,7 +169,8 @@ AbstractTween.prototype.to = function (toObject, duration, easing, easingParam, 
 		easing,
 		easingParam,
 		this._interpolations,
-		interpolationParams
+		interpolationParams,
+        this._suffixMap
 	);
 
 	this._transitions.push(transition);
