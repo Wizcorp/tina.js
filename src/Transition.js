@@ -9,27 +9,27 @@
 function update(object, t) {
 	var p = this.prop;
     
-    var suffix = (p in this.suffixMap) ? this.suffixMap[p] : null;
-    if (suffix) {
-	   object[p] = (this.from[p] * (1 - t) + this.to[p] * t) + suffix;
-    } else {
-	   object[p] = this.from[p] * (1 - t) + this.to[p] * t;        
-    }
+    	var suffix = (p in this.suffixMap) ? this.suffixMap[p] : null;
+    	if (suffix) {
+	   	object[p] = (this.from[p] * (1 - t) + this.to[p] * t) + suffix;
+    	} else {
+	   	object[p] = this.from[p] * (1 - t) + this.to[p] * t;        
+    	}
 }
 
 // Several Properties
 function updateP(object, t) {
 	var q = this.props;
-    var suffix = null;
+    	var suffix = null;
     
-    for (var i = 0; i < this.props.length; i += 1) {
+    	for (var i = 0; i < this.props.length; i += 1) {
 		var p = q[i];
-        suffix = (p in this.suffixMap) ? this.suffixMap[p] : null;
-        if (suffix) {
-            object[p] = (this.from[p] * (1 - t) + this.to[p] * t) + suffix;
-        } else {
-            object[p] = this.from[p] * (1 - t) + this.to[p] * t; 
-        }
+        	suffix = (p in this.suffixMap) ? this.suffixMap[p] : null;
+        	if (suffix) {
+            		object[p] = (this.from[p] * (1 - t) + this.to[p] * t) + suffix;
+        	} else {
+            		object[p] = this.from[p] * (1 - t) + this.to[p] * t; 
+        	}
 	}
 }
 
@@ -37,42 +37,42 @@ function updateP(object, t) {
 function updateI(object, t) {
 	var p = this.prop;
     
-    var suffix = (p in this.suffixMap) ? this.suffixMap[p] : null;
-    if (suffix) {
-        object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]) + suffix;
-    } else {
-        object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);
-    }
+    	var suffix = (p in this.suffixMap) ? this.suffixMap[p] : null;
+    	if (suffix) {
+        	object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]) + suffix;
+    	} else {
+        	object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);
+    	}
 }
 
 // Interpolation
 // Several Properties
 function updatePI(object, t) {
 	var q = this.props;
-    var suffix = null;
+    	var suffix = null;
     
 	for (var i = 0; i < q.length; i += 1) {
 		var p = q[i];
-        suffix = (p in this.suffixMap) ? this.suffixMap[p] : null;
-        if (suffix) {
-            object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]) + suffix;
-        } else {
-            object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);            
-        }
+        	suffix = (p in this.suffixMap) ? this.suffixMap[p] : null;
+        	if (suffix) {
+            		object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]) + suffix;
+		} else {
+            		object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);            
+        	}
 	}
 }
 
 // Easing
 function updateE(object, t) {
 	t = this.easing(t, this.easingParam);
-    var p = this.prop;
+    	var p = this.prop;
     
-    var suffix = (p in this.suffixMap) ? this.suffixMap[p] : null;
-    if (suffix) {
-	   object[p] = (this.from[p] * (1 - t) + this.to[p] * t) + suffix;
-    } else {
-	   object[p] = this.from[p] * (1 - t) + this.to[p] * t;    
-    }
+    	var suffix = (p in this.suffixMap) ? this.suffixMap[p] : null;
+    	if (suffix) {
+	   	object[p] = (this.from[p] * (1 - t) + this.to[p] * t) + suffix;
+    	} else {
+	   	object[p] = this.from[p] * (1 - t) + this.to[p] * t;    
+    	}
 }
 
 // Easing
@@ -80,16 +80,16 @@ function updateE(object, t) {
 function updatePE(object, t) {
 	var q = this.props;
 	t = this.easing(t, this.easingParam);
-    var suffix = null;
+    	var suffix = null;
     
 	for (var i = 0; i < q.length; i += 1) {
 		var p = q[i];
-        suffix = (p in this.suffixMap) ? this.suffixMap[p] : null;
-        if (suffix) {
-            object[p] = (this.from[p] * (1 - t) + this.to[p] * t) + suffix;
-        } else {
-            object[p] = this.from[p] * (1 - t) + this.to[p] * t;            
-        }
+        	suffix = (p in this.suffixMap) ? this.suffixMap[p] : null;
+        	if (suffix) {
+            		object[p] = (this.from[p] * (1 - t) + this.to[p] * t) + suffix;
+        	} else {
+            		object[p] = this.from[p] * (1 - t) + this.to[p] * t;            
+        	}
 	}
 }
 
@@ -97,15 +97,15 @@ function updatePE(object, t) {
 // Interpolation
 function updateIE(object, t) {
 	var p = this.prop;
-    var suffix = (p in this.suffixMap) ? this.suffixMap[p] : null;
+    	var suffix = (p in this.suffixMap) ? this.suffixMap[p] : null;
 
-    if (suffix) {
-	   object[p] = this.interps[p](this.easing(t, this.easingParam), 
-                                   this.from[p], this.to[p], this.interpParams[p]) + suffix;
-    } else {
-	   object[p] = this.interps[p](this.easing(t, this.easingParam), 
-                                   this.from[p], this.to[p], this.interpParams[p]);        
-    }
+    	if (suffix) {
+	   	object[p] = this.interps[p](this.easing(t, this.easingParam), 
+                            this.from[p], this.to[p], this.interpParams[p]) + suffix;
+    	} else {
+	   	object[p] = this.interps[p](this.easing(t, this.easingParam), 
+                            this.from[p], this.to[p], this.interpParams[p]);        
+    	}
 }
 
 // Easing
@@ -113,17 +113,17 @@ function updateIE(object, t) {
 // Several Properties
 function updatePIE(object, t) {
 	var q = this.props;
-    var suffix = null;
+    	var suffix = null;
 	t = this.easing(t, this.easingParam);
     
 	for (var i = 0; i < q.length; i += 1) {
 		var p = q[i];
-        suffix = (p in this.suffixMap) ? this.suffixMap[p] : null;
-        if (suffix) {
-            object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]) + suffix;
-        } else {
-            object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);            
-        }
+        	suffix = (p in this.suffixMap) ? this.suffixMap[p] : null;
+        	if (suffix) {
+            		object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]) + suffix;
+        	} else {
+            		object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);            
+		}
 	}
 }
 
@@ -142,7 +142,7 @@ function Transition(properties, from, to, start, duration, easing,
 	this.start     = start;
 	this.end       = start + duration;
 	this.duration  = duration;
-    this.suffixMap = suffixMap;
+    	this.suffixMap = suffixMap;
 	this.from      = from;
 	this.to        = to;
 
