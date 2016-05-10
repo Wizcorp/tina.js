@@ -45,13 +45,13 @@ function AbstractTween(object, properties) {
 			properties[p] = p;
 		}
 	}
-    
+
+	// Determine if we are are tweening a CSS object
+	this._cssMap = (object instanceof CSSStyleDeclaration) ? CSSMap(properties) : null;
+
 	// Properties to tween
 	this._properties = properties;
 
-    	// If we are dealing with a CSS style object, detetermine which suffixes to use
-    	this._suffixMap = (object instanceof CSSStyleDeclaration) ? CSSMap(this._properties) : {};
-    
 	// Starting property values
 	// By default is a copy of given object property values
 	this._from = null;
@@ -170,7 +170,7 @@ AbstractTween.prototype.to = function (toObject, duration, easing, easingParam, 
 		easingParam,
 		this._interpolations,
 		interpolationParams,
-        	this._suffixMap
+		this._cssMap
 	);
 
 	this._transitions.push(transition);
@@ -190,12 +190,12 @@ AbstractTween.prototype._update = function () {
 	var transition = this._transitions[this._index];
 	while (transition.end <= this._time) {
 		if (this._index === (this._transitions.length - 1)) {
-			transition.update(this._object, 1);
+			transition.update(this._object, 1, transition.transFunc);
 			return;
 		}
 
 		if (this._relative === true ) {
-			transition.update(this._object, 1);
+			transition.update(this._object, 1, transition.transFunc);
 		}
 
 		transition = this._transitions[++this._index];
@@ -203,19 +203,19 @@ AbstractTween.prototype._update = function () {
 
 	while (this._time <= transition.start) {
 		if (this._index === 0) {
-			transition.update(this._object, 0);
+			transition.update(this._object, 0, transition.transFunc);
 			return;
 		}
 
 		if (this._relative === true ) {
-			transition.update(this._object, 0);
+			transition.update(this._object, 0, transition.transFunc);
 		}
 
 		transition = this._transitions[--this._index];
 	}
 
 	// Updating the object with respect to the current transition and time
-	transition.update(this._object, (this._time - transition.start) / transition.duration);
+	transition.update(this._object, (this._time - transition.start) / transition.duration, transition.transFunc);
 };
 
 AbstractTween.prototype._validate = function () {

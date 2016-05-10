@@ -5,127 +5,93 @@
 //  - Whether or not an easing is being used
 //  - Whether or not an interpolation is being used
 
+// Interpolation functions
+function standardTrans(context, p, t) {
+	return context.from[p] * (1 - t) + context.to[p] * t;
+}
+
+function standardTransCSS(context, p, t) {
+	return (context.from[p] * (1 - t) + context.to[p] * t) + context.cssMap[p];
+}
+
+function interpTrans(context, p, t) {
+	return this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);
+}
+
+function interpTransCSS(context, p, t) {
+	return this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]) + context.cssMap[p];
+}
+
 // One property
-function update(object, t) {
+function update(object, t, fn) {
 	var p = this.prop;
-    
-    	var suffix = (p in this.suffixMap) ? this.suffixMap[p] : null;
-    	if (suffix) {
-	   	object[p] = (this.from[p] * (1 - t) + this.to[p] * t) + suffix;
-    	} else {
-	   	object[p] = this.from[p] * (1 - t) + this.to[p] * t;        
-    	}
+	object[p] = fn(this, p, t);
 }
 
 // Several Properties
-function updateP(object, t) {
+function updateP(object, t, fn) {
 	var q = this.props;
-    	var suffix = null;
-    
-    	for (var i = 0; i < this.props.length; i += 1) {
+
+	for (var i = 0; i < this.props.length; i += 1) {
 		var p = q[i];
-        	suffix = (p in this.suffixMap) ? this.suffixMap[p] : null;
-        	if (suffix) {
-            		object[p] = (this.from[p] * (1 - t) + this.to[p] * t) + suffix;
-        	} else {
-            		object[p] = this.from[p] * (1 - t) + this.to[p] * t; 
-        	}
+		object[p] = fn(this, p, t);
 	}
 }
 
 // Interpolation
-function updateI(object, t) {
+function updateI(object, t, fn) {
 	var p = this.prop;
-    
-    	var suffix = (p in this.suffixMap) ? this.suffixMap[p] : null;
-    	if (suffix) {
-        	object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]) + suffix;
-    	} else {
-        	object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);
-    	}
+	object[p] = fn(context, p, t);
 }
 
 // Interpolation
 // Several Properties
-function updatePI(object, t) {
+function updatePI(object, t, fn) {
 	var q = this.props;
-    	var suffix = null;
-    
 	for (var i = 0; i < q.length; i += 1) {
 		var p = q[i];
-        	suffix = (p in this.suffixMap) ? this.suffixMap[p] : null;
-        	if (suffix) {
-            		object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]) + suffix;
-		} else {
-            		object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);            
-        	}
+		object[p] = fn(context, p, t);
 	}
 }
 
 // Easing
-function updateE(object, t) {
+function updateE(object, t, fn) {
 	t = this.easing(t, this.easingParam);
-    	var p = this.prop;
-    
-    	var suffix = (p in this.suffixMap) ? this.suffixMap[p] : null;
-    	if (suffix) {
-	   	object[p] = (this.from[p] * (1 - t) + this.to[p] * t) + suffix;
-    	} else {
-	   	object[p] = this.from[p] * (1 - t) + this.to[p] * t;    
-    	}
-}
-
-// Easing
-// Several Properties
-function updatePE(object, t) {
-	var q = this.props;
-	t = this.easing(t, this.easingParam);
-    	var suffix = null;
-    
-	for (var i = 0; i < q.length; i += 1) {
-		var p = q[i];
-        	suffix = (p in this.suffixMap) ? this.suffixMap[p] : null;
-        	if (suffix) {
-            		object[p] = (this.from[p] * (1 - t) + this.to[p] * t) + suffix;
-        	} else {
-            		object[p] = this.from[p] * (1 - t) + this.to[p] * t;            
-        	}
-	}
-}
-
-// Easing
-// Interpolation
-function updateIE(object, t) {
 	var p = this.prop;
-    	var suffix = (p in this.suffixMap) ? this.suffixMap[p] : null;
+	object[p] = fn(this, p, t);
+}
 
-    	if (suffix) {
-	   	object[p] = this.interps[p](this.easing(t, this.easingParam), 
-                            this.from[p], this.to[p], this.interpParams[p]) + suffix;
-    	} else {
-	   	object[p] = this.interps[p](this.easing(t, this.easingParam), 
-                            this.from[p], this.to[p], this.interpParams[p]);        
-    	}
+// Easing
+// Several Properties
+function updatePE(object, t, fn) {
+	var q = this.props;
+	t = this.easing(t, this.easingParam);
+	for (var i = 0; i < q.length; i += 1) {
+		var p = q[i];
+		object[p] = fn(this, p, t);
+	}
+}
+
+// Easing
+// Interpolation
+function updateIE(object, t, fn) {
+	var p = this.prop;
+	t = this.easing(t, this.easingParam);
+	object[p] = fn(this, p, t);
 }
 
 // Easing
 // Interpolation
 // Several Properties
-function updatePIE(object, t) {
+function updatePIE(object, t, fn) {
 	var q = this.props;
-    	var suffix = null;
 	t = this.easing(t, this.easingParam);
-    
 	for (var i = 0; i < q.length; i += 1) {
 		var p = q[i];
-        	suffix = (p in this.suffixMap) ? this.suffixMap[p] : null;
-        	if (suffix) {
-            		object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]) + suffix;
-        	} else {
-            		object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);            
-		}
+		object[p] = fn(this, p, t);
 	}
 }
+
 
 var updateMethods = [
 	[
@@ -137,14 +103,37 @@ var updateMethods = [
 	]
 ];
 
-function Transition(properties, from, to, start, duration, easing, 
-                    easingParam, interpolations, interpolationParams, suffixMap) {
+// A mapping of transition functions to updatemethods
+var transFunctions = [
+	[
+		[standardTrans, standardTrans],
+		[interpTrans, interpTrans]
+	], [
+		[standardTrans, standardTrans],
+		[interpTrans, interpTrans]
+	]
+];
+
+// A mapping of transition functions to update methods:
+// If we have A CSS Object we select a CSS version of the tranition function
+var transFunctionsCSS = [
+	[
+		[standardTransCSS, standardTransCSS],
+		[interpTransCSS, interpTransCSS]
+	], [
+		[standardTransCSS, standardTransCSS],
+		[interpTransCSS, interpTransCSS]
+	]
+];
+
+function Transition(properties, from, to, start, duration, easing,
+                    easingParam, interpolations, interpolationParams, cssMap) {
 	this.start     = start;
 	this.end       = start + duration;
 	this.duration  = duration;
-    	this.suffixMap = suffixMap;
 	this.from      = from;
 	this.to        = to;
+	this.cssMap    = cssMap ? cssMap : null;
 
 	// Easing flag - Whether an easing function is used
 	// 0 => Using linear easing
@@ -185,6 +174,14 @@ function Transition(properties, from, to, start, duration, easing,
 	}
 
 	this.update = updateMethods[easingFlag][interpFlag][propsFlag];
+	// Select the appropriate transition function based on the mappings
+	this.transFunc = transFunctions[easingFlag][interpFlag][propsFlag];
+
+	if (cssMap) {
+		this.transFunc = transFunctionsCSS[easingFlag][interpFlag][propsFlag];
+	} else {
+		this.transFunc = transFunctions[easingFlag][interpFlag][propsFlag];
+	}
 }
 
 module.exports = Transition;
