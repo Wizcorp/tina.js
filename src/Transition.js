@@ -15,80 +15,80 @@ function standardTransCSS(context, p, t) {
 }
 
 function interpTrans(context, p, t) {
-	return this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);
+	return context.interps[p](t, context.from[p], context.to[p], context.interpParams[p]);
 }
 
 function interpTransCSS(context, p, t) {
-	return this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]) + context.cssMap[p];
+	return context.interps[p](t, context.from[p], context.to[p], context.interpParams[p]) + context.cssMap[p];
 }
 
 // One property
-function update(object, t, fn) {
+function update(object, t, interpFunc) {
 	var p = this.prop;
-	object[p] = fn(this, p, t);
+	object[p] = interpFunc(this, p, t);
 }
 
 // Several Properties
-function updateP(object, t, fn) {
+function updateP(object, t, interpFunc) {
 	var q = this.props;
 
 	for (var i = 0; i < this.props.length; i += 1) {
 		var p = q[i];
-		object[p] = fn(this, p, t);
+		object[p] = interpFunc(this, p, t);
 	}
 }
 
 // Interpolation
-function updateI(object, t, fn) {
+function updateI(object, t, interpFunc) {
 	var p = this.prop;
-	object[p] = fn(context, p, t);
+	object[p] = interpFunc(this, p, t);
 }
 
 // Interpolation
 // Several Properties
-function updatePI(object, t, fn) {
+function updatePI(object, t, interpFunc) {
 	var q = this.props;
 	for (var i = 0; i < q.length; i += 1) {
 		var p = q[i];
-		object[p] = fn(context, p, t);
+		object[p] = interpFunc(this, p, t);
 	}
 }
 
 // Easing
-function updateE(object, t, fn) {
+function updateE(object, t, interpFunc) {
 	t = this.easing(t, this.easingParam);
 	var p = this.prop;
-	object[p] = fn(this, p, t);
+	object[p] = interpFunc(this, p, t);
 }
 
 // Easing
 // Several Properties
-function updatePE(object, t, fn) {
+function updatePE(object, t, interpFunc) {
 	var q = this.props;
 	t = this.easing(t, this.easingParam);
 	for (var i = 0; i < q.length; i += 1) {
 		var p = q[i];
-		object[p] = fn(this, p, t);
+		object[p] = interpFunc(this, p, t);
 	}
 }
 
 // Easing
 // Interpolation
-function updateIE(object, t, fn) {
+function updateIE(object, t, interpFunc) {
 	var p = this.prop;
 	t = this.easing(t, this.easingParam);
-	object[p] = fn(this, p, t);
+	object[p] = interpFunc(this, p, t);
 }
 
 // Easing
 // Interpolation
 // Several Properties
-function updatePIE(object, t, fn) {
+function updatePIE(object, t, interpFunc) {
 	var q = this.props;
 	t = this.easing(t, this.easingParam);
 	for (var i = 0; i < q.length; i += 1) {
 		var p = q[i];
-		object[p] = fn(this, p, t);
+		object[p] = interpFunc(this, p, t);
 	}
 }
 
