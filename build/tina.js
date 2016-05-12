@@ -48,8 +48,10 @@ function AbstractTween(object, properties) {
 	}
 
 	// Determine if we are are tweening a CSS object
-	this._cssMap = (object instanceof CSSStyleDeclaration) ? CSSMap(properties) : null;
-
+	if (typeof CSSStyleDeclaration !== 'undefined') {
+		this._cssMap = (object instanceof CSSStyleDeclaration) ? CSSMap(properties) : null;
+	}
+	
 	// Properties to tween
 	this._properties = properties;
 
