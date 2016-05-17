@@ -5,60 +5,43 @@
 //  - Whether or not an easing is being used
 //  - Whether or not an interpolation is being used
 
-// Interpolation functions
-function standardTrans(context, p, t) {
-	return context.from[p] * (1 - t) + context.to[p] * t;
-}
-
-function standardTransCSS(context, p, t) {
-	return (context.from[p] * (1 - t) + context.to[p] * t) + context.cssMap[p];
-}
-
-function interpTrans(context, p, t) {
-	return context.interps[p](t, context.from[p], context.to[p], context.interpParams[p]);
-}
-
-function interpTransCSS(context, p, t) {
-	return context.interps[p](t, context.from[p], context.to[p], context.interpParams[p]) + context.cssMap[p];
-}
-
 // One property
-function update(object, t, interpFunc) {
+function update(object, t) {
 	var p = this.prop;
-	object[p] = interpFunc(this, p, t);
+	object[p] = this.from[p] * (1 - t) + this.to[p] * t;
 }
 
 // Several Properties
-function updateP(object, t, interpFunc) {
+function updateP(object, t) {
 	var q = this.props;
 
 	for (var i = 0; i < this.props.length; i += 1) {
 		var p = q[i];
-		object[p] = interpFunc(this, p, t);
+		object[p] = this.from[p] * (1 - t) + this.to[p] * t;
 	}
 }
 
 // Interpolation
-function updateI(object, t, interpFunc) {
+function updateI(object, t) {
 	var p = this.prop;
-	object[p] = interpFunc(this, p, t);
+	object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);
 }
 
 // Interpolation
 // Several Properties
-function updatePI(object, t, interpFunc) {
+function updatePI(object, t) {
 	var q = this.props;
 	for (var i = 0; i < q.length; i += 1) {
 		var p = q[i];
-		object[p] = interpFunc(this, p, t);
+		object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);
 	}
 }
 
 // Easing
-function updateE(object, t, interpFunc) {
+function updateE(object, t) {
 	t = this.easing(t, this.easingParam);
 	var p = this.prop;
-	object[p] = interpFunc(this, p, t);
+	object[p] = this.from[p] * (1 - t) + this.to[p] * t;
 }
 
 // Easing
@@ -68,7 +51,7 @@ function updatePE(object, t, interpFunc) {
 	t = this.easing(t, this.easingParam);
 	for (var i = 0; i < q.length; i += 1) {
 		var p = q[i];
-		object[p] = interpFunc(this, p, t);
+		object[p] = this.from[p] * (1 - t) + this.to[p] * t;
 	}
 }
 
@@ -77,7 +60,7 @@ function updatePE(object, t, interpFunc) {
 function updateIE(object, t, interpFunc) {
 	var p = this.prop;
 	t = this.easing(t, this.easingParam);
-	object[p] = interpFunc(this, p, t);
+	object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);
 }
 
 // Easing
@@ -88,10 +71,9 @@ function updatePIE(object, t, interpFunc) {
 	t = this.easing(t, this.easingParam);
 	for (var i = 0; i < q.length; i += 1) {
 		var p = q[i];
-		object[p] = interpFunc(this, p, t);
+		object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);
 	}
 }
-
 
 var updateMethods = [
 	[
@@ -103,37 +85,13 @@ var updateMethods = [
 	]
 ];
 
-// A mapping of transition functions to updatemethods
-var transFunctions = [
-	[
-		[standardTrans, standardTrans],
-		[interpTrans, interpTrans]
-	], [
-		[standardTrans, standardTrans],
-		[interpTrans, interpTrans]
-	]
-];
-
-// A mapping of transition functions to update methods:
-// If we have A CSS Object we select a CSS version of the tranition function
-var transFunctionsCSS = [
-	[
-		[standardTransCSS, standardTransCSS],
-		[interpTransCSS, interpTransCSS]
-	], [
-		[standardTransCSS, standardTransCSS],
-		[interpTransCSS, interpTransCSS]
-	]
-];
-
 function Transition(properties, from, to, start, duration, easing,
-                    easingParam, interpolations, interpolationParams, cssMap) {
+                    easingParam, interpolations, interpolationParams) {
 	this.start     = start;
 	this.end       = start + duration;
 	this.duration  = duration;
 	this.from      = from;
 	this.to        = to;
-	this.cssMap    = cssMap ? cssMap : null;
 
 	// Easing flag - Whether an easing function is used
 	// 0 => Using linear easing
@@ -174,14 +132,6 @@ function Transition(properties, from, to, start, duration, easing,
 	}
 
 	this.update = updateMethods[easingFlag][interpFlag][propsFlag];
-	// Select the appropriate transition function based on the mappings
-	this.transFunc = transFunctions[easingFlag][interpFlag][propsFlag];
-
-	if (cssMap) {
-		this.transFunc = transFunctionsCSS[easingFlag][interpFlag][propsFlag];
-	} else {
-		this.transFunc = transFunctions[easingFlag][interpFlag][propsFlag];
-	}
 }
 
 module.exports = Transition;

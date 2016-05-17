@@ -1,9 +1,8 @@
-var Transition         = require('./Transition');
-var TransitionRelative = require('./TransitionRelative');
-var CSSMap             = require('./CSSMap');
-
-var easingFunctions        = require('./easing');
-var interpolationFunctions = require('./interpolation');
+var Transition         		= require('./Transition');
+var TransitionCSS		= require('./TransitionCSS');
+var TransitionRelative 		= require('./TransitionRelative');
+var easingFunctions        	= require('./easing');
+var interpolationFunctions 	= require('./interpolation');
 
 
 // Temporisation, used for waiting
@@ -48,7 +47,7 @@ function AbstractTween(object, properties) {
 
 	// Determine if we are are tweening a CSS object
 	if (typeof CSSStyleDeclaration !== 'undefined') {
-		this._cssMap = (object instanceof CSSStyleDeclaration) ? CSSMap(properties) : null;
+		this._css = (object instanceof CSSStyleDeclaration) ? true : false;
 	}
 
 	// Properties to tween
@@ -161,7 +160,16 @@ AbstractTween.prototype.to = function (toObject, duration, easing, easingParam, 
 	// Getting previous transition ending as the beginning for the new transition
 	var fromObject = this._getLastTransitionEnding();
 
-	var TransitionConstructor = (this._relative === true) ? TransitionRelative : Transition;
+	// Determine the appropriate transition constructor for the given object
+	var TransitionConstructor = null;
+	if (this._relative === true) {
+		TransitionConstructor = TransitionRelative;
+	} else if (this._css === true) {
+		TransitionConstructor = TransitionCSS;
+	} else {
+		TransitionConstructor = Transition;
+	}
+
 	var transition = new TransitionConstructor(
 		this._properties,
 		fromObject,
@@ -171,8 +179,7 @@ AbstractTween.prototype.to = function (toObject, duration, easing, easingParam, 
 		easing,
 		easingParam,
 		this._interpolations,
-		interpolationParams,
-		this._cssMap
+		interpolationParams
 	);
 
 	this._transitions.push(transition);
@@ -192,12 +199,12 @@ AbstractTween.prototype._update = function () {
 	var transition = this._transitions[this._index];
 	while (transition.end <= this._time) {
 		if (this._index === (this._transitions.length - 1)) {
-			transition.update(this._object, 1, transition.transFunc);
+			transition.update(this._object, 1);
 			return;
 		}
 
 		if (this._relative === true ) {
-			transition.update(this._object, 1, transition.transFunc);
+			transition.update(this._object, 1);
 		}
 
 		transition = this._transitions[++this._index];
@@ -205,19 +212,19 @@ AbstractTween.prototype._update = function () {
 
 	while (this._time <= transition.start) {
 		if (this._index === 0) {
-			transition.update(this._object, 0, transition.transFunc);
+			transition.update(this._object, 0);
 			return;
 		}
 
 		if (this._relative === true ) {
-			transition.update(this._object, 0, transition.transFunc);
+			transition.update(this._object, 0);
 		}
 
 		transition = this._transitions[--this._index];
 	}
 
 	// Updating the object with respect to the current transition and time
-	transition.update(this._object, (this._time - transition.start) / transition.duration, transition.transFunc);
+	transition.update(this._object, (this._time - transition.start) / transition.duration);
 };
 
 AbstractTween.prototype._validate = function () {
