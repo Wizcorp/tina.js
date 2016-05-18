@@ -1,8 +1,8 @@
-var Transition				= require('./Transition');
-var TransitionCSS			= require('./TransitionCSS');
-var TransitionRelative		= require('./TransitionRelative');
-var easingFunctions			= require('./easing');
-var interpolationFunctions	= require('./interpolation');
+var Transition              = require('./Transition');
+var TransitionCSS           = require('./TransitionCSS');
+var TransitionRelative      = require('./TransitionRelative');
+var easingFunctions         = require('./easing');
+var interpolationFunctions  = require('./interpolation');
 
 
 // Temporisation, used for waiting
