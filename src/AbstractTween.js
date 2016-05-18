@@ -1,8 +1,8 @@
-var Transition         		= require('./Transition');
-var TransitionCSS		= require('./TransitionCSS');
-var TransitionRelative 		= require('./TransitionRelative');
-var easingFunctions        	= require('./easing');
-var interpolationFunctions 	= require('./interpolation');
+var Transition				= require('./Transition');
+var TransitionCSS			= require('./TransitionCSS');
+var TransitionRelative		= require('./TransitionRelative');
+var easingFunctions			= require('./easing');
+var interpolationFunctions	= require('./interpolation');
 
 
 // Temporisation, used for waiting
@@ -46,7 +46,7 @@ function AbstractTween(object, properties) {
 	}
 
 	// Determine if we are are tweening a CSS object
-	// NOTE: The undefined check is to avoid a crash when running Tina in
+	// The undefined check is to avoid a crash when running Tina in
 	// environments where the DOM is not available, such as in node.
 	if (typeof CSSStyleDeclaration !== 'undefined') {
 		this._css = (object instanceof CSSStyleDeclaration) ? true : false;
