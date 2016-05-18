@@ -46,6 +46,8 @@ function AbstractTween(object, properties) {
 	}
 
 	// Determine if we are are tweening a CSS object
+	// NOTE: The undefined check is to avoid a crash when running Tina in
+	// environments where the DOM is not available, such as in node.
 	if (typeof CSSStyleDeclaration !== 'undefined') {
 		this._css = (object instanceof CSSStyleDeclaration) ? true : false;
 	}

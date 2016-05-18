@@ -47,6 +47,8 @@ function AbstractTween(object, properties) {
 	}
 
 	// Determine if we are are tweening a CSS object
+	// NOTE: The undefined check is to avoid a crash when running Tina in
+	// environments where the DOM is not available, such as in node.
 	if (typeof CSSStyleDeclaration !== 'undefined') {
 		this._css = (object instanceof CSSStyleDeclaration) ? true : false;
 	}
@@ -2623,7 +2625,6 @@ function update(object, t) {
 // Several Properties
 function updateP(object, t) {
 	var q = this.props;
-
 	for (var i = 0; i < this.props.length; i += 1) {
 		var p = q[i];
 		object[p] = this.from[p] * (1 - t) + this.to[p] * t;
@@ -2655,7 +2656,7 @@ function updateE(object, t) {
 
 // Easing
 // Several Properties
-function updatePE(object, t, interpFunc) {
+function updatePE(object, t) {
 	var q = this.props;
 	t = this.easing(t, this.easingParam);
 	for (var i = 0; i < q.length; i += 1) {
@@ -2666,16 +2667,15 @@ function updatePE(object, t, interpFunc) {
 
 // Easing
 // Interpolation
-function updateIE(object, t, interpFunc) {
+function updateIE(object, t) {
 	var p = this.prop;
-	t = this.easing(t, this.easingParam);
-	object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);
+	object[p] = this.interps[p](this.easing(t, this.easingParam), this.from[p], this.to[p], this.interpParams[p]);
 }
 
 // Easing
 // Interpolation
 // Several Properties
-function updatePIE(object, t, interpFunc) {
+function updatePIE(object, t) {
 	var q = this.props;
 	t = this.easing(t, this.easingParam);
 	for (var i = 0; i < q.length; i += 1) {
@@ -2694,13 +2694,13 @@ var updateMethods = [
 	]
 ];
 
-function Transition(properties, from, to, start, duration, easing,
-                    easingParam, interpolations, interpolationParams) {
-	this.start     = start;
-	this.end       = start + duration;
-	this.duration  = duration;
-	this.from      = from;
-	this.to        = to;
+function Transition(properties, from, to, start, duration, easing, easingParam, interpolations, interpolationParams) {
+	this.start    = start;
+	this.end      = start + duration;
+	this.duration = duration;
+
+	this.from = from;
+	this.to   = to;
 
 	// Easing flag - Whether an easing function is used
 	// 0 => Using linear easing
@@ -2744,7 +2744,6 @@ function Transition(properties, from, to, start, duration, easing,
 }
 
 module.exports = Transition;
-
 },{}],19:[function(require,module,exports){
 // Provides transitions for CSS style objects
 var CSSMap = require('./CSSMap');
