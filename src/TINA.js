@@ -188,7 +188,6 @@ var TINA = {
 	// Internal start method, called by start and resume
 	_startAutomaticUpdate: function () {
 		if (this._running === true) {
-			console.warn('[TINA.start] TINA is already running');
 			return false;
 		}
 
@@ -326,6 +325,7 @@ var TINA = {
 			// Tweener can be added
 			tweener._handle = this._inactiveTweeners.add(tweener);
 			tweener._player = this;
+			tweener._time = (this._time - tweener._startTime) * tweener._speed;
 			return;
 		}
 
