@@ -40,7 +40,7 @@ function updatePI(object, t) {
 
 // Easing
 function updateE(object, t) {
-	t = this.easing(t, this.easingParams);
+	t = this.easing(t, this.easingParam);
 	var p = this.prop;
 	var now = this.from[p] * (1 - t) + this.to[p] * t;
 	object[p] = object[p] + (now - this.prev);
@@ -51,7 +51,7 @@ function updateE(object, t) {
 // Several Properties
 function updatePE(object, t) {
 	var q = this.props;
-	t = this.easing(t, this.easingParams);
+	t = this.easing(t, this.easingParam);
 	for (var i = 0; i < q.length; i += 1) {
 		var p = q[i];
 		var now = this.from[p] * (1 - t) + this.to[p] * t;
@@ -64,7 +64,7 @@ function updatePE(object, t) {
 // Interpolation
 function updateIE(object, t) {
 	var p = this.prop;
-	var now = this.interps[p](this.easing(t, this.easingParams), this.from[p], this.to[p], this.interpParams[p]);
+	var now = this.interps[p](this.easing(t, this.easingParam), this.from[p], this.to[p], this.interpParams[p]);
 	object[p] = object[p] + (now - this.prev);
 	this.prev = now;
 }
@@ -74,7 +74,7 @@ function updateIE(object, t) {
 // Several Properties
 function updatePIE(object, t) {
 	var q = this.props;
-	t = this.easing(t, this.easingParams);
+	t = this.easing(t, this.easingParam);
 	for (var i = 0; i < q.length; i += 1) {
 		var p = q[i];
 		var now = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);
