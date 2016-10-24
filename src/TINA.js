@@ -59,6 +59,7 @@ var TINA = {
 	_time:      0,
 
 	_running: false,
+	_paused: false,
 
 	// callbacks
 	_onStart:  null,
@@ -95,7 +96,7 @@ var TINA = {
 	},
 
 	update: function () {
-		if (this._running === false) {
+		if (this._paused) {
 			return;
 		}
 
@@ -222,7 +223,7 @@ var TINA = {
 	},
 
 	pause: function () {
-		this._running = false;
+		this._paused = true;
 		if (this._onPause !== null) {
 			this._onPause();
 		}
@@ -231,7 +232,7 @@ var TINA = {
 	},
 
 	resume: function () {
-		this._running = true;
+		this._paused = false;
 		this._startTime = clock.now() - this._time;
 
 		if (this._onResume !== null) {
