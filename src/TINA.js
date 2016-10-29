@@ -59,6 +59,7 @@ var TINA = {
 	_time:      0,
 
 	_running: false,
+	_paused: false,
 
 	// callbacks
 	_onStart:  null,
@@ -95,6 +96,10 @@ var TINA = {
 	},
 
 	update: function () {
+		if (this._paused) {
+			return;
+		}
+
 		var now = clock.now() - this._startTime;
 		var dt = now - this._time;
 		if (dt < 0) {
@@ -209,7 +214,6 @@ var TINA = {
 	// Internal stop method, called by stop and pause
 	_stopAutomaticUpdate: function () {
 		if (this._running === false) {
-			console.warn('[TINA.pause] TINA is not running');
 			return false;
 		}
 
@@ -219,31 +223,20 @@ var TINA = {
 	},
 
 	pause: function () {
-		if (this._stopAutomaticUpdate() === false) {
-			return;
-		}
-
-		for (var handle = this._activeTweeners.first; handle !== null; handle = handle.next) {
-			handle.object._pause();
-		}
-
+		this._paused = true;
 		if (this._onPause !== null) {
 			this._onPause();
 		}
+
 		return this;
 	},
 
 	resume: function () {
-		if (this._startAutomaticUpdate() === false) {
-			return;
-		}
+		this._paused = false;
+		this._startTime = clock.now() - this._time;
 
 		if (this._onResume !== null) {
 			this._onResume();
-		}
-
-		for (var handle = this._activeTweeners.first; handle !== null; handle = handle.next) {
-			handle.object._resume();
 		}
 
 		return this;
