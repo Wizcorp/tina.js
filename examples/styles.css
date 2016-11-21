@@ -4,11 +4,18 @@ body {
 	font-family: verdana;
 }
 
+.democontainer,
 canvas {
 	margin: 20px auto;
 	border-radius: 5px;
 	box-shadow: 1px 1px 10px #333;
 	display: block;
+}
+
+.democontainer {
+    	position: relative;
+    	width: 400px;
+    	height: 400px;
 }
 
 a {

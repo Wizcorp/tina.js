@@ -1,6 +1,6 @@
 var TINA = require('./TINA.js');
 
-// TINA.CSSTween        = require('./CSSTween');
+TINA.CSSTween        = require('./CSSTween');
 TINA.Delay           = require('./Delay');
 TINA.BriefExtension  = require('./BriefExtension');
 TINA.BriefPlayable   = require('./BriefPlayable');

@@ -1,9 +1,9 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-var Transition         = require('./Transition');
-var TransitionRelative = require('./TransitionRelative');
-
-var easingFunctions        = require('./easing');
-var interpolationFunctions = require('./interpolation');
+var Transition         		= require('./Transition');
+var TransitionCSS		= require('./TransitionCSS');
+var TransitionRelative 		= require('./TransitionRelative');
+var easingFunctions        	= require('./easing');
+var interpolationFunctions 	= require('./interpolation');
 
 
 // Temporisation, used for waiting
@@ -44,6 +44,13 @@ function AbstractTween(object, properties) {
 		for (var p = 0; p < object.length; p += 1) {
 			properties[p] = p;
 		}
+	}
+
+	// Determine if we are are tweening a CSS object
+	// NOTE: The undefined check is to avoid a crash when running Tina in
+	// environments where the DOM is not available, such as in node.
+	if (typeof CSSStyleDeclaration !== 'undefined') {
+		this._css = (object instanceof CSSStyleDeclaration) ? true : false;
 	}
 
 	// Properties to tween
@@ -156,7 +163,16 @@ AbstractTween.prototype.to = function (toObject, duration, easing, easingParam, 
 	// Getting previous transition ending as the beginning for the new transition
 	var fromObject = this._getLastTransitionEnding();
 
-	var TransitionConstructor = (this._relative === true) ? TransitionRelative : Transition;
+	// Determine the appropriate transition constructor for the given object
+	var TransitionConstructor = null;
+	if (this._relative === true) {
+		TransitionConstructor = TransitionRelative;
+	} else if (this._css === true) {
+		TransitionConstructor = TransitionCSS;
+	} else {
+		TransitionConstructor = Transition;
+	}
+
 	var transition = new TransitionConstructor(
 		this._properties,
 		fromObject,
@@ -222,7 +238,8 @@ AbstractTween.prototype._validate = function () {
 
 	return true;
 };
-},{"./Transition":16,"./TransitionRelative":17,"./easing":20,"./interpolation":23}],2:[function(require,module,exports){
+
+},{"./Transition":18,"./TransitionCSS":19,"./TransitionRelative":20,"./easing":23,"./interpolation":26}],2:[function(require,module,exports){
 
 function BriefExtension() {
 	// Local duration of the playable, independent from speed and iterations
@@ -379,7 +396,7 @@ BriefExtension.prototype._complete = function (overflow) {
 		return;
 	}
 
-	// Removing playable before it completes
+	// Inactivating playable before it completes
 	// So that the playable can be reactivated again within _onComplete callback
 	if (this._player._inactivate(this) === false) {
 		// Could not be completed
@@ -502,7 +519,7 @@ BriefPlayable.prototype.constructor = BriefPlayable;
 inherit(BriefPlayable, BriefExtension);
 
 module.exports = BriefPlayable;
-},{"./BriefExtension":2,"./Playable":8,"./inherit":22}],4:[function(require,module,exports){
+},{"./BriefExtension":2,"./Playable":10,"./inherit":25}],4:[function(require,module,exports){
 var inherit        = require('./inherit');
 var Player         = require('./Player');
 var BriefExtension = require('./BriefExtension');
@@ -551,7 +568,63 @@ BriefPlayer.prototype._onPlayableRemoved = BriefPlayer.prototype._updateDuration
 // 	this._warn('[BriefPlayer._onPlayableChanged] Changing a playable\'s property after attaching it to a player may have unwanted side effects',
 // 		'playable:', changedPlayable, 'player:', this);
 // };
-},{"./BriefExtension":2,"./Player":9,"./inherit":22}],5:[function(require,module,exports){
+},{"./BriefExtension":2,"./Player":11,"./inherit":25}],5:[function(require,module,exports){
+/**
+ *
+ * Maps the given properties to a unit type
+ *
+ * Currently only supports basic CSS methods - in order to support more advance CSS3 properties, such as
+ * transform, we will need to modify the way the properties array is handled and moved through the system. 
+ * In the case of CSS methods such as "transform: rotate(Xdeg)" - the mapping will need to be more advanced,
+ * possibly adding a prefix / suffix mapping.
+ *
+ * @param {array}  properties - Properties of the object to tween
+ * @returns {array} - The suffix mapped to the property name
+ *
+ */
+module.exports = function (properties) {
+    
+        var cssMap = { height: 'px', width: 'px', top: 'px', left: 'px', bottom: 'px', right: 'px', opacity: '' };
+        var mapping = {};
+    
+        for (var i = 0; i < properties.length; i++) {
+                if (properties[i] in cssMap) {
+                        var property = properties[i];
+                        mapping[property] = cssMap[property];
+                }
+        }
+    
+        return mapping;
+};
+
+},{}],6:[function(require,module,exports){
+var NestedTween = require('./NestedTween');
+/**
+ *
+ * @classdesc
+ * Manages transition of properties of an object
+ *
+ * @param {object} object     - Object to tween
+ * @param {array}  properties - Properties of the object to tween
+ *
+ */
+
+function CSSTween(object, properties) {
+	if ((this instanceof CSSTween) === false) {
+		return new CSSTween(object, properties);
+	}
+
+	var tweenedObject = (typeof object === 'string') ? document.querySelector(object) : object;
+
+	// TODO: Add an internal method for replacing unprefixed properties by prefixed properties when necessary
+	NestedTween.call(this, tweenedObject.style, properties);
+}
+
+CSSTween.prototype = Object.create(NestedTween.prototype);
+CSSTween.prototype.constructor = CSSTween;
+module.exports = CSSTween;
+
+},{"./NestedTween":9}],7:[function(require,module,exports){
 var BriefPlayable = require('./BriefPlayable');
 
 /**
@@ -570,7 +643,7 @@ function Delay(duration) {
 Delay.prototype = Object.create(BriefPlayable.prototype);
 Delay.prototype.constructor = Delay;
 module.exports = Delay;
-},{"./BriefPlayable":3}],6:[function(require,module,exports){
+},{"./BriefPlayable":3}],8:[function(require,module,exports){
 /**
  * DOUBLY LIST Class
  *
@@ -810,7 +883,7 @@ DoublyList.prototype.toArray = function () {
 
 	return objects;
 };
-},{}],7:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 var BriefPlayable = require('./BriefPlayable');
 var AbstractTween   = require('./AbstractTween');
 
@@ -998,7 +1071,7 @@ NestedTween.prototype._update = function () {
 		tween._update();
 	}
 };
-},{"./AbstractTween":1,"./BriefPlayable":3}],8:[function(require,module,exports){
+},{"./AbstractTween":1,"./BriefPlayable":3}],10:[function(require,module,exports){
 /** @class */
 function Playable() {
 	// Player component handling this playable
@@ -1235,7 +1308,7 @@ Playable.prototype._moveTo = function (time, dt) {
 // Overridable methods
 Playable.prototype._update   = function () {};
 Playable.prototype._validate = function () {};
-},{}],9:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 var Playable   = require('./Playable');
 var DoublyList = require('./DoublyList');
 
@@ -1484,7 +1557,7 @@ Player.prototype._update = function (dt, overflow) {
 Player.prototype._onPlayableChanged = function (/* playable */) {};
 Player.prototype._onPlayableRemoved = function (/* playable */) {};
 Player.prototype._onAllPlayablesRemoved = function () {};
-},{"./DoublyList":6,"./Playable":8}],10:[function(require,module,exports){
+},{"./DoublyList":8,"./Playable":10}],12:[function(require,module,exports){
 var BriefPlayable = require('./BriefPlayable');
 var DoublyList    = require('./DoublyList');
 
@@ -1895,7 +1968,7 @@ Recorder.prototype._update = function (dt) {
 	}
 };
 
-},{"./BriefPlayable":3,"./DoublyList":6}],11:[function(require,module,exports){
+},{"./BriefPlayable":3,"./DoublyList":8}],13:[function(require,module,exports){
 var Timeline   = require('./Timeline');
 var Delay      = require('./Delay');
 var DoublyList = require('./DoublyList');
@@ -2006,7 +2079,7 @@ Sequence.prototype._onPlayableRemoved = function (removedPlayable) {
 
 Sequence.prototype._onPlayableChanged = Sequence.prototype._reconstruct;
 
-},{"./Delay":5,"./DoublyList":6,"./Timeline":14}],12:[function(require,module,exports){
+},{"./Delay":7,"./DoublyList":8,"./Timeline":16}],14:[function(require,module,exports){
 (function (global){
 
 var DoublyList = require('./DoublyList');
@@ -2410,7 +2483,7 @@ var TINA = {
 module.exports = root.TINA = TINA;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./DoublyList":6}],13:[function(require,module,exports){
+},{"./DoublyList":8}],15:[function(require,module,exports){
 var Tweener = require('./Tweener');
 
 /**
@@ -2457,7 +2530,7 @@ Ticker.prototype.convertToTimeUnits = function(nbTicks) {
 	return nbTicks * this.tupt;
 };
 
-},{"./Tweener":19}],14:[function(require,module,exports){
+},{"./Tweener":22}],16:[function(require,module,exports){
 var BriefPlayer = require('./BriefPlayer');
 
 /**
@@ -2498,7 +2571,7 @@ Timeline.prototype.add = function (playable, startTime) {
 
 	return this;
 };
-},{"./BriefPlayer":4}],15:[function(require,module,exports){
+},{"./BriefPlayer":4}],17:[function(require,module,exports){
 var Tweener = require('./Tweener');
 
 /**
@@ -2535,7 +2608,7 @@ Timer.prototype.convertToSeconds = function(timeUnits) {
 Timer.prototype.convertToTimeUnits = function(seconds) {
 	return seconds * this._speed * 1000;
 };
-},{"./Tweener":19}],16:[function(require,module,exports){
+},{"./Tweener":22}],18:[function(require,module,exports){
 // The file is a good representation of the constant fight between maintainability and performance
 // For performance reasons several update methods are created
 // The appropriate method should be used for tweening. The selection depends on:
@@ -2671,7 +2744,144 @@ function Transition(properties, from, to, start, duration, easing, easingParam, 
 }
 
 module.exports = Transition;
-},{}],17:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
+// Provides transitions for CSS style objects
+var CSSMap = require('./CSSMap');
+
+// One property
+function update(object, t) {
+	var p = this.prop;
+	object[p] = (this.from[p] * (1 - t) + this.to[p] * t) + this.cssMap[p];
+}
+
+// Several Properties
+function updateP(object, t) {
+	var q = this.props;
+	for (var i = 0; i < this.props.length; i += 1) {
+		var p = q[i];
+		object[p] = (this.from[p] * (1 - t) + this.to[p] * t) + this.cssMap[p];
+	}
+}
+
+// Interpolation
+function updateI(object, t) {
+	var p = this.prop;
+	object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]) + this.cssMap[p];
+}
+
+// Interpolation
+// Several Properties
+function updatePI(object, t) {
+	var q = this.props;
+	for (var i = 0; i < q.length; i += 1) {
+		var p = q[i];
+		object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]) + this.cssMap[p];
+	}
+}
+
+// Easing
+function updateE(object, t) {
+	t = this.easing(t, this.easingParam);
+	var p = this.prop;
+	object[p] = (this.from[p] * (1 - t) + this.to[p] * t) + this.cssMap[p];
+}
+
+// Easing
+// Several Properties
+function updatePE(object, t, interpFunc) {
+	var q = this.props;
+	t = this.easing(t, this.easingParam);
+	for (var i = 0; i < q.length; i += 1) {
+		var p = q[i];
+		object[p] = (this.from[p] * (1 - t) + this.to[p] * t) + this.cssMap[p];
+	}
+}
+
+// Easing
+// Interpolation
+function updateIE(object, t, interpFunc) {
+	var p = this.prop;
+	t = this.easing(t, this.easingParam);
+	object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]) + this.cssMap[p];
+}
+
+// Easing
+// Interpolation
+// Several Properties
+function updatePIE(object, t, interpFunc) {
+	var q = this.props;
+	t = this.easing(t, this.easingParam);
+	for (var i = 0; i < q.length; i += 1) {
+		var p = q[i];
+		object[p] = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]) + this.cssMap[p];
+	}
+}
+
+
+var updateMethods = [
+	[
+		[update, updateP],
+		[updateI, updatePI]
+	], [
+		[updateE, updatePE],
+		[updateIE, updatePIE]
+	]
+];
+
+function TransitionCSS(properties, from, to, start, duration, easing,
+                       easingParam, interpolations, interpolationParams) {
+
+	this.start     = start;
+	this.end       = start + duration;
+	this.duration  = duration;
+	this.from      = from;
+	this.to        = to;
+	this.cssMap    = CSSMap(properties);
+
+	// Easing flag - Whether an easing function is used
+	// 0 => Using linear easing
+	// 1 => Using custom easing
+	var easingFlag;
+	if (easing) {
+		easingFlag = 1;
+		this.easing = easing;
+		this.easingParam = easingParam;
+	} else {
+		easingFlag = 0;
+	}
+
+	// Interpolation flag - Whether an interpolation function is used
+	// 0 => No Interpolation
+	// 1 => At least one interpolation
+	var interpFlag;
+	if (interpolations === null) {
+		interpFlag = 0;
+	} else {
+		interpFlag = 1;
+		this.interps = interpolations;
+		this.interpParams = interpolationParams || {};
+	}
+
+	// Property flag - Whether the transition has several properties
+	// 0 => Only one property
+	// 1 => Several properties
+	var propsFlag;
+	if (properties.length === 1) {
+		propsFlag  = 0;
+		this.prop  = properties[0]; // string
+		this.props = null;
+	} else {
+		propsFlag  = 1;
+		this.prop  = null;
+		this.props = properties; // array
+	}
+
+	this.update = updateMethods[easingFlag][interpFlag][propsFlag];
+}
+
+module.exports = TransitionCSS;
+
+},{"./CSSMap":5}],20:[function(require,module,exports){
 
 // One property
 function update(object, t) {
@@ -2824,7 +3034,7 @@ function Transition(properties, from, to, start, duration, easing, easingParam, 
 }
 
 module.exports = Transition;
-},{}],18:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 var BriefPlayable = require('./BriefPlayable');
 var AbstractTween = require('./AbstractTween');
 
@@ -2867,7 +3077,7 @@ Tween.prototype.wait = function (duration) {
 	}
 	return this;
 };
-},{"./AbstractTween":1,"./BriefPlayable":3,"./inherit":22}],19:[function(require,module,exports){
+},{"./AbstractTween":1,"./BriefPlayable":3,"./inherit":25}],22:[function(require,module,exports){
 var Player = require('./Player');
 var TINA   = require('./TINA');
 
@@ -2894,7 +3104,7 @@ Tweener.prototype.useAsDefault = function () {
 	TINA.setDefaultTweener(this);
 	return this;
 };
-},{"./Player":9,"./TINA":12}],20:[function(require,module,exports){
+},{"./Player":11,"./TINA":14}],23:[function(require,module,exports){
 /**
  *
  * @file A set of ease functions
@@ -3157,10 +3367,10 @@ exports.backInOut = function (t, e) {
 	return 0.5 * (t * t * ((e + 1) * t + e)) + 1;
 };
 
-},{}],21:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 var TINA = require('./TINA.js');
 
-// TINA.CSSTween        = require('./CSSTween');
+TINA.CSSTween        = require('./CSSTween');
 TINA.Delay           = require('./Delay');
 TINA.BriefExtension  = require('./BriefExtension');
 TINA.BriefPlayable   = require('./BriefPlayable');
@@ -3181,7 +3391,7 @@ TINA.Tweener         = require('./Tweener');
 
 module.exports = TINA;
 
-},{"./BriefExtension":2,"./BriefPlayable":3,"./BriefPlayer":4,"./Delay":5,"./NestedTween":7,"./Playable":8,"./Player":9,"./Recorder":10,"./Sequence":11,"./TINA.js":12,"./Ticker":13,"./Timeline":14,"./Timer":15,"./Tween":18,"./Tweener":19,"./easing":20,"./interpolation":23}],22:[function(require,module,exports){
+},{"./BriefExtension":2,"./BriefPlayable":3,"./BriefPlayer":4,"./CSSTween":6,"./Delay":7,"./NestedTween":9,"./Playable":10,"./Player":11,"./Recorder":12,"./Sequence":13,"./TINA.js":14,"./Ticker":15,"./Timeline":16,"./Timer":17,"./Tween":21,"./Tweener":22,"./easing":23,"./interpolation":26}],25:[function(require,module,exports){
 module.exports = function (subobject, superobject) {
 	var prototypes = Object.keys(superobject.prototype);
 	for (var p = 0; p < prototypes.length; p += 1) {
@@ -3189,7 +3399,7 @@ module.exports = function (subobject, superobject) {
 		subobject.prototype[prototypeName] = superobject.prototype[prototypeName];
 	}
 };
-},{}],23:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 /**
  *
  * @file A set of interpolation functions
@@ -3681,4 +3891,4 @@ exports.simplex2d = (function () {
 		return a * (1 - t) + b * t;
 	};
 })();
-},{}]},{},[21]);
+},{}]},{},[24]);

@@ -1,8 +1,8 @@
-var Transition         = require('./Transition');
-var TransitionRelative = require('./TransitionRelative');
-
-var easingFunctions        = require('./easing');
-var interpolationFunctions = require('./interpolation');
+var Transition              = require('./Transition');
+var TransitionCSS           = require('./TransitionCSS');
+var TransitionRelative      = require('./TransitionRelative');
+var easingFunctions         = require('./easing');
+var interpolationFunctions  = require('./interpolation');
 
 
 // Temporisation, used for waiting
@@ -43,6 +43,13 @@ function AbstractTween(object, properties) {
 		for (var p = 0; p < object.length; p += 1) {
 			properties[p] = p;
 		}
+	}
+
+	// Determine if we are are tweening a CSS object
+	// The undefined check is to avoid a crash when running Tina in
+	// environments where the DOM is not available, such as in node.
+	if (typeof CSSStyleDeclaration !== 'undefined') {
+		this._css = (object instanceof CSSStyleDeclaration) ? true : false;
 	}
 
 	// Properties to tween
@@ -155,7 +162,16 @@ AbstractTween.prototype.to = function (toObject, duration, easing, easingParam, 
 	// Getting previous transition ending as the beginning for the new transition
 	var fromObject = this._getLastTransitionEnding();
 
-	var TransitionConstructor = (this._relative === true) ? TransitionRelative : Transition;
+	// Determine the appropriate transition constructor for the given object
+	var TransitionConstructor = null;
+	if (this._relative === true) {
+		TransitionConstructor = TransitionRelative;
+	} else if (this._css === true) {
+		TransitionConstructor = TransitionCSS;
+	} else {
+		TransitionConstructor = Transition;
+	}
+
 	var transition = new TransitionConstructor(
 		this._properties,
 		fromObject,
