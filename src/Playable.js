@@ -6,6 +6,9 @@ function Playable() {
 	// Handle of the playable within its player
 	this._handle = null;
 
+	// An inactive playable cannot run even within its time boundaries when its parent is running
+	this._active = true;
+
 	// Starting time, is global (relative to its player time)
 	this._startTime = 0;
 
@@ -196,10 +199,13 @@ Playable.prototype.stop = function () {
 };
 
 Playable.prototype.resume = function () {
-	if (this._player._activate(this) === false) {
+	if (this._player === null || this._player._reactivate(this) === false) {
 		// Could not be resumed
 		return this;
 	}
+
+	// Resetting starting time so that the playable starts off where it left off
+	this._startTime = this._player._time - this._time;
 
 	if (this._onResume !== null) {
 		this._onResume();
@@ -208,7 +214,7 @@ Playable.prototype.resume = function () {
 };
 
 Playable.prototype.pause = function () {
-	if (this._player._remove(this) === false) {
+	if (this._player === null || this._player._inactivate(this) === false) {
 		// Could not be paused
 		return this;
 	}

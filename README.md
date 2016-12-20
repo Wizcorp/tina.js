@@ -7,7 +7,6 @@
 A comprehensive, high performance, easy to use, open source animation library in JavaScript. 
 
 * **Easy to use** (API strongly inspired by Tween.js)
-* **Easy to debug** (Proper warnings)
 * **High performance** (Competitive with Tweenjs and GSAP, benchmark coming soon)
 * **High flexibility** (tween transitions can easily be modified after creation)
 * **High customizability** (possibility to use custom easings, interpolations and components)

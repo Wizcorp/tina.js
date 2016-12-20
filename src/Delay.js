@@ -11,12 +11,17 @@ function Delay(duration, onComplete) {
 	}
 
 	BriefPlayable.call(this);
-	this._duration = duration;
-
-	if (onComplete !== undefined) {
-		this.onComplete(onComplete);
-	}
+	this.reset(duration, onComplete);
 }
 Delay.prototype = Object.create(BriefPlayable.prototype);
 Delay.prototype.constructor = Delay;
 module.exports = Delay;
+
+Delay.prototype.reset = function (duration, onComplete) {
+	this._duration = duration;
+	if (onComplete !== undefined) {
+		this.onComplete(onComplete);
+	}
+
+	return this;
+};

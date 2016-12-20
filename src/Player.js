@@ -89,7 +89,7 @@ Player.prototype._remove = function (playable) {
 		return false;
 	}
 
-	this._warn('[Player._add] Playable is used elsewhere');
+	this._warn('[Player._remove] Playable is used elsewhere');
 	return false;
 };
 
@@ -152,7 +152,7 @@ Player.prototype.clear = function () {
 Player.prototype._warn = function (warning) {
 	// jshint debug: true
 	if (this._silent === false) {
-		console.warn(warning);
+		console.warn('[TINA]' + warning);
 	}
 
 	if (this._debug === true) {
@@ -185,20 +185,32 @@ Player.prototype.stop = function () {
 };
 
 Player.prototype._activate = function (playable) {
-	// O(1)
-	this._inactivePlayables.removeByReference(playable._handle);
-	playable._handle = this._activePlayables.addBack(playable);
+	if (playable._handle.container === this._inactivePlayables) {
+		// O(1)
+		this._inactivePlayables.removeByReference(playable._handle);
+		playable._handle = this._activePlayables.addBack(playable);
+	}
+
+	playable._active = true;
+	return true;
 };
+
+Player.prototype._reactivate = Player.prototype._activate;
 
 Player.prototype._inactivate = function (playable) {
 	if (playable._handle === null) {
-		this._warn('[Playable.stop] Cannot stop a playable that is not running');
-		return;
+		this._warn('[Player._inactivate] Cannot stop a playable that is not running');
+		return false;
 	}
 
-	// O(1)
-	this._activePlayables.removeByReference(playable._handle);
-	playable._handle = this._inactivePlayables.addBack(playable);
+	if (playable._handle.container === this._activePlayables) {
+		// O(1)
+		this._activePlayables.removeByReference(playable._handle);
+		playable._handle = this._inactivePlayables.addBack(playable);
+	}
+
+	playable._active = false;
+	return true;
 };
 
 Player.prototype._updatePlayableList = function (dt) {
@@ -223,7 +235,7 @@ Player.prototype._updatePlayableList = function (dt) {
 
 		// Starting if player time within playable bounds
 		// console.log('Should playable be playing?', playable._startTime, time0, time1, dt)
-		if (playable._overlaps(time0, time1)) {
+		if (playable._active && playable._overlaps(time0, time1)) {
 			this._activate(playable);
 			playable._start();
 		}
