@@ -161,16 +161,17 @@ Playable.prototype.start = function (timeOffset) {
 		return this;
 	}
 
-	if (this._player._add(this) === false) {
-		// Could not be added to player
-		return this;
-	}
-
 	if (timeOffset === undefined || timeOffset === null) {
 		timeOffset = 0;
 	}
 
 	this._startTime = this._player._time - timeOffset;
+
+	if (this._player._add(this) === false) {
+		// Could not be added to player
+		return this;
+	}
+
 	return this;
 };
 
@@ -182,8 +183,7 @@ Playable.prototype._start = function () {
 
 Playable.prototype.stop = function () {
 	if (this._player === null) {
-		console.warn('[Playable.stop] Trying to stop a playable that was never started.');
-		return;
+		return this;
 	}
 
 	// Stopping playable without performing any additional update nor completing
