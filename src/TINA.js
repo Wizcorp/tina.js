@@ -38,6 +38,8 @@ var requestAnimFrame = (function(){
 		};
 })();
 
+var cancelAnimationFrame = window.cancelAnimationFrame || window.mozCancelAnimationFrame || window.clearTimeout;
+
 // Performance.now gives better precision than Date.now
 var clock = root.performance || Date;
 
@@ -58,7 +60,7 @@ var TINA = {
 	_startTime: 0,
 	_time:      0,
 
-	_running: false,
+	_requestFrameId: null,
 	_paused: false,
 
 	// callbacks
@@ -91,8 +93,12 @@ var TINA = {
 		return this;
 	},
 
+	_onPlayableChanged: function () {},
+	_onPlayableRemoved: function () {},
+	_onAllPlayablesRemoved: function () {},
+
 	isRunning: function () {
-		return (this._running === true);
+		return (this._requestFrameId !== null);
 	},
 
 	update: function () {
@@ -192,33 +198,31 @@ var TINA = {
 
 	// Internal start method, called by start and resume
 	_startAutomaticUpdate: function () {
-		if (this._running === true) {
+		if (this._requestFrameId !== null) {
 			return false;
 		}
 
 		function updateTINA() {
-			if (TINA._running === true) {
-				TINA.update();
-				requestAnimFrame(updateTINA);
-			}
+			TINA.update();
+			this._requestFrameId = requestAnimFrame(updateTINA);
 		}
 
 		this.reset();
 
 		// Starting the animation loop
-		this._running = true;
-		requestAnimFrame(updateTINA);
+		this._requestFrameId = requestAnimFrame(updateTINA);
 		return true;
 	},
 
 	// Internal stop method, called by stop and pause
 	_stopAutomaticUpdate: function () {
-		if (this._running === false) {
+		if (this._requestFrameId === null) {
 			return false;
 		}
 
 		// Stopping the animation loop
-		this._running = false;
+		cancelAnimationFrame(this._requestFrameId);
+		this._requestFrameId = null;
 		return true;
 	},
 
@@ -309,7 +313,7 @@ var TINA = {
 
 	_add: function (tweener) {
 		// A tweener is starting
-		if (this._running === false) {
+		if (this._requestFrameId === null) {
 			// TINA is not running, starting now
 			this.start();
 		}
@@ -340,7 +344,7 @@ var TINA = {
 			this._activePlayables.removeByReference(tweener._handle);
 		}
 
-		tweener._handle = this._inactivePlayables.addBack(tweener);
+		tweener._handle = this._inactiveTweeners.addBack(tweener);
 	},
 
 	_remove: function (tweener) {
