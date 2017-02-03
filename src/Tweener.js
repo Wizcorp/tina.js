@@ -26,6 +26,7 @@ Tweener.prototype._reactivate = function (playable) {
 
 Tweener.prototype._inactivate = function (playable) {
 	// In a tweener, playables are removed when inactivated
+	Player.prototype._inactivate.call(this, playable);
 	this._remove(playable);
 	playable._active = false;
 };

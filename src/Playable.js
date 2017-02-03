@@ -165,9 +165,10 @@ Playable.prototype.start = function (timeOffset) {
 		timeOffset = 0;
 	}
 
+	this._time = timeOffset;
 	this._startTime = this._player._time - timeOffset;
 
-	if (this._player._add(this) === false) {
+	if (this._player._reactivate(this) === false) {
 		// Could not be added to player
 		return this;
 	}

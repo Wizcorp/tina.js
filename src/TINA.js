@@ -339,6 +339,11 @@ var TINA = {
 		return this;
 	},
 
+	_reactivate: function (tweener) {
+		this._add(tweener);
+		return this;
+	},
+
 	_inactivate: function (tweener) {
 		if (tweener._handle !== null) {
 			this._activePlayables.removeByReference(tweener._handle);
