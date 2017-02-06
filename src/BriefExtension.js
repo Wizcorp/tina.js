@@ -171,8 +171,9 @@ BriefExtension.prototype._complete = function (overflow) {
 	}
 
 	if (this._onceComplete !== null) {
-		this._onceComplete(overflow);
+		var onceComplete = this._onceComplete;
 		this._onceComplete = null;
+		onceComplete(overflow);
 	}
 };
 

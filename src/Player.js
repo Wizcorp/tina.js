@@ -43,6 +43,7 @@ Player.prototype._add = function (playable) {
 	if (playable._handle.container === this._playablesToRemove) {
 		// Playable was being removed, removing from playables to remove
 		playable._handle = this._playablesToRemove.removeByReference(playable._handle);
+		playable._handle = playable._handle.object;
 		return true;
 	}
 
@@ -181,12 +182,12 @@ Player.prototype.stop = function () {
 
 Player.prototype._activate = function (playable) {
 	if (playable._handle.container === this._inactivePlayables) {
-		// O(1)
 		this._inactivePlayables.removeByReference(playable._handle);
 		playable._handle = this._activePlayables.addBack(playable);
 	} else if (playable._handle.container === this._playablesToRemove) {
+		// Already in list of active playables
 		this._playablesToRemove.removeByReference(playable._handle);
-		playable._handle = this._activePlayables.addBack(playable);
+		playable._handle = playable._handle.object;
 	}
 
 	playable._active = true;

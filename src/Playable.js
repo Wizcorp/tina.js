@@ -165,7 +165,7 @@ Playable.prototype.start = function (timeOffset) {
 		timeOffset = 0;
 	}
 
-	this._time = timeOffset;
+	this._time  = timeOffset;
 	this._startTime = this._player._time - timeOffset;
 
 	if (this._player._reactivate(this) === false) {
@@ -206,7 +206,7 @@ Playable.prototype.resume = function () {
 	}
 
 	// Resetting starting time so that the playable starts off where it left off
-	this._startTime = this._player._time - this._time;
+	this._startTime = this._player._time - this._time / this._speed;
 
 	if (this._onResume !== null) {
 		this._onResume();

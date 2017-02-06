@@ -1,28 +1,22 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 var Transition         = require('./Transition');
 var TransitionRelative = require('./TransitionRelative');
-
 var easingFunctions        = require('./easing');
 var interpolationFunctions = require('./interpolation');
-
-
 // Temporisation, used for waiting
 function Temporisation(start, duration, toObject, properties) {
 	this.start    = start;
 	this.end      = start + duration;
 	this.duration = duration;
-
 	this.properties = properties;
 	this.to = toObject;
 }
-
 Temporisation.prototype.update = function (object) {
 	for (var p = 0; p < this.properties.length; p += 1) {
 		var property = this.properties[p];
 		object[property] = this.to[property];
 	}
 };
-
 /**
  *
  * @classdesc
@@ -32,11 +26,9 @@ Temporisation.prototype.update = function (object) {
  * @param {array}  properties - Properties of the object to tween
  *
  */
-
-function AbstractTween(object, properties) {
+ function AbstractTween(object, properties) {
 	// Tweened object
 	this._object = object;
-
 	if ((properties === null || properties === undefined) && (object instanceof Array)) {
 		// Given object is an array
 		// Its properties to tween are the indices of the array
@@ -45,46 +37,35 @@ function AbstractTween(object, properties) {
 			properties[p] = p;
 		}
 	}
-
 	// Properties to tween
 	this._properties = properties;
-
 	// Starting property values
 	// By default is a copy of given object property values
 	this._from = null;
-
 	// Property interpolations
 	this._interpolations = null;
-
 	// Current transition index
 	this._index = 0;
-
 	// List of transitions of the tween
 	this._transitions = [];
-
 	// Whether the tween is relative
 	this._relative = false;
-
 	// Current time
 	this._time = 0;
-
 	// Total duration
 	this._duration = 0;
 }
 module.exports = AbstractTween;
-
 AbstractTween.prototype.relative = function (relative) {
 	this._relative = relative;
 	return this;
 };
-
 AbstractTween.prototype.reset = function () {
 	this._index       = 0;
 	this._duration    = 0;
 	this._transitions = [];
 	return this;
 };
-
 AbstractTween.prototype.interpolations = function (interpolations) {
 	// The API allows to pass interpolation names that will be replaced
 	// by the corresponding interpolation functions
@@ -95,7 +76,6 @@ AbstractTween.prototype.interpolations = function (interpolations) {
 			interpolations[property] = interpolationFunctions.linear;
 			continue;
 		}
-
 		if (typeof(interpolation) === 'string') {
 			// Replacing interpolation name by interpolation function
 			if (interpolationFunctions[interpolation] === undefined) {
@@ -106,21 +86,16 @@ AbstractTween.prototype.interpolations = function (interpolations) {
 			}
 		}
 	}
-
 	this._interpolations = interpolations;
 	return this;
 };
-
 AbstractTween.prototype.from = function (fromObject) {
 	this._from = fromObject;
-
 	if (this._transitions.length > 0) {
 		this._transitions[0].from = fromObject;
 	}
-
 	return this;
 };
-
 AbstractTween.prototype._setFrom = function () {
 	// Copying properties of tweened object
 	this._from = {};
@@ -128,10 +103,8 @@ AbstractTween.prototype._setFrom = function () {
 		var property = this._properties[p];
 		this._from[property] = (this._relative === true) ? 0 : this._object[property];
 	}
-
 	return this._from;
 };
-
 AbstractTween.prototype._getLastTransitionEnding = function () {
 	if (this._transitions.length > 0) {
 		return (this._relative === true) ? this._setFrom() : this._transitions[this._transitions.length - 1].to;
@@ -139,7 +112,6 @@ AbstractTween.prototype._getLastTransitionEnding = function () {
 		return (this._from === null) ? this._setFrom() : this._from;
 	}
 };
-
 AbstractTween.prototype.to = function (toObject, duration, easing, easingParam, interpolationParams) {
 	// The API allows to pass easing names that will be replaced
 	// by the corresponding easing functions
@@ -152,10 +124,8 @@ AbstractTween.prototype.to = function (toObject, duration, easing, easingParam, 
 			easing = easingFunctions[easing];
 		}
 	}
-
 	// Getting previous transition ending as the beginning for the new transition
 	var fromObject = this._getLastTransitionEnding();
-
 	var TransitionConstructor = (this._relative === true) ? TransitionRelative : Transition;
 	var transition = new TransitionConstructor(
 		this._properties,
@@ -168,19 +138,16 @@ AbstractTween.prototype.to = function (toObject, duration, easing, easingParam, 
 		this._interpolations,
 		interpolationParams
 	);
-
 	this._transitions.push(transition);
 	this._duration += duration;
 	return this;
 };
-
 AbstractTween.prototype.wait = function (duration) {
 	var toObject = this._getLastTransitionEnding();
 	this._transitions.push(new Temporisation(this._duration, duration, toObject, this._properties));
 	this._duration += duration;
 	return this;
 };
-
 AbstractTween.prototype._update = function () {
 	// Finding transition corresponding to current time
 	var transition = this._transitions[this._index];
@@ -190,36 +157,30 @@ AbstractTween.prototype._update = function () {
 			return;
 		}
 
-		if (this._relative === true ) {
+		if (this._relative === true) {
 			transition.update(this._object, 1);
 		}
-
 		transition = this._transitions[++this._index];
 	}
-
 	while (this._time <= transition.start) {
 		if (this._index === 0) {
 			transition.update(this._object, 0);
 			return;
 		}
 
-		if (this._relative === true ) {
+		if (this._relative === true) {
 			transition.update(this._object, 0);
 		}
-
 		transition = this._transitions[--this._index];
 	}
-
 	// Updating the object with respect to the current transition and time
 	transition.update(this._object, (this._time - transition.start) / transition.duration);
 };
-
 AbstractTween.prototype._validate = function () {
 	if (this._transitions.length === 0) {
 		console.warn('[AbstractTween._validate] Cannot start a tween with no transition:', this);
 		return false;
 	}
-
 	return true;
 };
 },{"./Transition":16,"./TransitionRelative":17,"./easing":20,"./interpolation":23}],2:[function(require,module,exports){
@@ -230,6 +191,9 @@ function BriefExtension() {
 
 	// On complete callback
 	this._onComplete = null;
+
+	// Once complete callback
+	this._onceComplete = null;
 
 	// Playing options
 	this._iterations = 1; // Number of times to iterate the playable
@@ -262,10 +226,8 @@ BriefExtension.prototype.setSpeed = function (speed) {
 	}
 };
 
-BriefExtension.prototype.onComplete = function (onComplete) {
-	this._onComplete = onComplete;
-	return this;
-};
+BriefExtension.prototype.onComplete = function (onComplete) { this._onComplete = onComplete; return this; };
+BriefExtension.prototype.onceComplete = function (onceComplete) { this._onceComplete = onceComplete; return this; };
 
 BriefExtension.prototype.getDuration = function () {
 	// Duration from outside the playable
@@ -337,6 +299,10 @@ BriefExtension.prototype._overlaps = function (time0, time1) {
 };
 
 BriefExtension.prototype.goToEnd = function () {
+	if (this._iterations === Infinity) {
+		return this.goTo(this._duration / this._speed, 0);
+	}
+
 	return this.goTo(this.getDuration(), this._iterations - 1);
 };
 
@@ -379,7 +345,7 @@ BriefExtension.prototype._complete = function (overflow) {
 		return;
 	}
 
-	// Removing playable before it completes
+	// Inactivating playable before it completes
 	// So that the playable can be reactivated again within _onComplete callback
 	if (this._player._inactivate(this) === false) {
 		// Could not be completed
@@ -388,6 +354,12 @@ BriefExtension.prototype._complete = function (overflow) {
 
 	if (this._onComplete !== null) { 
 		this._onComplete(overflow);
+	}
+
+	if (this._onceComplete !== null) {
+		var onceComplete = this._onceComplete;
+		this._onceComplete = null;
+		onceComplete(overflow);
 	}
 };
 
@@ -559,17 +531,26 @@ var BriefPlayable = require('./BriefPlayable');
  * Manages tweening of one property or several properties of an object
  */
 
-function Delay(duration) {
+function Delay(duration, onComplete) {
 	if ((this instanceof Delay) === false) {
 		return new Delay(duration);
 	}
 
 	BriefPlayable.call(this);
-	this._duration = duration;
+	this.reset(duration, onComplete);
 }
 Delay.prototype = Object.create(BriefPlayable.prototype);
 Delay.prototype.constructor = Delay;
 module.exports = Delay;
+
+Delay.prototype.reset = function (duration, onComplete) {
+	this._duration = duration;
+	if (onComplete !== undefined) {
+		this.onComplete(onComplete);
+	}
+
+	return this;
+};
 },{"./BriefPlayable":3}],6:[function(require,module,exports){
 /**
  * DOUBLY LIST Class
@@ -1007,6 +988,9 @@ function Playable() {
 	// Handle of the playable within its player
 	this._handle = null;
 
+	// An inactive playable cannot run even within its time boundaries when its parent is running
+	this._active = true;
+
 	// Starting time, is global (relative to its player time)
 	this._startTime = 0;
 
@@ -1159,16 +1143,18 @@ Playable.prototype.start = function (timeOffset) {
 		return this;
 	}
 
-	if (this._player._add(this) === false) {
-		// Could not be added to player
-		return this;
-	}
-
 	if (timeOffset === undefined || timeOffset === null) {
 		timeOffset = 0;
 	}
 
+	this._time  = timeOffset;
 	this._startTime = this._player._time - timeOffset;
+
+	if (this._player._reactivate(this) === false) {
+		// Could not be added to player
+		return this;
+	}
+
 	return this;
 };
 
@@ -1180,8 +1166,7 @@ Playable.prototype._start = function () {
 
 Playable.prototype.stop = function () {
 	if (this._player === null) {
-		console.warn('[Playable.stop] Trying to stop a playable that was never started.');
-		return;
+		return this;
 	}
 
 	// Stopping playable without performing any additional update nor completing
@@ -1197,10 +1182,13 @@ Playable.prototype.stop = function () {
 };
 
 Playable.prototype.resume = function () {
-	if (this._player._activate(this) === false) {
+	if (this._player === null || this._player._reactivate(this) === false) {
 		// Could not be resumed
 		return this;
 	}
+
+	// Resetting starting time so that the playable starts off where it left off
+	this._startTime = this._player._time - this._time / this._speed;
 
 	if (this._onResume !== null) {
 		this._onResume();
@@ -1209,7 +1197,7 @@ Playable.prototype.resume = function () {
 };
 
 Playable.prototype.pause = function () {
-	if (this._player._remove(this) === false) {
+	if (this._player === null || this._player._inactivate(this) === false) {
 		// Could not be paused
 		return this;
 	}
@@ -1249,11 +1237,6 @@ function Player() {
 	// A DoublyList, rather than an Array, is used to store playables.
 	// It allows for faster removal and is similar in speed for iterations.
 
-	// Quick note: as of mid 2014 iterating through linked list was slower than iterating through arrays
-	// in safari and firefox as only V8 managed to have linked lists work as fast as arrays.
-	// As of mid 2015 it seems that performances are now identical in every major browsers.
-	// (KUDOs to the JS engines guys)
-
 	// List of active playables handled by this player
 	this._activePlayables = new DoublyList();
 
@@ -1286,6 +1269,7 @@ Player.prototype._add = function (playable) {
 	if (playable._handle.container === this._playablesToRemove) {
 		// Playable was being removed, removing from playables to remove
 		playable._handle = this._playablesToRemove.removeByReference(playable._handle);
+		playable._handle = playable._handle.object;
 		return true;
 	}
 
@@ -1327,7 +1311,7 @@ Player.prototype._remove = function (playable) {
 		return false;
 	}
 
-	this._warn('[Player._add] Playable is used elsewhere');
+	this._warn('[Player._remove] Playable is used elsewhere');
 	return false;
 };
 
@@ -1390,7 +1374,7 @@ Player.prototype.clear = function () {
 Player.prototype._warn = function (warning) {
 	// jshint debug: true
 	if (this._silent === false) {
-		console.warn(warning);
+		console.warn('[TINA]' + warning);
 	}
 
 	if (this._debug === true) {
@@ -1423,20 +1407,35 @@ Player.prototype.stop = function () {
 };
 
 Player.prototype._activate = function (playable) {
-	// O(1)
-	this._inactivePlayables.removeByReference(playable._handle);
-	playable._handle = this._activePlayables.addBack(playable);
+	if (playable._handle.container === this._inactivePlayables) {
+		this._inactivePlayables.removeByReference(playable._handle);
+		playable._handle = this._activePlayables.addBack(playable);
+	} else if (playable._handle.container === this._playablesToRemove) {
+		// Already in list of active playables
+		this._playablesToRemove.removeByReference(playable._handle);
+		playable._handle = playable._handle.object;
+	}
+
+	playable._active = true;
+	return true;
 };
+
+Player.prototype._reactivate = Player.prototype._activate;
 
 Player.prototype._inactivate = function (playable) {
 	if (playable._handle === null) {
-		this._warn('[Playable.stop] Cannot stop a playable that is not running');
-		return;
+		this._warn('[Player._inactivate] Cannot stop a playable that is not running');
+		return false;
 	}
 
-	// O(1)
-	this._activePlayables.removeByReference(playable._handle);
-	playable._handle = this._inactivePlayables.addBack(playable);
+	if (playable._handle.container === this._activePlayables) {
+		// O(1)
+		this._activePlayables.removeByReference(playable._handle);
+		playable._handle = this._inactivePlayables.addBack(playable);
+	}
+
+	playable._active = false;
+	return true;
 };
 
 Player.prototype._updatePlayableList = function (dt) {
@@ -1461,7 +1460,7 @@ Player.prototype._updatePlayableList = function (dt) {
 
 		// Starting if player time within playable bounds
 		// console.log('Should playable be playing?', playable._startTime, time0, time1, dt)
-		if (playable._overlaps(time0, time1)) {
+		if (playable._active && playable._overlaps(time0, time1)) {
 			this._activate(playable);
 			playable._start();
 		}
@@ -2048,6 +2047,8 @@ var requestAnimFrame = (function(){
 		};
 })();
 
+var cancelAnimationFrame = window.cancelAnimationFrame || window.mozCancelAnimationFrame || window.clearTimeout;
+
 // Performance.now gives better precision than Date.now
 var clock = root.performance || Date;
 
@@ -2068,7 +2069,8 @@ var TINA = {
 	_startTime: 0,
 	_time:      0,
 
-	_running: false,
+	_requestFrameId: null,
+	_paused: false,
 
 	// callbacks
 	_onStart:  null,
@@ -2100,11 +2102,19 @@ var TINA = {
 		return this;
 	},
 
+	_onPlayableChanged: function () {},
+	_onPlayableRemoved: function () {},
+	_onAllPlayablesRemoved: function () {},
+
 	isRunning: function () {
-		return (this._running === true);
+		return (this._requestFrameId !== null);
 	},
 
 	update: function () {
+		if (this._paused) {
+			return;
+		}
+
 		var now = clock.now() - this._startTime;
 		var dt = now - this._time;
 		if (dt < 0) {
@@ -2197,64 +2207,49 @@ var TINA = {
 
 	// Internal start method, called by start and resume
 	_startAutomaticUpdate: function () {
-		if (this._running === true) {
-			console.warn('[TINA.start] TINA is already running');
+		if (this._requestFrameId !== null) {
 			return false;
 		}
 
 		function updateTINA() {
-			if (TINA._running === true) {
-				TINA.update();
-				requestAnimFrame(updateTINA);
-			}
+			TINA.update();
+			this._requestFrameId = requestAnimFrame(updateTINA);
 		}
 
 		this.reset();
 
 		// Starting the animation loop
-		this._running = true;
-		requestAnimFrame(updateTINA);
+		this._requestFrameId = requestAnimFrame(updateTINA);
 		return true;
 	},
 
 	// Internal stop method, called by stop and pause
 	_stopAutomaticUpdate: function () {
-		if (this._running === false) {
-			console.warn('[TINA.pause] TINA is not running');
+		if (this._requestFrameId === null) {
 			return false;
 		}
 
 		// Stopping the animation loop
-		this._running = false;
+		cancelAnimationFrame(this._requestFrameId);
+		this._requestFrameId = null;
 		return true;
 	},
 
 	pause: function () {
-		if (this._stopAutomaticUpdate() === false) {
-			return;
-		}
-
-		for (var handle = this._activeTweeners.first; handle !== null; handle = handle.next) {
-			handle.object._pause();
-		}
-
+		this._paused = true;
 		if (this._onPause !== null) {
 			this._onPause();
 		}
+
 		return this;
 	},
 
 	resume: function () {
-		if (this._startAutomaticUpdate() === false) {
-			return;
-		}
+		this._paused = false;
+		this._startTime = clock.now() - this._time;
 
 		if (this._onResume !== null) {
 			this._onResume();
-		}
-
-		for (var handle = this._activeTweeners.first; handle !== null; handle = handle.next) {
-			handle.object._resume();
 		}
 
 		return this;
@@ -2327,7 +2322,7 @@ var TINA = {
 
 	_add: function (tweener) {
 		// A tweener is starting
-		if (this._running === false) {
+		if (this._requestFrameId === null) {
 			// TINA is not running, starting now
 			this.start();
 		}
@@ -2336,6 +2331,7 @@ var TINA = {
 			// Tweener can be added
 			tweener._handle = this._inactiveTweeners.add(tweener);
 			tweener._player = this;
+			tweener._time = (this._time - tweener._startTime) * tweener._speed;
 			return;
 		}
 
@@ -2352,12 +2348,17 @@ var TINA = {
 		return this;
 	},
 
+	_reactivate: function (tweener) {
+		this._add(tweener);
+		return this;
+	},
+
 	_inactivate: function (tweener) {
 		if (tweener._handle !== null) {
 			this._activePlayables.removeByReference(tweener._handle);
 		}
 
-		tweener._handle = this._inactivePlayables.addBack(tweener);
+		tweener._handle = this._inactiveTweeners.addBack(tweener);
 	},
 
 	_remove: function (tweener) {
@@ -2714,7 +2715,7 @@ function updatePI(object, t) {
 
 // Easing
 function updateE(object, t) {
-	t = this.easing(t, this.easingParams);
+	t = this.easing(t, this.easingParam);
 	var p = this.prop;
 	var now = this.from[p] * (1 - t) + this.to[p] * t;
 	object[p] = object[p] + (now - this.prev);
@@ -2725,7 +2726,7 @@ function updateE(object, t) {
 // Several Properties
 function updatePE(object, t) {
 	var q = this.props;
-	t = this.easing(t, this.easingParams);
+	t = this.easing(t, this.easingParam);
 	for (var i = 0; i < q.length; i += 1) {
 		var p = q[i];
 		var now = this.from[p] * (1 - t) + this.to[p] * t;
@@ -2738,7 +2739,7 @@ function updatePE(object, t) {
 // Interpolation
 function updateIE(object, t) {
 	var p = this.prop;
-	var now = this.interps[p](this.easing(t, this.easingParams), this.from[p], this.to[p], this.interpParams[p]);
+	var now = this.interps[p](this.easing(t, this.easingParam), this.from[p], this.to[p], this.interpParams[p]);
 	object[p] = object[p] + (now - this.prev);
 	this.prev = now;
 }
@@ -2748,7 +2749,7 @@ function updateIE(object, t) {
 // Several Properties
 function updatePIE(object, t) {
 	var q = this.props;
-	t = this.easing(t, this.easingParams);
+	t = this.easing(t, this.easingParam);
 	for (var i = 0; i < q.length; i += 1) {
 		var p = q[i];
 		var now = this.interps[p](t, this.from[p], this.to[p], this.interpParams[p]);
@@ -2885,9 +2886,30 @@ Tweener.prototype = Object.create(Player.prototype);
 Tweener.prototype.constructor = Tweener;
 module.exports = Tweener;
 
+Tweener.prototype._reactivate = function (playable) {
+	if (playable._handle === null) {
+		// In a tweener, playables are added when reactivated
+		this._add(playable);
+	}
+	Player.prototype._activate.call(this, playable);
+};
+
 Tweener.prototype._inactivate = function (playable) {
 	// In a tweener, playables are removed when inactivated
-	this._remove(playable);
+	if (playable._handle !== null) {
+		// Playable is handled, either by this player or by another one
+		if (playable._handle.container === this._activePlayables) {
+			// and adding to remove list
+			playable._handle = this._playablesToRemove.add(playable._handle);
+		}
+
+		if (playable._handle.container === this._inactivePlayables) {
+			// Playable was inactive, removing from inactive playables
+			playable._handle = this._inactivePlayables.removeByReference(playable._handle);
+		}
+	}
+
+	playable._active = false;
 };
 
 Tweener.prototype.useAsDefault = function () {

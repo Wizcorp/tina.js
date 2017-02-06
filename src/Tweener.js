@@ -20,14 +20,24 @@ Tweener.prototype._reactivate = function (playable) {
 		// In a tweener, playables are added when reactivated
 		this._add(playable);
 	}
-
 	Player.prototype._activate.call(this, playable);
 };
 
 Tweener.prototype._inactivate = function (playable) {
 	// In a tweener, playables are removed when inactivated
-	Player.prototype._inactivate.call(this, playable);
-	this._remove(playable);
+	if (playable._handle !== null) {
+		// Playable is handled, either by this player or by another one
+		if (playable._handle.container === this._activePlayables) {
+			// and adding to remove list
+			playable._handle = this._playablesToRemove.add(playable._handle);
+		}
+
+		if (playable._handle.container === this._inactivePlayables) {
+			// Playable was inactive, removing from inactive playables
+			playable._handle = this._inactivePlayables.removeByReference(playable._handle);
+		}
+	}
+
 	playable._active = false;
 };
 
