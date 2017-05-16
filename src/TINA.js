@@ -204,7 +204,7 @@ var TINA = {
 
 		function updateTINA() {
 			TINA.update();
-			this._requestFrameId = requestAnimFrame(updateTINA);
+			TINA._requestFrameId = requestAnimFrame(updateTINA);
 		}
 
 		this.reset();
