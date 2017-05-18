@@ -171,8 +171,9 @@ BriefExtension.prototype._complete = function (overflow) {
 	}
 
 	if (this._onceComplete !== null) {
-		this._onceComplete(overflow);
+		var onceComplete = this._onceComplete;
 		this._onceComplete = null;
+		onceComplete(overflow);
 	}
 };
 
@@ -211,14 +212,14 @@ BriefExtension.prototype._moveTo = function (time, dt, playerOverflow) {
 			// Iteration at current update
 			var iteration = time / this._duration;
 			if (dt > 0) {
-				if (0 < iteration && iteration < this._iterations) {
+				if (0 <= iteration && iteration < this._iterations) {
 					this._time = time % this._duration;
 				} else {
 					overflow = (iteration - this._iterations) * this._duration;
 					this._time = this._duration * (1 - (Math.ceil(this._iterations) - this._iterations));
 				}
 			} else if (dt < 0) {
-				if (0 < iteration && iteration < this._iterations) {
+				if (0 <= iteration && iteration < this._iterations) {
 					this._time = time % this._duration;
 				} else {
 					overflow = iteration * this._duration;

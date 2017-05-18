@@ -11,11 +11,6 @@ function Player() {
 	// A DoublyList, rather than an Array, is used to store playables.
 	// It allows for faster removal and is similar in speed for iterations.
 
-	// Quick note: as of mid 2014 iterating through linked list was slower than iterating through arrays
-	// in safari and firefox as only V8 managed to have linked lists work as fast as arrays.
-	// As of mid 2015 it seems that performances are now identical in every major browsers.
-	// (KUDOs to the JS engines guys)
-
 	// List of active playables handled by this player
 	this._activePlayables = new DoublyList();
 
@@ -48,6 +43,7 @@ Player.prototype._add = function (playable) {
 	if (playable._handle.container === this._playablesToRemove) {
 		// Playable was being removed, removing from playables to remove
 		playable._handle = this._playablesToRemove.removeByReference(playable._handle);
+		playable._handle = playable._handle.object;
 		return true;
 	}
 
@@ -186,9 +182,12 @@ Player.prototype.stop = function () {
 
 Player.prototype._activate = function (playable) {
 	if (playable._handle.container === this._inactivePlayables) {
-		// O(1)
 		this._inactivePlayables.removeByReference(playable._handle);
 		playable._handle = this._activePlayables.addBack(playable);
+	} else if (playable._handle.container === this._playablesToRemove) {
+		// Already in list of active playables
+		this._playablesToRemove.removeByReference(playable._handle);
+		playable._handle = playable._handle.object;
 	}
 
 	playable._active = true;

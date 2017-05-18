@@ -357,8 +357,9 @@ BriefExtension.prototype._complete = function (overflow) {
 	}
 
 	if (this._onceComplete !== null) {
-		this._onceComplete(overflow);
+		var onceComplete = this._onceComplete;
 		this._onceComplete = null;
+		onceComplete(overflow);
 	}
 };
 
@@ -397,14 +398,14 @@ BriefExtension.prototype._moveTo = function (time, dt, playerOverflow) {
 			// Iteration at current update
 			var iteration = time / this._duration;
 			if (dt > 0) {
-				if (0 < iteration && iteration < this._iterations) {
+				if (0 <= iteration && iteration < this._iterations) {
 					this._time = time % this._duration;
 				} else {
 					overflow = (iteration - this._iterations) * this._duration;
 					this._time = this._duration * (1 - (Math.ceil(this._iterations) - this._iterations));
 				}
 			} else if (dt < 0) {
-				if (0 < iteration && iteration < this._iterations) {
+				if (0 <= iteration && iteration < this._iterations) {
 					this._time = time % this._duration;
 				} else {
 					overflow = iteration * this._duration;
@@ -1146,9 +1147,10 @@ Playable.prototype.start = function (timeOffset) {
 		timeOffset = 0;
 	}
 
+	this._time  = timeOffset;
 	this._startTime = this._player._time - timeOffset;
 
-	if (this._player._add(this) === false) {
+	if (this._player._reactivate(this) === false) {
 		// Could not be added to player
 		return this;
 	}
@@ -1186,7 +1188,7 @@ Playable.prototype.resume = function () {
 	}
 
 	// Resetting starting time so that the playable starts off where it left off
-	this._startTime = this._player._time - this._time;
+	this._startTime = this._player._time - this._time / this._speed;
 
 	if (this._onResume !== null) {
 		this._onResume();
@@ -1235,11 +1237,6 @@ function Player() {
 	// A DoublyList, rather than an Array, is used to store playables.
 	// It allows for faster removal and is similar in speed for iterations.
 
-	// Quick note: as of mid 2014 iterating through linked list was slower than iterating through arrays
-	// in safari and firefox as only V8 managed to have linked lists work as fast as arrays.
-	// As of mid 2015 it seems that performances are now identical in every major browsers.
-	// (KUDOs to the JS engines guys)
-
 	// List of active playables handled by this player
 	this._activePlayables = new DoublyList();
 
@@ -1272,6 +1269,7 @@ Player.prototype._add = function (playable) {
 	if (playable._handle.container === this._playablesToRemove) {
 		// Playable was being removed, removing from playables to remove
 		playable._handle = this._playablesToRemove.removeByReference(playable._handle);
+		playable._handle = playable._handle.object;
 		return true;
 	}
 
@@ -1410,9 +1408,12 @@ Player.prototype.stop = function () {
 
 Player.prototype._activate = function (playable) {
 	if (playable._handle.container === this._inactivePlayables) {
-		// O(1)
 		this._inactivePlayables.removeByReference(playable._handle);
 		playable._handle = this._activePlayables.addBack(playable);
+	} else if (playable._handle.container === this._playablesToRemove) {
+		// Already in list of active playables
+		this._playablesToRemove.removeByReference(playable._handle);
+		playable._handle = playable._handle.object;
 	}
 
 	playable._active = true;
@@ -2347,6 +2348,11 @@ var TINA = {
 		return this;
 	},
 
+	_reactivate: function (tweener) {
+		this._add(tweener);
+		return this;
+	},
+
 	_inactivate: function (tweener) {
 		if (tweener._handle !== null) {
 			this._activePlayables.removeByReference(tweener._handle);
@@ -2891,7 +2897,19 @@ Tweener.prototype._reactivate = function (playable) {
 
 Tweener.prototype._inactivate = function (playable) {
 	// In a tweener, playables are removed when inactivated
-	this._remove(playable);
+	if (playable._handle !== null) {
+		// Playable is handled, either by this player or by another one
+		if (playable._handle.container === this._activePlayables) {
+			// and adding to remove list
+			playable._handle = this._playablesToRemove.add(playable._handle);
+		}
+
+		if (playable._handle.container === this._inactivePlayables) {
+			// Playable was inactive, removing from inactive playables
+			playable._handle = this._inactivePlayables.removeByReference(playable._handle);
+		}
+	}
+
 	playable._active = false;
 };
 
