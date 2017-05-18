@@ -38,6 +38,8 @@ var requestAnimFrame = (function(){
 		};
 })();
 
+var cancelAnimationFrame = window.cancelAnimationFrame || window.mozCancelAnimationFrame || window.clearTimeout;
+
 // Performance.now gives better precision than Date.now
 var clock = root.performance || Date;
 
@@ -58,7 +60,8 @@ var TINA = {
 	_startTime: 0,
 	_time:      0,
 
-	_running: false,
+	_requestFrameId: null,
+	_paused: false,
 
 	// callbacks
 	_onStart:  null,
@@ -90,11 +93,19 @@ var TINA = {
 		return this;
 	},
 
+	_onPlayableChanged: function () {},
+	_onPlayableRemoved: function () {},
+	_onAllPlayablesRemoved: function () {},
+
 	isRunning: function () {
-		return (this._running === true);
+		return (this._requestFrameId !== null);
 	},
 
 	update: function () {
+		if (this._paused) {
+			return;
+		}
+
 		var now = clock.now() - this._startTime;
 		var dt = now - this._time;
 		if (dt < 0) {
@@ -187,64 +198,49 @@ var TINA = {
 
 	// Internal start method, called by start and resume
 	_startAutomaticUpdate: function () {
-		if (this._running === true) {
-			console.warn('[TINA.start] TINA is already running');
+		if (this._requestFrameId !== null) {
 			return false;
 		}
 
 		function updateTINA() {
-			if (TINA._running === true) {
-				TINA.update();
-				requestAnimFrame(updateTINA);
-			}
+			TINA.update();
+			TINA._requestFrameId = requestAnimFrame(updateTINA);
 		}
 
 		this.reset();
 
 		// Starting the animation loop
-		this._running = true;
-		requestAnimFrame(updateTINA);
+		this._requestFrameId = requestAnimFrame(updateTINA);
 		return true;
 	},
 
 	// Internal stop method, called by stop and pause
 	_stopAutomaticUpdate: function () {
-		if (this._running === false) {
-			console.warn('[TINA.pause] TINA is not running');
+		if (this._requestFrameId === null) {
 			return false;
 		}
 
 		// Stopping the animation loop
-		this._running = false;
+		cancelAnimationFrame(this._requestFrameId);
+		this._requestFrameId = null;
 		return true;
 	},
 
 	pause: function () {
-		if (this._stopAutomaticUpdate() === false) {
-			return;
-		}
-
-		for (var handle = this._activeTweeners.first; handle !== null; handle = handle.next) {
-			handle.object._pause();
-		}
-
+		this._paused = true;
 		if (this._onPause !== null) {
 			this._onPause();
 		}
+
 		return this;
 	},
 
 	resume: function () {
-		if (this._startAutomaticUpdate() === false) {
-			return;
-		}
+		this._paused = false;
+		this._startTime = clock.now() - this._time;
 
 		if (this._onResume !== null) {
 			this._onResume();
-		}
-
-		for (var handle = this._activeTweeners.first; handle !== null; handle = handle.next) {
-			handle.object._resume();
 		}
 
 		return this;
@@ -317,7 +313,7 @@ var TINA = {
 
 	_add: function (tweener) {
 		// A tweener is starting
-		if (this._running === false) {
+		if (this._requestFrameId === null) {
 			// TINA is not running, starting now
 			this.start();
 		}
@@ -326,6 +322,7 @@ var TINA = {
 			// Tweener can be added
 			tweener._handle = this._inactiveTweeners.add(tweener);
 			tweener._player = this;
+			tweener._time = (this._time - tweener._startTime) * tweener._speed;
 			return;
 		}
 
@@ -347,7 +344,7 @@ var TINA = {
 			this._activePlayables.removeByReference(tweener._handle);
 		}
 
-		tweener._handle = this._inactivePlayables.addBack(tweener);
+		tweener._handle = this._inactiveTweeners.addBack(tweener);
 	},
 
 	_remove: function (tweener) {

@@ -6,6 +6,9 @@ function BriefExtension() {
 	// On complete callback
 	this._onComplete = null;
 
+	// Once complete callback
+	this._onceComplete = null;
+
 	// Playing options
 	this._iterations = 1; // Number of times to iterate the playable
 	this._pingpong = false; // To make the playable go backward on even iterations
@@ -37,10 +40,8 @@ BriefExtension.prototype.setSpeed = function (speed) {
 	}
 };
 
-BriefExtension.prototype.onComplete = function (onComplete) {
-	this._onComplete = onComplete;
-	return this;
-};
+BriefExtension.prototype.onComplete = function (onComplete) { this._onComplete = onComplete; return this; };
+BriefExtension.prototype.onceComplete = function (onceComplete) { this._onceComplete = onceComplete; return this; };
 
 BriefExtension.prototype.getDuration = function () {
 	// Duration from outside the playable
@@ -112,6 +113,10 @@ BriefExtension.prototype._overlaps = function (time0, time1) {
 };
 
 BriefExtension.prototype.goToEnd = function () {
+	if (this._iterations === Infinity) {
+		return this.goTo(this._duration / this._speed, 0);
+	}
+
 	return this.goTo(this.getDuration(), this._iterations - 1);
 };
 
@@ -163,6 +168,11 @@ BriefExtension.prototype._complete = function (overflow) {
 
 	if (this._onComplete !== null) { 
 		this._onComplete(overflow);
+	}
+
+	if (this._onceComplete !== null) {
+		this._onceComplete(overflow);
+		this._onceComplete = null;
 	}
 };
 
