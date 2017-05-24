@@ -269,7 +269,12 @@ BriefExtension.prototype._moveTo = function (time, dt, playerOverflow) {
 		}
 	}
 
+	// If overflow is defined - then this playable/player will be completed
 	if (overflow !== undefined) {
-		this._complete(overflow);
+		// If we don't have a list of playables - we are a playable, with no dependencies and can complete
+		// but if we are a player, only complete if we are sure we have no active children
+		if (!this._activePlayables || this._activePlayables.length === 0) {
+			this._complete(overflow);
+		}
 	}
 };
