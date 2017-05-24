@@ -455,8 +455,17 @@ BriefExtension.prototype._moveTo = function (time, dt, playerOverflow) {
 		}
 	}
 
+	// If overflow is defined - then this playable/player will be completed
 	if (overflow !== undefined) {
-		this._complete(overflow);
+		// if we have a list of playable objects, then we are also a container (a player)
+		// Make sure they are complete before we are able to call complete
+        if (this._activePlayables) {
+            if (this._activePlayables.length === 0) {
+            	this._complete(overflow);
+            }
+        } else {
+            this._complete(overflow);
+        }
 	}
 };
 },{}],3:[function(require,module,exports){
