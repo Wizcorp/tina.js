@@ -478,6 +478,7 @@ BriefPlayable.prototype.constructor = BriefPlayable;
 inherit(BriefPlayable, BriefExtension);
 
 module.exports = BriefPlayable;
+
 },{"./BriefExtension":2,"./Playable":8,"./inherit":22}],4:[function(require,module,exports){
 var inherit        = require('./inherit');
 var Player         = require('./Player');
@@ -1227,6 +1228,7 @@ Playable.prototype._moveTo = function (time, dt) {
 // Overridable methods
 Playable.prototype._update   = function () {};
 Playable.prototype._validate = function () {};
+
 },{}],9:[function(require,module,exports){
 var Playable   = require('./Playable');
 var DoublyList = require('./DoublyList');
