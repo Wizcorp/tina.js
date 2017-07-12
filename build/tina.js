@@ -197,6 +197,7 @@ function BriefExtension() {
 
 	// Playing options
 	this._iterations = 1; // Number of times to iterate the playable
+	this._currentIterations = 0; // Number of complete iterations
 	this._pingpong = false; // To make the playable go backward on even iterations
 	this._persist  = false; // To keep the playable running instead of completing
 }
@@ -397,6 +398,9 @@ BriefExtension.prototype._moveTo = function (time, dt, playerOverflow) {
 
 			// Iteration at current update
 			var iteration = time / this._duration;
+			// Track the current number of iterations
+			this._currentIterations = Math.floor(iteration);
+
 			if (dt > 0) {
 				if (0 <= iteration && iteration < this._iterations) {
 					this._time = time % this._duration;
@@ -474,6 +478,7 @@ BriefPlayable.prototype.constructor = BriefPlayable;
 inherit(BriefPlayable, BriefExtension);
 
 module.exports = BriefPlayable;
+
 },{"./BriefExtension":2,"./Playable":8,"./inherit":22}],4:[function(require,module,exports){
 var inherit        = require('./inherit');
 var Player         = require('./Player');
@@ -1188,7 +1193,7 @@ Playable.prototype.resume = function () {
 	}
 
 	// Resetting starting time so that the playable starts off where it left off
-	this._startTime = this._player._time - this._time / this._speed;
+	this._startTime = this._player._time - (this._time + (this._duration * this._currentIterations)) / this._speed;
 
 	if (this._onResume !== null) {
 		this._onResume();
@@ -1223,6 +1228,7 @@ Playable.prototype._moveTo = function (time, dt) {
 // Overridable methods
 Playable.prototype._update   = function () {};
 Playable.prototype._validate = function () {};
+
 },{}],9:[function(require,module,exports){
 var Playable   = require('./Playable');
 var DoublyList = require('./DoublyList');

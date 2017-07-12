@@ -1,0 +1,25 @@
+# EditorConfig is awesome: http://EditorConfig.org
+# Download a plugin for your favorite editor from http://editorconfig.org/#download
+
+root = true
+
+[*]
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+
+[*.{html}]
+insert_final_newline = true
+indent_style = tab
+
+[*.js]
+insert_final_newline = true
+indent_style = tab
+
+[*.json]
+insert_final_newline = false
+indent_style = tab
+
+[package.json]
+indent_style = space
+indent_size = 2
