@@ -1169,13 +1169,12 @@ Playable.prototype._start = function () {
 	}
 };
 
-Playable.prototype.destroy = function () {
+Playable.prototype._stop = function (immediate) {
 	if (this._player === null) {
 		return this;
 	}
 
-	// Stopping playable without performing any additional update nor completing
-	if (this._player._remove(this, true) === false) {
+	if (this._player._remove(this, immediate) === false) {
 		// Could not be removed
 		return this;
 	}
@@ -1187,20 +1186,13 @@ Playable.prototype.destroy = function () {
 };
 
 Playable.prototype.stop = function () {
-	if (this._player === null) {
-		return this;
-	}
-
 	// Stopping playable while letting it perform a final update and complete
-	if (this._player._remove(this, false) === false) {
-		// Could not be removed
-		return this;
-	}
+	return this._stop(false);
+};
 
-	if (this._onStop !== null) {
-		this._onStop();
-	}
-	return this;
+Playable.prototype.destroy = function () {
+	// Stopping playable without performing any additional update nor completing
+	return this._stop(true);
 };
 
 Playable.prototype.resume = function () {
