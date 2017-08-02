@@ -1169,13 +1169,30 @@ Playable.prototype._start = function () {
 	}
 };
 
-Playable.prototype.stop = function () {
+Playable.prototype.destroy = function () {
 	if (this._player === null) {
 		return this;
 	}
 
 	// Stopping playable without performing any additional update nor completing
-	if (this._player._remove(this) === false) {
+	if (this._player._remove(this, true) === false) {
+		// Could not be removed
+		return this;
+	}
+
+	if (this._onStop !== null) {
+		this._onStop();
+	}
+	return this;
+};
+
+Playable.prototype.stop = function () {
+	if (this._player === null) {
+		return this;
+	}
+
+	// Stopping playable while letting it perform a final update and complete
+	if (this._player._remove(this, false) === false) {
 		// Could not be removed
 		return this;
 	}
@@ -1293,7 +1310,7 @@ Player.prototype._add = function (playable) {
 	return false;
 };
 
-Player.prototype._remove = function (playable) {
+Player.prototype._remove = function (playable, immediate) {
 	if (playable._handle === null) {
 		this._warn('[Player._remove] Playable is not being used');
 		return false;
@@ -1301,9 +1318,14 @@ Player.prototype._remove = function (playable) {
 
 	// Playable is handled, either by this player or by another one
 	if (playable._handle.container === this._activePlayables) {
-		// Playable was active, adding to remove list
-		playable._handle = this._playablesToRemove.add(playable._handle);
-		return true;
+		if (immediate) {
+			playable._handle = this._activePlayables.removeByReference(playable._handle);
+			return true;
+		} else {
+			// Playable was active, adding to remove list
+			playable._handle = this._playablesToRemove.add(playable._handle);
+			return true;
+		}
 	}
 
 	if (playable._handle.container === this._inactivePlayables) {
@@ -1326,7 +1348,7 @@ Player.prototype.remove = function (playable) {
 		playable.stop();
 	}
 
-	this._remove(playable);
+	this._remove(playable, false);
 	this._onPlayableRemoved(playable);
 	return this;
 };
@@ -1489,6 +1511,7 @@ Player.prototype._update = function (dt, overflow) {
 Player.prototype._onPlayableChanged = function (/* playable */) {};
 Player.prototype._onPlayableRemoved = function (/* playable */) {};
 Player.prototype._onAllPlayablesRemoved = function () {};
+
 },{"./DoublyList":6,"./Playable":8}],10:[function(require,module,exports){
 var BriefPlayable = require('./BriefPlayable');
 var DoublyList    = require('./DoublyList');

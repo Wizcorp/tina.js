@@ -61,7 +61,7 @@ Player.prototype._add = function (playable) {
 	return false;
 };
 
-Player.prototype._remove = function (playable) {
+Player.prototype._remove = function (playable, immediate) {
 	if (playable._handle === null) {
 		this._warn('[Player._remove] Playable is not being used');
 		return false;
@@ -69,9 +69,14 @@ Player.prototype._remove = function (playable) {
 
 	// Playable is handled, either by this player or by another one
 	if (playable._handle.container === this._activePlayables) {
-		// Playable was active, adding to remove list
-		playable._handle = this._playablesToRemove.add(playable._handle);
-		return true;
+		if (immediate) {
+			playable._handle = this._activePlayables.removeByReference(playable._handle);
+			return true;
+		} else {
+			// Playable was active, adding to remove list
+			playable._handle = this._playablesToRemove.add(playable._handle);
+			return true;
+		}
 	}
 
 	if (playable._handle.container === this._inactivePlayables) {
@@ -94,7 +99,7 @@ Player.prototype.remove = function (playable) {
 		playable.stop();
 	}
 
-	this._remove(playable);
+	this._remove(playable, false);
 	this._onPlayableRemoved(playable);
 	return this;
 };
