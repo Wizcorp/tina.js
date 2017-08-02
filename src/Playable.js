@@ -182,13 +182,12 @@ Playable.prototype._start = function () {
 	}
 };
 
-Playable.prototype.stop = function () {
+Playable.prototype._stop = function (immediate) {
 	if (this._player === null) {
 		return this;
 	}
 
-	// Stopping playable without performing any additional update nor completing
-	if (this._player._remove(this) === false) {
+	if (this._player._remove(this, immediate) === false) {
 		// Could not be removed
 		return this;
 	}
@@ -197,6 +196,16 @@ Playable.prototype.stop = function () {
 		this._onStop();
 	}
 	return this;
+};
+
+Playable.prototype.stop = function () {
+	// Stopping playable while letting it perform a final update and complete
+	return this._stop(false);
+};
+
+Playable.prototype.destroy = function () {
+	// Stopping playable without performing any additional update nor completing
+	return this._stop(true);
 };
 
 Playable.prototype.resume = function () {
