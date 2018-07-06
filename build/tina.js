@@ -1160,6 +1160,25 @@ Playable.prototype.start = function (timeOffset) {
 		return this;
 	}
 
+	// MATEO
+	// Make sure we call onStart if not delayed
+	if (timeOffset >= 0) {
+		this._start();
+	} else { // Make sure we wait until tween starts to call onStart
+		var oldOnUpdate = this._onUpdate || function(t, dt) {};
+		oldOnUpdate = oldOnUpdate.bind(this);
+		var newOnUpdate = function(time, dt) {
+			// We are at the start boundary, call onStart
+			if (time > 0 && time - dt < 0) {
+				this._start();
+			}
+
+			oldOnUpdate(time, dt);
+		}.bind(this);
+
+		this._onUpdate = newOnUpdate;
+	}
+
 	return this;
 };
 
