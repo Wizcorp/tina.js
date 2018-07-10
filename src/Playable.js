@@ -173,6 +173,27 @@ Playable.prototype.start = function (timeOffset) {
 		return this;
 	}
 
+	// Call onStart immediately if not delayed
+	if (timeOffset >= 0) {
+		this._start();
+	} else { // Make sure we wait until tween starts to call onStart
+		var oldOnUpdate = this._onUpdate || function(t, dt) {};
+		oldOnUpdate = oldOnUpdate.bind(this);
+
+		// Redefine onUpdate to additionally check for the start of tween
+		var newOnUpdate = function(time, dt) {
+			// We are at the start boundary, call onStart
+			if (time > 0 && time - dt < 0) {
+				this._start();
+			}
+
+			// Call our old onUpdate
+			oldOnUpdate(time, dt);
+		}.bind(this);
+
+		this._onUpdate = newOnUpdate;
+	}
+
 	return this;
 };
 
